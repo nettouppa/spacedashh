@@ -185,7 +185,7 @@ function Index() {
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={order} strategy={rectSortingStrategy}>
-          <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="mt-4 grid grid-cols-1 gap-4 dash-grid">
             {order.map((id) => {
               const W = WIDGETS[id];
               return (
