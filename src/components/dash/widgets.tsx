@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ArrowDownRight, ArrowUpRight, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -79,46 +80,63 @@ const passTone = (r: number) =>
 
 export function FunnelWidget({ f, set, big }: P) {
   const data = funnel(f);
-  const top = data[0]?.count || 1;
-  // Strictly proportional to deal count; names are rendered above the bar, so no minimum width is needed.
-  const widths = data.map((s) => (s.count / top) * 100);
+  const [metric, setMetric] = useState<"count" | "value">("count");
+  const val = (s: (typeof data)[number]) => (metric === "count" ? s.count : s.value);
+  const top = (data[0] && val(data[0])) || 1;
+  // Strictly proportional widths (no minimum) — labels live above each band.
+  const widths = data.map((s) => (val(s) / top) * 100);
   const last = data[data.length - 1];
   const overall = data[0]?.count ? (last?.count ?? 0) / data[0].count : 0;
   let gap = { i: 1, pass: 1 };
   data.forEach((s, i) => { if (i && s.pass < gap.pass) gap = { i, pass: s.pass }; });
-  const rowH = big ? "h-20" : "h-14";
+  const n = Math.max(data.length - 1, 1);
   return (
-    <Card title="Funil de vendas" subtitle="Clique numa etapa para filtrar o painel">
-      <div className="mb-5 grid grid-cols-3 gap-3 rounded-lg bg-muted/60 p-3">
-        <div><div className="text-xs text-muted-foreground">Eficiência topo → fundo</div><div className={cn("font-semibold tabular-nums text-primary", big ? "text-4xl" : "text-2xl")}>{(overall * 100).toFixed(1).replace(".", ",")}%</div></div>
-        <div><div className="text-xs text-muted-foreground">Valor convertido</div><div className={cn("font-semibold tabular-nums", big ? "text-4xl" : "text-2xl")}>{brl(last?.value ?? 0)}</div></div>
-        <div><div className="text-xs text-muted-foreground">Maior gargalo</div><div className={cn("font-semibold", big ? "text-xl" : "text-sm")}>{data[gap.i - 1]?.stage} → {data[gap.i]?.stage}</div><span className={cn("mt-0.5 inline-block rounded px-1.5 text-xs font-medium tabular-nums", passTone(gap.pass))}>{pct(gap.pass)}</span></div>
+    <Card title="Funil de vendas" subtitle="Clique numa etapa para filtrar o painel"
+      right={
+        <div className="inline-flex rounded-md border border-border bg-muted/60 p-0.5 text-xs font-medium">
+          {(["count", "value"] as const).map((m) => (
+            <button key={m} onClick={() => setMetric(m)} className={cn("rounded px-2.5 py-1 transition-colors", metric === m ? "bg-card text-foreground shadow-soft" : "text-muted-foreground hover:text-foreground")}>
+              {m === "count" ? "Quantidade" : "Valor"}
+            </button>
+          ))}
+        </div>
+      }>
+      <div className="mb-6 grid grid-cols-3 divide-x divide-border rounded-lg border border-border">
+        <div className="p-4"><div className="text-xs font-medium text-muted-foreground">Eficiência topo → fundo</div><div className={cn("mt-1 font-semibold tabular-nums text-primary", big ? "text-5xl" : "text-2xl")}>{(overall * 100).toFixed(1).replace(".", ",")}%</div><div className="mt-0.5 text-xs text-muted-foreground">{last?.count ?? 0} ganhos de {data[0]?.count ?? 0} entradas</div></div>
+        <div className="p-4"><div className="text-xs font-medium text-muted-foreground">Valor convertido</div><div className={cn("mt-1 font-semibold tabular-nums", big ? "text-5xl" : "text-2xl", "whitespace-nowrap")}>{brl(last?.value ?? 0)}</div><div className="mt-0.5 text-xs text-muted-foreground">de {brl(data[0]?.value ?? 0)} no topo</div></div>
+        <div className="p-4"><div className="text-xs font-medium text-muted-foreground">Maior gargalo</div><div className={cn("mt-1 font-semibold", big ? "text-2xl" : "text-base")}>{data[gap.i - 1]?.stage} → {data[gap.i]?.stage}</div><span className={cn("mt-1 inline-block rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums", passTone(gap.pass))}>{pct(gap.pass)} de passagem</span></div>
       </div>
-      <div>
+      <div className="mx-auto max-w-3xl">
         {data.map((s, i) => {
           const w = widths[i]!;
-          const next = widths[i + 1] ?? w;
+          const next = widths[i + 1] ?? w * 0.85;
+          const inset = w ? Math.max(0, ((w - next) / 2 / w) * 100) : 0;
           const active = f.stage === s.stage;
+          const ticket = s.count ? s.value / s.count : 0;
           return (
             <div key={s.stage}>
               {i > 0 && (
-                <div className="flex h-7 items-center pl-3">
-                  <span className="mr-2 h-full w-px bg-border" />
-                  <span className={cn("inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-semibold tabular-nums", passTone(s.pass))}>↓ {pct(s.pass)}</span>
-                  <span className="ml-1.5 text-[11px] text-muted-foreground">de {data[i - 1]?.stage} para {s.stage}</span>
+                <div className="flex justify-center py-1.5">
+                  <span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-semibold tabular-nums", big ? "text-sm" : "text-[11px]", passTone(s.pass))}>↓ {pct(s.pass)} conversão</span>
                 </div>
               )}
               <button onClick={() => set({ stage: active ? undefined : (s.stage as Stage) })}
-                className={cn("group flex w-full items-center gap-4 text-left transition-opacity", f.stage && !active && "opacity-35")}>
-                <div className="min-w-0 flex-1">
-                  <div className={cn("mb-1 truncate font-medium", big ? "text-lg" : "text-[13px]")}>{s.stage}</div>
-                  <div className={cn("rounded-l-md transition-all group-hover:brightness-110", big ? "h-10" : "h-7", active && "outline-2 outline-offset-2 outline-primary")}
-                    style={{ width: `${w}%`, minWidth: s.count ? 2 : 0, background: `color-mix(in oklab, var(--primary) ${30 + (i / Math.max(data.length - 1, 1)) * 70}%, var(--card))`, clipPath: w ? `polygon(0 0, 100% 0, ${Math.min((next / w) * 100, 100)}% 100%, 0 100%)` : undefined }} />
+                title={`Ticket médio ${brl(ticket)} · ${pct(s.count / (data[0]?.count || 1))} do topo`}
+                className={cn("group block w-full text-center transition-opacity", f.stage && !active && "opacity-40")}>
+                <div className={cn("mb-1.5 flex items-baseline justify-center gap-2", big ? "text-xl" : "text-sm")}>
+                  <span className="font-semibold text-foreground">{s.stage}</span>
+                  <span className="text-subtle-foreground">·</span>
+                  <span className="font-semibold tabular-nums">{s.count}</span><span className="text-muted-foreground">negócios</span>
+                  <span className="text-subtle-foreground">·</span>
+                  <span className="font-semibold tabular-nums text-primary">{brl(s.value)}</span>
                 </div>
-                <div className="w-32 shrink-0 text-right">
-                  <div className={cn("font-semibold tabular-nums", big ? "text-2xl" : "text-sm")}>{s.count}<span className="ml-1 text-xs font-normal text-muted-foreground">negócios</span></div>
-                  <div className="text-xs tabular-nums text-muted-foreground">{brl(s.value)}</div>
-                </div>
+                <div className={cn("mx-auto transition-all group-hover:brightness-110", big ? "h-12" : "h-9")}
+                  style={{
+                    width: `${w}%`, minWidth: s.count ? 2 : 0,
+                    background: `color-mix(in oklab, var(--primary) ${28 + (i / n) * 72}%, var(--card))`,
+                    clipPath: w ? `polygon(0 0, 100% 0, ${100 - inset}% 100%, ${inset}% 100%)` : undefined,
+                    outline: active ? "2px solid var(--primary)" : undefined, outlineOffset: 3,
+                  }} />
               </button>
             </div>
           );
@@ -127,6 +145,7 @@ export function FunnelWidget({ f, set, big }: P) {
     </Card>
   );
 }
+
 
 export function RankingWidget({ f, set, big }: P) {
   const data = ranking(f);
