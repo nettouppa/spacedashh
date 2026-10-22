@@ -80,7 +80,7 @@ const passTone = (r: number) =>
 export function FunnelWidget({ f, set, big }: P) {
   const data = funnel(f);
   const top = data[0]?.count || 1;
-  const MIN = 18;
+  const MIN = 30;
   const widths = data.map((s) => Math.max((s.count / top) * 100, MIN));
   const last = data[data.length - 1];
   const overall = data[0]?.count ? (last?.count ?? 0) / data[0].count : 0;
@@ -94,31 +94,32 @@ export function FunnelWidget({ f, set, big }: P) {
         <div><div className="text-xs text-muted-foreground">Valor convertido</div><div className={cn("font-semibold tabular-nums", big ? "text-4xl" : "text-2xl")}>{brl(last?.value ?? 0)}</div></div>
         <div><div className="text-xs text-muted-foreground">Maior gargalo</div><div className={cn("font-semibold", big ? "text-xl" : "text-sm")}>{data[gap.i - 1]?.stage} → {data[gap.i]?.stage}</div><span className={cn("mt-0.5 inline-block rounded px-1.5 text-xs font-medium tabular-nums", passTone(gap.pass))}>{pct(gap.pass)}</span></div>
       </div>
-      <div className="space-y-0">
+      <div>
         {data.map((s, i) => {
           const w = widths[i]!;
-          const next = widths[i + 1] ?? w * 0.85;
-          const inset = ((w - next) / 2 / w) * 100;
+          const next = widths[i + 1] ?? w * 0.92;
           const active = f.stage === s.stage;
+          const strong = i >= 2;
           return (
             <div key={s.stage}>
               {i > 0 && (
-                <div className="flex h-6 items-center">
-                  <div className="flex-1" />
-                  <div className="w-44 pl-4"><span className={cn("inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-semibold tabular-nums", passTone(s.pass))}>↓ {pct(s.pass)} conversão</span></div>
+                <div className="flex h-7 items-center pl-3">
+                  <span className="mr-2 h-full w-px bg-border" />
+                  <span className={cn("inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-semibold tabular-nums", passTone(s.pass))}>↓ {pct(s.pass)}</span>
+                  <span className="ml-1.5 text-[11px] text-muted-foreground">de {data[i - 1]?.stage} para {s.stage}</span>
                 </div>
               )}
               <button onClick={() => set({ stage: active ? undefined : (s.stage as Stage) })}
-                className={cn("group flex w-full items-center text-left transition-opacity", f.stage && !active && "opacity-35")}>
-                <div className="flex flex-1 justify-center">
-                  <div className={cn("flex items-center justify-center bg-primary text-primary-foreground transition-all group-hover:brightness-110", rowH, active && "ring-2 ring-primary ring-offset-2 ring-offset-card")}
-                    style={{ width: `${w}%`, opacity: 0.3 + (i / Math.max(data.length - 1, 1)) * 0.7, clipPath: `polygon(0 0, 100% 0, ${100 - inset}% 100%, ${inset}% 100%)` }}>
-                    <span className={cn("font-semibold tabular-nums", big ? "text-2xl" : "text-sm", i < 2 && "text-foreground")}>{s.count}</span>
-                  </div>
+                className={cn("group flex w-full items-center gap-4 text-left transition-opacity", f.stage && !active && "opacity-35")}>
+                <div className="flex-1">
+                <div className={cn("flex items-center justify-between gap-2 rounded-l-md pl-3 pr-8 transition-all group-hover:brightness-110", rowH, active && "outline-2 outline-offset-2 outline-primary")}
+                  style={{ width: `${w}%`, background: `color-mix(in oklab, var(--primary) ${30 + (i / Math.max(data.length - 1, 1)) * 70}%, var(--card))`, clipPath: `polygon(0 0, 100% 0, ${(next / w) * 100}% 100%, 0 100%)` }}>
+                  <span className={cn("truncate font-medium", big ? "text-lg" : "text-[13px]", strong ? "text-primary-foreground" : "text-foreground")}>{s.stage}</span>
                 </div>
-                <div className="w-44 pl-4">
-                  <div className={cn("font-medium", big ? "text-lg" : "text-sm")}>{s.stage}</div>
-                  <div className="text-xs tabular-nums text-muted-foreground">{s.count} negócios · {brl(s.value)}</div>
+                </div>
+                <div className="w-32 shrink-0 text-right">
+                  <div className={cn("font-semibold tabular-nums", big ? "text-2xl" : "text-sm")}>{s.count}<span className="ml-1 text-xs font-normal text-muted-foreground">negócios</span></div>
+                  <div className="text-xs tabular-nums text-muted-foreground">{brl(s.value)}</div>
                 </div>
               </button>
             </div>
