@@ -27,17 +27,31 @@ export const Route = createFileRoute("/")({
 });
 
 const LAYOUT_KEY = "vsh-layout-v3";
+const SIZE_KEY = "vsh-sizes-v1";
 const ME = "s1"; // simulated logged-in seller
 
-function SortableItem({ id, edit, children, span }: { id: string; edit: boolean; children: React.ReactNode; span: string }) {
+type Size = 1 | 2 | 3;
+const SPAN: Record<Size, string> = { 1: "lg:col-span-1", 2: "lg:col-span-2", 3: "lg:col-span-3" };
+const SIZE_LABEL: Record<Size, string> = { 1: "1/3", 2: "2/3", 3: "Inteira" };
+const defaultSize = (span: string): Size => (span.includes("3") ? 3 : span.includes("2") ? 2 : 1);
+
+function SortableItem({ id, edit, children, size, onSize }: { id: string; edit: boolean; children: React.ReactNode; size: Size; onSize: (s: Size) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   return (
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={cn("relative", span, isDragging && "z-10 opacity-80", edit && "rounded-xl ring-2 ring-primary/40 ring-offset-2 ring-offset-background")}>
+      className={cn("relative", SPAN[size], isDragging && "z-10 opacity-80", edit && "rounded-xl ring-2 ring-primary/40 ring-offset-2 ring-offset-background")}>
       {edit && (
-        <button {...attributes} {...listeners} aria-label="Arrastar" className="absolute left-1/2 top-2 z-10 -translate-x-1/2 cursor-grab rounded-lg bg-primary px-3 py-1 text-primary-foreground active:cursor-grabbing">
-          <GripVertical className="size-4" />
-        </button>
+        <div className="absolute left-1/2 top-2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-lg border border-border bg-card p-1 shadow-soft">
+          <button {...attributes} {...listeners} aria-label="Arrastar" className="cursor-grab rounded-md bg-primary px-2 py-1 text-primary-foreground active:cursor-grabbing">
+            <GripVertical className="size-4" />
+          </button>
+          {([1, 2, 3] as Size[]).map((s) => (
+            <button key={s} onClick={() => onSize(s)} aria-label={`Largura ${SIZE_LABEL[s]}`}
+              className={cn("rounded-md px-2 py-1 text-xs font-medium", size === s ? "bg-primary-soft text-primary" : "text-muted-foreground hover:bg-muted")}>
+              {SIZE_LABEL[s]}
+            </button>
+          ))}
+        </div>
       )}
       {children}
     </div>
@@ -58,6 +72,7 @@ function Index() {
   const [f, setF] = useState<Filters>({ period: "month" });
   const [profile, setProfile] = useState<"manager" | "seller">("manager");
   const [order, setOrder] = useState<WidgetId[]>(DEFAULT_ORDER);
+  const [sizes, setSizes] = useState<Partial<Record<WidgetId, Size>>>({});
   const [edit, setEdit] = useState(false);
   const [saved, setSaved] = useState(false);
   const [ai, setAi] = useState(false);
@@ -65,6 +80,7 @@ function Index() {
 
   useEffect(() => {
     try { const s = JSON.parse(localStorage.getItem(LAYOUT_KEY) || "null"); if (Array.isArray(s) && s.length === DEFAULT_ORDER.length) setOrder(s); } catch { /* ignore */ }
+    try { const z = JSON.parse(localStorage.getItem(SIZE_KEY) || "null"); if (z && typeof z === "object") setSizes(z); } catch { /* ignore */ }
   }, []);
 
   const eff: Filters = profile === "seller" ? { ...f, sellerId: ME, team: undefined } : f;
@@ -78,7 +94,7 @@ function Index() {
     if (e.over && e.active.id !== e.over.id)
       setOrder((o) => arrayMove(o, o.indexOf(e.active.id as WidgetId), o.indexOf(e.over!.id as WidgetId)));
   };
-  const saveLayout = () => { localStorage.setItem(LAYOUT_KEY, JSON.stringify(order)); setSaved(true); setEdit(false); setTimeout(() => setSaved(false), 2000); };
+  const saveLayout = () => { localStorage.setItem(LAYOUT_KEY, JSON.stringify(order)); localStorage.setItem(SIZE_KEY, JSON.stringify(sizes)); setSaved(true); setEdit(false); setTimeout(() => setSaved(false), 2000); };
 
   const onAi = (a: AiAction) => {
     if (a.tvMode) setTv(true);
@@ -120,7 +136,7 @@ function Index() {
             <Select label="Todos vendedores" value={f.sellerId} onChange={(v) => set({ sellerId: v })} options={SELLERS.filter((s) => !f.team || s.team === f.team).map((s) => ({ v: s.id, l: s.name }))} />
           </>}
           {edit ? <>
-            <button onClick={() => setOrder(DEFAULT_ORDER)} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted"><RotateCcw className="size-3.5" />Padrão</button>
+            <button onClick={() => { setOrder(DEFAULT_ORDER); setSizes({}); }} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted"><RotateCcw className="size-3.5" />Padrão</button>
             <button onClick={saveLayout} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[13px] font-medium text-primary-foreground"><Save className="size-3.5" />Salvar layout</button>
           </> : (
             <button onClick={() => setEdit(true)} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted">
@@ -151,7 +167,7 @@ function Index() {
             {order.map((id) => {
               const W = WIDGETS[id];
               return (
-                <SortableItem key={id} id={id} edit={edit} span={W.span}>
+                <SortableItem key={id} id={id} edit={edit} size={sizes[id] ?? defaultSize(W.span)} onSize={(z) => setSizes((p) => ({ ...p, [id]: z }))}>
                   <W.C f={eff} set={setEff} />
                 </SortableItem>
               );
