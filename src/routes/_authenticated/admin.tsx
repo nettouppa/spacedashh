@@ -10,7 +10,7 @@ const meQuery = queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
 const adminQuery = queryOptions({ queryKey: ["admin"], queryFn: () => adminOverview() });
 
 export const Route = createFileRoute("/_authenticated/admin")({
-  head: () => ({ meta: [{ title: "Administração — Spacedash" }, { name: "description", content: "Gerencie empresas e convites do Spacedash." }] }),
+  head: () => ({ meta: [{ title: "Administração — Spacedash" }, { name: "description", content: "Gerencie empresas e convites do Spacedash." }, { property: "og:title", content: "Administração — Spacedash" }, { property: "og:description", content: "Gestão de empresas, convites e permissões do Spacedash." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   loader: ({ context }) => context.queryClient.ensureQueryData(meQuery),
   component: Admin,
 });
