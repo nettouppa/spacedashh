@@ -27,17 +27,31 @@ export const Route = createFileRoute("/")({
 });
 
 const LAYOUT_KEY = "vsh-layout-v3";
+const SIZE_KEY = "vsh-sizes-v1";
 const ME = "s1"; // simulated logged-in seller
 
-function SortableItem({ id, edit, children, span }: { id: string; edit: boolean; children: React.ReactNode; span: string }) {
+type Size = 1 | 2 | 3;
+const SPAN: Record<Size, string> = { 1: "lg:col-span-1", 2: "lg:col-span-2", 3: "lg:col-span-3" };
+const SIZE_LABEL: Record<Size, string> = { 1: "1/3", 2: "2/3", 3: "Inteira" };
+const defaultSize = (span: string): Size => (span.includes("3") ? 3 : span.includes("2") ? 2 : 1);
+
+function SortableItem({ id, edit, children, size, onSize }: { id: string; edit: boolean; children: React.ReactNode; size: Size; onSize: (s: Size) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   return (
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={cn("relative", span, isDragging && "z-10 opacity-80", edit && "rounded-xl ring-2 ring-primary/40 ring-offset-2 ring-offset-background")}>
+      className={cn("relative", SPAN[size], isDragging && "z-10 opacity-80", edit && "rounded-xl ring-2 ring-primary/40 ring-offset-2 ring-offset-background")}>
       {edit && (
-        <button {...attributes} {...listeners} aria-label="Arrastar" className="absolute left-1/2 top-2 z-10 -translate-x-1/2 cursor-grab rounded-lg bg-primary px-3 py-1 text-primary-foreground active:cursor-grabbing">
-          <GripVertical className="size-4" />
-        </button>
+        <div className="absolute left-1/2 top-2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-lg border border-border bg-card p-1 shadow-soft">
+          <button {...attributes} {...listeners} aria-label="Arrastar" className="cursor-grab rounded-md bg-primary px-2 py-1 text-primary-foreground active:cursor-grabbing">
+            <GripVertical className="size-4" />
+          </button>
+          {([1, 2, 3] as Size[]).map((s) => (
+            <button key={s} onClick={() => onSize(s)} aria-label={`Largura ${SIZE_LABEL[s]}`}
+              className={cn("rounded-md px-2 py-1 text-xs font-medium", size === s ? "bg-primary-soft text-primary" : "text-muted-foreground hover:bg-muted")}>
+              {SIZE_LABEL[s]}
+            </button>
+          ))}
+        </div>
       )}
       {children}
     </div>
