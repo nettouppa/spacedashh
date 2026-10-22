@@ -26,7 +26,7 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-const LAYOUT_KEY = "vsh-layout-v2";
+const LAYOUT_KEY = "vsh-layout-v3";
 const ME = "s1"; // simulated logged-in seller
 
 function SortableItem({ id, edit, children, span }: { id: string; edit: boolean; children: React.ReactNode; span: string }) {
