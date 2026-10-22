@@ -201,3 +201,10 @@
   .dash-grid { grid-template-columns: repeat(12, minmax(0, 1fr)); }
   .dash-span { min-width: 0; grid-column: span var(--span) / span var(--span); }
 }
+
+@keyframes atlas-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes atlas-dot { 0%, 80%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+@keyframes atlas-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--primary) 35%, transparent); } 50% { box-shadow: 0 0 0 6px color-mix(in oklab, var(--primary) 0%, transparent); } }
+@utility atlas-in { animation: atlas-in .28s ease-out both; }
+@utility atlas-dot { animation: atlas-dot 1.2s infinite ease-in-out; }
+@utility atlas-pulse { animation: atlas-pulse 1.6s infinite; }
