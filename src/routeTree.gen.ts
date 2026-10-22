@@ -14,6 +14,9 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedIntegrationsRouteImport } from './routes/_authenticated/integrations'
+import { Route as ApiPublicBitrixCallbackRouteImport } from './routes/api/public/bitrix/callback'
+import { Route as ApiPublicBitrixInstallRouteImport } from './routes/api/public/bitrix/install'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -39,18 +42,40 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedIntegrationsRoute =
+  AuthenticatedIntegrationsRouteImport.update({
+    id: '/integrations',
+    path: '/integrations',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const ApiPublicBitrixCallbackRoute = ApiPublicBitrixCallbackRouteImport.update({
+  id: '/api/public/bitrix/callback',
+  path: '/api/public/bitrix/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicBitrixInstallRoute = ApiPublicBitrixInstallRouteImport.update({
+  id: '/api/public/bitrix/install',
+  path: '/api/public/bitrix/install',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/integrations': typeof AuthenticatedIntegrationsRoute
+  '/api/public/bitrix/callback': typeof ApiPublicBitrixCallbackRoute
+  '/api/public/bitrix/install': typeof ApiPublicBitrixInstallRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/integrations': typeof AuthenticatedIntegrationsRoute
+  '/api/public/bitrix/callback': typeof ApiPublicBitrixCallbackRoute
+  '/api/public/bitrix/install': typeof ApiPublicBitrixInstallRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -59,12 +84,29 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/integrations': typeof AuthenticatedIntegrationsRoute
+  '/api/public/bitrix/callback': typeof ApiPublicBitrixCallbackRoute
+  '/api/public/bitrix/install': typeof ApiPublicBitrixInstallRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/admin' | '/dashboard'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/admin'
+    | '/dashboard'
+    | '/integrations'
+    | '/api/public/bitrix/callback'
+    | '/api/public/bitrix/install'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/admin' | '/dashboard'
+  to:
+    | '/'
+    | '/auth'
+    | '/admin'
+    | '/dashboard'
+    | '/integrations'
+    | '/api/public/bitrix/callback'
+    | '/api/public/bitrix/install'
   id:
     | '__root__'
     | '/'
@@ -72,12 +114,17 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
+    | '/_authenticated/integrations'
+    | '/api/public/bitrix/callback'
+    | '/api/public/bitrix/install'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicBitrixCallbackRoute: typeof ApiPublicBitrixCallbackRoute
+  ApiPublicBitrixInstallRoute: typeof ApiPublicBitrixInstallRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -117,17 +164,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/integrations': {
+      id: '/_authenticated/integrations'
+      path: '/integrations'
+      fullPath: '/integrations'
+      preLoaderRoute: typeof AuthenticatedIntegrationsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/bitrix/callback': {
+      id: '/api/public/bitrix/callback'
+      path: '/api/public/bitrix/callback'
+      fullPath: '/api/public/bitrix/callback'
+      preLoaderRoute: typeof ApiPublicBitrixCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/bitrix/install': {
+      id: '/api/public/bitrix/install'
+      path: '/api/public/bitrix/install'
+      fullPath: '/api/public/bitrix/install'
+      preLoaderRoute: typeof ApiPublicBitrixInstallRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedIntegrationsRoute: typeof AuthenticatedIntegrationsRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedIntegrationsRoute: AuthenticatedIntegrationsRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -137,6 +207,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicBitrixCallbackRoute: ApiPublicBitrixCallbackRoute,
+  ApiPublicBitrixInstallRoute: ApiPublicBitrixInstallRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
