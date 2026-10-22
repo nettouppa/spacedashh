@@ -188,7 +188,7 @@ export const WIDGETS = {
   ranking: { title: "Ranking", C: RankingWidget, span: "" },
   risk: { title: "Risco", C: RiskWidget, span: "" },
   loss: { title: "Perdas", C: LossWidget, span: "" },
-  pace: { title: "Ritmo", C: PaceWidget, span: "lg:col-span-2" },
+  pace: { title: "Ritmo", C: PaceWidget, span: "" },
 } as const;
 export type WidgetId = keyof typeof WIDGETS;
 export const DEFAULT_ORDER: WidgetId[] = ["funnel", "ranking", "risk", "pace", "loss"];
