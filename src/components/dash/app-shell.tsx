@@ -10,7 +10,7 @@ const NAV = [
   { icon: BarChart3, label: "Relatórios" },
 ];
 
-export function AppShell({ children, topRight, userName, userPhoto, compact = false, companyName, roleLabel, isAdmin, onSignOut }: { compact?: boolean; children: React.ReactNode; topRight: React.ReactNode; userName: string; userPhoto: string; companyName: string; roleLabel: string; isAdmin: boolean; onSignOut: () => void }) {
+export function AppShell({ children, topRight, userName, userPhoto, compact = false, companyName, roleLabel, isAdmin, onSignOut, page = "dashboard" }: { page?: "dashboard" | "integrations"; compact?: boolean; children: React.ReactNode; topRight: React.ReactNode; userName: string; userPhoto: string; companyName: string; roleLabel: string; isAdmin: boolean; onSignOut: () => void }) {
   return (
     <div className="min-h-screen bg-background">
       <aside className={cn("fixed inset-y-0 left-0 hidden flex-col border-r border-border bg-card transition-[width] duration-300 lg:flex", compact ? "w-16" : "w-60")}>
@@ -21,24 +21,24 @@ export function AppShell({ children, topRight, userName, userPhoto, compact = fa
         <nav className="flex-1 space-y-0.5 p-3">
           {!compact && <p className="px-2 pb-1 pt-2 text-[11px] font-medium text-subtle-foreground">Análise</p>}
           {NAV.map((n) => (
-            <a key={n.label} title={n.label} className={cn("flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm", n.active ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/60")}>
+            <Link to="/dashboard" key={n.label} title={n.label} className={cn("flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm", n.active && page === "dashboard" ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/60")}>
               <n.icon className="size-4" />{!compact && n.label}
-            </a>
+            </Link>
           ))}
           {compact ? <div className="my-3 border-t border-border" /> : <p className="px-2 pb-1 pt-5 text-[11px] font-medium text-subtle-foreground">Workspace</p>}
-          <a className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted/60"><Plug className="size-4" />{!compact && <>Integrações<span className="ml-auto flex items-center gap-1 text-[11px] text-success"><span className="size-1.5 rounded-full bg-success" />Bitrix24</span></>}</a>
+          <Link to="/integrations" title="Integrações" className={cn("flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm hover:bg-muted/60", page === "integrations" ? "bg-muted font-medium text-foreground" : "text-muted-foreground")}><Plug className="size-4" />{!compact && <>Integrações<span className="ml-auto text-[11px] text-muted-foreground">Bitrix24</span></>}</Link>
           <a className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted/60"><Settings className="size-4" />{!compact && "Configurações"}</a>
           {isAdmin && <Link to="/admin" title="Administração" className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted/60"><ShieldCheck className="size-4" />{!compact && "Administração"}</Link>}
         </nav>
         <div className="flex items-center gap-2.5 border-t border-border p-3">
-          <img src={userPhoto} alt="" className="size-7 rounded-full" />
+          {userPhoto ? <img src={userPhoto} alt="" className="size-7 rounded-full" /> : <span className="grid size-7 shrink-0 place-items-center rounded-full bg-muted text-xs font-semibold">{userName.charAt(0)}</span>}
           {!compact && <div className="min-w-0 flex-1 text-sm"><div className="truncate font-medium">{userName}</div><div className="truncate text-xs text-muted-foreground">{companyName} · {roleLabel}</div></div>}
           {!compact && <button onClick={onSignOut} title="Sair" aria-label="Sair" className="grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><LogOut className="size-4" /></button>}
         </div>
       </aside>
       <div className={cn("transition-[padding] duration-300", compact ? "lg:pl-16 lg:pr-[400px]" : "lg:pl-60")}>
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-card/95 px-4 backdrop-blur sm:px-6">
-          <div className="flex items-center gap-1.5 whitespace-nowrap text-sm text-muted-foreground">Dashboards<ChevronRight className="size-3.5" /><span className="font-medium text-foreground">CRM & Vendas</span></div>
+          <div className="flex items-center gap-1.5 whitespace-nowrap text-sm text-muted-foreground">{page === "integrations" ? "Integrações" : "Dashboards"}<ChevronRight className="size-3.5" /><span className="font-medium text-foreground">{page === "integrations" ? "Bitrix24" : "CRM & Vendas"}</span></div>
           <div className={cn("mx-auto hidden h-8 w-72 items-center gap-2 rounded-md border border-border bg-background px-2.5 text-sm text-subtle-foreground", compact ? "2xl:flex" : "md:flex")}>
             <Search className="size-3.5" />Buscar negócios, pessoas…<kbd className="ml-auto rounded border border-border px-1 text-[10px]">⌘K</kbd>
           </div>

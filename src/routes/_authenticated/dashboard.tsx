@@ -205,7 +205,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{profile === "manager" ? "Visão geral comercial" : `Meu desempenho · ${me.name}`}</h1>
-          <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground"><span className="size-1.5 rounded-full bg-success" />Sincronizado com Bitrix24 há 2 min</p>
+          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground"><span className="size-1.5 rounded-full bg-warning" />Dados de demonstração · Bitrix24 não conectado <Link to="/integrations" className="ml-1 text-primary hover:underline">Configurar integração</Link></p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Segmented value={f.period} onChange={(p: Period) => set({ period: p })} options={[{ v: "month", l: "Mês" }, { v: "quarter", l: "Trimestre" }, { v: "year", l: "Ano" }]} />
