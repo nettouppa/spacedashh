@@ -130,7 +130,7 @@ export function FunnelWidget({ f, set, big }: P) {
                   <span className="text-subtle-foreground">·</span>
                   <span className="font-semibold tabular-nums text-primary">{brl(s.value)}</span>
                 </div>
-                <div className={cn("mx-auto transition-all group-hover:brightness-110", big ? "h-12" : "h-9", active && "drop-shadow-[0_0_0_var(--primary)]")}
+                <div className={cn("mx-auto transition-all group-hover:brightness-110", big ? "h-12" : "h-9")}
                   style={{
                     width: `${w}%`, minWidth: s.count ? 2 : 0,
                     background: `color-mix(in oklab, var(--primary) ${28 + (i / n) * 72}%, var(--card))`,
