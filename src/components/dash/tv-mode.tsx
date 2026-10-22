@@ -22,7 +22,7 @@ export function TvMode({ f, set, onClose }: { f: Filters; set: SetFilter; onClos
   return (
     <div className="dark fixed inset-0 z-50 overflow-auto bg-background p-8 text-foreground">
       <div className="mb-6 flex items-center justify-between">
-        <div><div className="text-sm uppercase tracking-[0.3em] text-primary">Violeta Sales Hub · TV</div><h1 className="text-5xl font-semibold tracking-tight">{VIEWS[view]}</h1></div>
+        <div><div className="text-sm uppercase tracking-[0.3em] text-primary">Spacedash · TV</div><h1 className="text-5xl font-semibold tracking-tight">{VIEWS[view]}</h1></div>
         <div className="flex items-center gap-4">
           <div className="flex gap-2">{VIEWS.map((v, i) => <button key={v} onClick={() => setView(i)} className={`h-2.5 rounded-full transition-all ${i === view ? "w-10 bg-primary" : "w-2.5 bg-muted"}`} aria-label={v} />)}</div>
           <span className="flex items-center gap-1 text-sm text-muted-foreground"><RefreshCw className="size-4" />{tick.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>

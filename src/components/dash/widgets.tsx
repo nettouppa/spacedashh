@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ArrowDownRight, ArrowUpRight, MoreHorizontal } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { AtlasTrigger } from "./atlas";
 import { cn } from "@/lib/utils";
 import {
   atRisk, brl, funnel, goalFor, kpis, lossReasons, pace, pct, previousKpis, ranking, sellerName, type Filters, type Stage,
@@ -14,7 +15,7 @@ export function Card({ className, children, title, subtitle, right }: { classNam
       {title && (
         <header className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
           <div><h3 className="text-sm font-semibold">{title}</h3>{subtitle && <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>}</div>
-          {right ?? <MoreHorizontal className="size-4 text-subtle-foreground" />}
+          <div className="flex items-center gap-2">{right}<AtlasTrigger topic={title} /></div>
         </header>
       )}
       <div className="flex-1 p-5">{children}</div>
@@ -64,7 +65,7 @@ export function KpiStrip({ f, big }: P) {
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {items.map((it) => (
         <section key={it.label} className="rounded-xl border border-border bg-card p-5 shadow-soft">
-          <div className="flex items-center justify-between"><span className={cn("text-[13px] font-medium text-muted-foreground", big && "text-lg")}>{it.label}</span>{it.delta}</div>
+          <div className="flex items-center justify-between gap-2"><span className={cn("text-[13px] font-medium text-muted-foreground", big && "text-lg")}>{it.label}</span><div className="flex items-center gap-1">{it.delta}{!big && <AtlasTrigger topic={it.label} />}</div></div>
           <div className={cn("mt-2", num)}>{it.value}</div>
           {it.foot}
         </section>
