@@ -110,7 +110,7 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
   return (
     <aside className={cn("fixed inset-y-0 right-0 z-40 flex w-[min(400px,100vw)] flex-col border-l border-border bg-card text-card-foreground shadow-soft transition-transform duration-300 ease-out", open ? "translate-x-0" : "translate-x-[110%]")}>
       <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-        <span className={cn("grid size-9 place-items-center rounded-full bg-primary-soft text-primary ring-1 ring-primary/20", busy && "atlas-pulse")}><AtlasIcon className="size-5" /></span>
+        <span className={cn("grid size-10 place-items-center rounded-xl bg-primary-soft text-primary", busy && "atlas-pulse")}><AtlasIcon className="size-6" /></span>
         <div className="min-w-0 flex-1">
           <div className="text-sm font-semibold">Atlas</div>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><span className="size-1.5 rounded-full bg-success" />{busy ? "Analisando seus dados…" : "Online · lendo seus dados do Bitrix24"}</div>
@@ -122,8 +122,7 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
       <div className="flex-1 overflow-auto px-4 py-5">
         {msgs.length === 0 ? (
           <div className="atlas-in">
-            <div className="grid size-12 place-items-center rounded-2xl bg-primary-soft text-primary"><AtlasIcon className="size-7" /></div>
-            <h2 className="mt-4 text-xl font-semibold tracking-tight">{hello}, {userName}.</h2>
+            <h2 className="text-xl font-semibold tracking-tight">{hello}, {userName}.</h2>
             <p className="mt-1 text-sm text-muted-foreground">Analisei seu {{ month: "mês", quarter: "trimestre", year: "ano" }[f.period]}. Veja o que chamou minha atenção:</p>
             <div className="mt-4 space-y-2">
               {insights(f).map((it, i) => (
