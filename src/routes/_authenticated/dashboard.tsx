@@ -1,4 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { getMe, getLayout, saveLayout as saveLayoutFn } from "@/lib/account.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { useCallback, useEffect, useState } from "react";
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, rectSortingStrategy, useSortable, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
@@ -13,7 +17,8 @@ import { TvMode } from "@/components/dash/tv-mode";
 import { AppShell, Segmented } from "@/components/dash/app-shell";
 import type { AiAction } from "@/lib/ai.functions";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/dashboard")({
+  loader: ({ context }) => context.queryClient.ensureQueryData(meQuery),
   head: () => ({
     meta: [
       { title: "Spacedash — Painel de CRM e Vendas Bitrix24" },
@@ -27,9 +32,8 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-const LAYOUT_KEY = "vsh-layout-v3";
-const SIZE_KEY = "vsh-sizes-v2";
-const ME = "s1"; // simulated logged-in seller
+const meQuery = queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
+const COMPANY_KEY = "sd-company";
 
 // Widths are in 12-column grid units; presets map to 1/3, 2/3 and full row.
 type Size = number;
@@ -92,8 +96,41 @@ function Select<T extends string>({ value, onChange, options, label }: { value?:
 }
 
 function Index() {
+  const { data: me } = useSuspenseQuery(meQuery);
+  if (!me.memberships.length) return <NoAccess isAdmin={me.isAdmin} />;
+  return <Dashboard me={me} />;
+}
+
+async function signOut(nav: ReturnType<typeof useNavigate>) {
+  await supabase.auth.signOut();
+  void nav({ to: "/auth", replace: true });
+}
+
+function NoAccess({ isAdmin }: { isAdmin: boolean }) {
+  const nav = useNavigate();
+  return (
+    <div className="grid min-h-screen place-items-center bg-background px-4">
+      <div className="max-w-sm rounded-xl border border-border bg-card p-6 text-center">
+        <h1 className="text-lg font-semibold">Aguardando convite</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Sua conta ainda não está vinculada a nenhuma empresa. Peça ao administrador do Spacedash para liberar seu acesso.</p>
+        <div className="mt-5 flex justify-center gap-2">
+          {isAdmin && <Link to="/admin" className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">Administração</Link>}
+          <button onClick={() => signOut(nav)} className="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted">Sair</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
+  const nav = useNavigate();
+  const loadLayout = useServerFn(getLayout);
+  const persistLayout = useServerFn(saveLayoutFn);
+  const [companyId, setCompanyId] = useState(account.memberships[0]!.companyId);
+  const membership = account.memberships.find((m) => m.companyId === companyId) ?? account.memberships[0]!;
+  const profile: "manager" | "seller" = membership.role === "gestor" ? "manager" : "seller";
+  const ME = membership.sellerRef && SELLERS.some((s) => s.id === membership.sellerRef) ? membership.sellerRef : "s1";
   const [f, setF] = useState<Filters>({ period: "month" });
-  const [profile, setProfile] = useState<"manager" | "seller">("manager");
   const [order, setOrder] = useState<WidgetId[]>(DEFAULT_ORDER);
   const [sizes, setSizes] = useState<Partial<Record<WidgetId, Size>>>({});
   const [edit, setEdit] = useState(false);
@@ -104,9 +141,20 @@ function Index() {
   const atlasCtx = { hidden: edit, request: (mode: "explain" | "ask", topic: string) => { setAi(true); setAtlasReq({ mode, topic, id: Date.now() }); } };
 
   useEffect(() => {
-    try { const s = JSON.parse(localStorage.getItem(LAYOUT_KEY) || "null"); if (Array.isArray(s) && s.length === DEFAULT_ORDER.length) setOrder(s); } catch { /* ignore */ }
-    try { const z = JSON.parse(localStorage.getItem(SIZE_KEY) || "null"); if (z && typeof z === "object") setSizes(z); } catch { /* ignore */ }
-  }, []);
+    const saved = localStorage.getItem(COMPANY_KEY);
+    if (saved && account.memberships.some((m) => m.companyId === saved)) setCompanyId(saved);
+  }, [account.memberships]);
+  useEffect(() => {
+    localStorage.setItem(COMPANY_KEY, companyId);
+    let live = true;
+    void loadLayout({ data: { companyId } }).then((l) => {
+      if (!live) return;
+      const valid = l?.order && l.order.length === DEFAULT_ORDER.length && l.order.every((x) => DEFAULT_ORDER.includes(x as WidgetId));
+      setOrder(valid ? (l!.order as WidgetId[]) : DEFAULT_ORDER);
+      setSizes((l?.sizes ?? {}) as Partial<Record<WidgetId, Size>>);
+    }).catch(() => { /* keep defaults */ });
+    return () => { live = false; };
+  }, [companyId, loadLayout]);
 
   const eff: Filters = profile === "seller" ? { ...f, sellerId: ME, team: undefined } : f;
   const set = useCallback((patch: Partial<Filters>) => {
@@ -119,7 +167,7 @@ function Index() {
     if (e.over && e.active.id !== e.over.id)
       setOrder((o) => arrayMove(o, o.indexOf(e.active.id as WidgetId), o.indexOf(e.over!.id as WidgetId)));
   };
-  const saveLayout = () => { localStorage.setItem(LAYOUT_KEY, JSON.stringify(order)); localStorage.setItem(SIZE_KEY, JSON.stringify(sizes)); setSaved(true); setEdit(false); setTimeout(() => setSaved(false), 2000); };
+  const saveLayout = async () => { await persistLayout({ data: { companyId, layout: { order, sizes: sizes as Record<string, number> } } }); setSaved(true); setEdit(false); setTimeout(() => setSaved(false), 2000); };
 
   const onAi = (a: AiAction) => {
     if (a.tvMode) setTv(true);
@@ -142,9 +190,15 @@ function Index() {
   const me = SELLERS.find((s) => s.id === ME)!;
 
   return (
-    <AppShell compact={ai} userName={profile === "manager" ? "Gestor Comercial" : me.name} userPhoto={profile === "manager" ? "https://i.pravatar.cc/80?img=68" : me.photo}
+    <AppShell compact={ai} userName={account.name} userPhoto={profile === "manager" ? "https://i.pravatar.cc/80?img=68" : me.photo}
+      companyName={membership.companyName} roleLabel={profile === "manager" ? "Gestor" : "Colaborador"} isAdmin={account.isAdmin} onSignOut={() => signOut(nav)}
       topRight={<>
-        <Segmented value={profile} onChange={setProfile} options={[{ v: "manager", l: "Gestor" }, { v: "seller", l: "Vendedor" }]} />
+        {account.memberships.length > 1 && (
+          <select aria-label="Empresa" value={companyId} onChange={(e) => { setCompanyId(e.target.value); setF({ period: f.period }); }}
+            className="h-8 max-w-44 rounded-md border border-border bg-card px-2.5 text-[13px] font-medium outline-none focus:ring-2 focus:ring-primary">
+            {account.memberships.map((m) => <option key={m.companyId} value={m.companyId}>{m.companyName}</option>)}
+          </select>
+        )}
         <button onClick={() => setTv(true)} className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted"><Monitor className="size-3.5" />Modo TV</button>
         <button onClick={() => setAi((v) => !v)} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[13px] font-medium text-primary-foreground hover:bg-primary/90"><AtlasIcon className="size-4" />Atlas</button>
       </>}>
@@ -203,7 +257,7 @@ function Index() {
       </DndContext>
       </AtlasContext.Provider>
 
-      <AiPanel open={ai} onClose={() => setAi(false)} f={eff} onAction={onAi} request={atlasReq} onRestore={setF} userName={profile === "manager" ? "Gestor" : me.name.split(" ")[0]!} />
+      <AiPanel open={ai} onClose={() => setAi(false)} f={eff} onAction={onAi} request={atlasReq} onRestore={setF} userName={account.name.split(" ")[0]!} />
       {tv && <TvMode f={eff} set={setEff} onClose={() => setTv(false)} />}
     </AppShell>
   );
