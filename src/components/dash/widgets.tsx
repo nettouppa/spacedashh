@@ -110,12 +110,14 @@ export function FunnelWidget({ f, set, big }: P) {
                 </div>
               )}
               <button onClick={() => set({ stage: active ? undefined : (s.stage as Stage) })}
-                className={cn("group flex w-full items-center gap-3 text-left transition-opacity", f.stage && !active && "opacity-35")}>
-                <div className={cn("flex items-center justify-between gap-2 rounded-l-md bg-primary pl-3 pr-8 transition-all group-hover:brightness-110", rowH, active && "outline-2 outline-offset-2 outline-primary")}
-                  style={{ width: `${w}%`, opacity: 0.35 + (i / Math.max(data.length - 1, 1)) * 0.65, clipPath: `polygon(0 0, 100% 0, ${(next / w) * 100}% 100%, 0 100%)` }}>
+                className={cn("group flex w-full items-center gap-4 text-left transition-opacity", f.stage && !active && "opacity-35")}>
+                <div className="flex-1">
+                <div className={cn("flex items-center justify-between gap-2 rounded-l-md pl-3 pr-8 transition-all group-hover:brightness-110", rowH, active && "outline-2 outline-offset-2 outline-primary")}
+                  style={{ width: `${w}%`, background: `color-mix(in oklab, var(--primary) ${30 + (i / Math.max(data.length - 1, 1)) * 70}%, var(--card))`, clipPath: `polygon(0 0, 100% 0, ${(next / w) * 100}% 100%, 0 100%)` }}>
                   <span className={cn("truncate font-medium", big ? "text-lg" : "text-[13px]", strong ? "text-primary-foreground" : "text-foreground")}>{s.stage}</span>
                 </div>
-                <div className="shrink-0">
+                </div>
+                <div className="w-32 shrink-0 text-right">
                   <div className={cn("font-semibold tabular-nums", big ? "text-2xl" : "text-sm")}>{s.count}<span className="ml-1 text-xs font-normal text-muted-foreground">negócios</span></div>
                   <div className="text-xs tabular-nums text-muted-foreground">{brl(s.value)}</div>
                 </div>
