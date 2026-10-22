@@ -4,6 +4,7 @@ import { z } from "zod";
 const Input = z.object({
   messages: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().max(4000) })).max(30),
   context: z.string().max(12000),
+  voice: z.boolean().optional(),
 });
 
 export type AiAction = {
@@ -16,7 +17,10 @@ export const askAssistant = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const key = process.env['LOVABLE_API_KEY'];
     if (!key) return { reply: "Assistente indisponível no momento.", action: null as AiAction | null };
-    const system = `Você é o analista de vendas do painel Spacedash (dados do CRM Bitrix24). Responda em português, de forma objetiva, usando markdown curto. Use APENAS os dados do contexto abaixo. Quando o usuário pedir para filtrar, mostrar, focar, limpar ou abrir modo TV, chame a ferramenta apply_dashboard_action. Para remover um filtro específico envie null.\n\nCONTEXTO:\n${data.context}`;
+    const style = data.voice
+      ? "Você está numa conversa por VOZ: responda em 1 a 3 frases curtas e naturais, sem markdown, sem listas, sem tabelas, sem emojis. Escreva valores por extenso de forma falável (ex: 230 mil reais)."
+      : "Responda de forma objetiva, usando markdown curto.";
+    const system = `Você é Atlas, o copiloto de vendas do painel Spacedash (dados do CRM Bitrix24). Responda em português. ${style} Use APENAS os dados do contexto abaixo. Quando o usuário pedir para filtrar, mostrar, focar, limpar ou abrir modo TV, chame a ferramenta apply_dashboard_action e inclua em reply uma confirmação curta. Para remover um filtro específico envie null.\n\nCONTEXTO:\n${data.context}`;
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
