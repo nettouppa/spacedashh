@@ -21,7 +21,7 @@ export const SELLERS: Seller[] = [
 export type Deal = {
   id: string; title: string; company: string; sellerId: string; team: string;
   stage: Stage; status: "open" | "won" | "lost"; value: number;
-  createdAt: Date; closedAt?: Date; lossReason?: string; lastActivityDays: number;
+  createdAt: Date; closedAt?: Date | undefined; lossReason?: string | undefined; lastActivityDays: number;
 };
 
 function rng(seed: number) {
@@ -55,7 +55,7 @@ export const DEALS: Deal[] = (() => {
 
 export type Period = "month" | "quarter" | "year";
 export type Filters = {
-  period: Period; company?: string; team?: string; sellerId?: string; stage?: Stage; lossReason?: string;
+  period: Period; company?: string | undefined; team?: string | undefined; sellerId?: string | undefined; stage?: Stage | undefined; lossReason?: string | undefined;
 };
 
 export function periodStart(p: Period) {

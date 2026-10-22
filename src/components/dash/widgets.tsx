@@ -5,9 +5,9 @@ import {
 } from "@/lib/crm-data";
 
 export type SetFilter = (patch: Partial<Filters>) => void;
-type P = { f: Filters; set: SetFilter; big?: boolean };
+type P = { f: Filters; set: SetFilter; big?: boolean | undefined };
 
-export function Card({ className, children, title, action }: { className?: string; children: React.ReactNode; title?: string; action?: React.ReactNode }) {
+export function Card({ className, children, title, action }: { className?: string | undefined; children: React.ReactNode; title?: string | undefined; action?: React.ReactNode | undefined }) {
   return (
     <div className={cn("h-full rounded-[2rem] bg-card p-6 text-card-foreground shadow-soft", className)}>
       {title && (

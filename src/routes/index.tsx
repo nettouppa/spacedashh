@@ -43,7 +43,7 @@ function SortableItem({ id, edit, children, span }: { id: string; edit: boolean;
   );
 }
 
-function Select<T extends string>({ value, onChange, options, label }: { value?: T; onChange: (v?: T) => void; options: { v: T; l: string }[]; label: string }) {
+function Select<T extends string>({ value, onChange, options, label }: { value?: T | undefined; onChange: (v?: T) => void; options: { v: T; l: string }[]; label: string }) {
   return (
     <select aria-label={label} value={value ?? ""} onChange={(e) => onChange((e.target.value || undefined) as T | undefined)}
       className="h-10 rounded-full border-0 bg-card px-4 text-sm shadow-soft outline-none focus:ring-2 focus:ring-primary">

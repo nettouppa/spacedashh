@@ -7,8 +7,8 @@ const Input = z.object({
 });
 
 export type AiAction = {
-  period?: "month" | "quarter" | "year"; company?: string | null; team?: string | null;
-  sellerId?: string | null; stage?: string | null; lossReason?: string | null; clear?: boolean; tvMode?: boolean;
+  period?: "month" | "quarter" | "year" | undefined; company?: string | null | undefined; team?: string | null | undefined;
+  sellerId?: string | null | undefined; stage?: string | null | undefined; lossReason?: string | null | undefined; clear?: boolean | undefined; tvMode?: boolean | undefined;
 };
 
 export const askAssistant = createServerFn({ method: "POST" })
@@ -50,7 +50,7 @@ export const askAssistant = createServerFn({ method: "POST" })
     const json = await res.json();
     const msg = json.choices?.[0]?.message;
     const call = msg?.tool_calls?.[0];
-    let action: (AiAction & { reply?: string }) | null = null;
+    let action: (AiAction & { reply?: string | undefined }) | null = null;
     if (call) { try { action = JSON.parse(call.function.arguments); } catch { action = null; } }
     return { reply: msg?.content || action?.reply || "Filtros aplicados.", action: action as AiAction | null };
   });
