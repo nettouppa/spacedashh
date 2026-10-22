@@ -142,10 +142,10 @@ function Index() {
   const me = SELLERS.find((s) => s.id === ME)!;
 
   return (
-    <AppShell userName={profile === "manager" ? "Gestor Comercial" : me.name} userPhoto={profile === "manager" ? "https://i.pravatar.cc/80?img=68" : me.photo}
+    <AppShell compact={ai} userName={profile === "manager" ? "Gestor Comercial" : me.name} userPhoto={profile === "manager" ? "https://i.pravatar.cc/80?img=68" : me.photo}
       topRight={<>
         <Segmented value={profile} onChange={setProfile} options={[{ v: "manager", l: "Gestor" }, { v: "seller", l: "Vendedor" }]} />
-        <button onClick={() => setTv(true)} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted"><Monitor className="size-3.5" />Modo TV</button>
+        <button onClick={() => setTv(true)} className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted"><Monitor className="size-3.5" />Modo TV</button>
         <button onClick={() => setAi((v) => !v)} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[13px] font-medium text-primary-foreground hover:bg-primary/90"><AtlasIcon className="size-4" />Atlas</button>
       </>}>
       <div className="flex flex-wrap items-end justify-between gap-4">
