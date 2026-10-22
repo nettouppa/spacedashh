@@ -129,8 +129,8 @@ export function FunnelWidget({ f, set, big }: P) {
                 <button key={s.stage} onClick={() => set({ stage: f.stage === s.stage ? undefined : (s.stage as Stage) })}
                   className={cn("border-l border-border px-4 pb-3 text-left transition-opacity first:border-l-0", f.stage && f.stage !== s.stage && "opacity-40")}>
                   <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><span className="size-2 rounded-full" style={{ background: `color-mix(in oklab, var(--primary) ${35 + (i / n) * 65}%, var(--card))` }} />{s.stage}</div>
-                  <div className={cn("mt-1 font-semibold tracking-tight tabular-nums", big ? "text-4xl" : "text-2xl")}>{s.count}<span className="ml-1 text-xs font-normal text-muted-foreground">negócios</span></div>
-                  <div className={cn("tabular-nums font-medium text-primary", big ? "text-xl" : "text-sm")}>{brl(s.value)}</div>
+                  <div className={cn("mt-1 whitespace-nowrap font-semibold tracking-tight tabular-nums", big ? "text-4xl" : "text-xl")}>{s.count}<span className="ml-1 text-xs font-normal text-muted-foreground">negócios</span></div>
+                  <div className={cn("whitespace-nowrap tabular-nums font-medium text-primary", big ? "text-xl" : "text-sm")}>{brl(s.value)}</div>
                 </button>
               ))}
             </div>
@@ -157,9 +157,9 @@ export function FunnelWidget({ f, set, big }: P) {
               {data.map((s, i) => {
                 const lost = i < data.length - 1 ? s.count - (data[i + 1]?.count ?? 0) : 0;
                 return (
-                  <div key={s.stage} className="border-l border-border px-4 text-xs first:border-l-0">
+                  <div key={s.stage} className="whitespace-nowrap border-l border-border px-4 text-xs first:border-l-0">
                     {i < data.length - 1
-                      ? <><span className="font-semibold tabular-nums text-danger">−{lost}</span> <span className="text-muted-foreground">não avançaram</span></>
+                      ? <><span className="font-semibold tabular-nums text-danger">−{lost}</span> <span className="text-muted-foreground">saíram</span></>
                       : <span className="font-semibold text-success">Ticket {brl(s.count ? s.value / s.count : 0)}</span>}
                   </div>
                 );
