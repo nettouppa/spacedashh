@@ -72,6 +72,7 @@ function Index() {
   const [f, setF] = useState<Filters>({ period: "month" });
   const [profile, setProfile] = useState<"manager" | "seller">("manager");
   const [order, setOrder] = useState<WidgetId[]>(DEFAULT_ORDER);
+  const [sizes, setSizes] = useState<Partial<Record<WidgetId, Size>>>({});
   const [edit, setEdit] = useState(false);
   const [saved, setSaved] = useState(false);
   const [ai, setAi] = useState(false);
@@ -79,6 +80,7 @@ function Index() {
 
   useEffect(() => {
     try { const s = JSON.parse(localStorage.getItem(LAYOUT_KEY) || "null"); if (Array.isArray(s) && s.length === DEFAULT_ORDER.length) setOrder(s); } catch { /* ignore */ }
+    try { const z = JSON.parse(localStorage.getItem(SIZE_KEY) || "null"); if (z && typeof z === "object") setSizes(z); } catch { /* ignore */ }
   }, []);
 
   const eff: Filters = profile === "seller" ? { ...f, sellerId: ME, team: undefined } : f;
@@ -92,7 +94,7 @@ function Index() {
     if (e.over && e.active.id !== e.over.id)
       setOrder((o) => arrayMove(o, o.indexOf(e.active.id as WidgetId), o.indexOf(e.over!.id as WidgetId)));
   };
-  const saveLayout = () => { localStorage.setItem(LAYOUT_KEY, JSON.stringify(order)); setSaved(true); setEdit(false); setTimeout(() => setSaved(false), 2000); };
+  const saveLayout = () => { localStorage.setItem(LAYOUT_KEY, JSON.stringify(order)); localStorage.setItem(SIZE_KEY, JSON.stringify(sizes)); setSaved(true); setEdit(false); setTimeout(() => setSaved(false), 2000); };
 
   const onAi = (a: AiAction) => {
     if (a.tvMode) setTv(true);
@@ -165,7 +167,7 @@ function Index() {
             {order.map((id) => {
               const W = WIDGETS[id];
               return (
-                <SortableItem key={id} id={id} edit={edit} span={W.span}>
+                <SortableItem key={id} id={id} edit={edit} size={sizes[id] ?? defaultSize(W.span)} onSize={(z) => setSizes((p) => ({ ...p, [id]: z }))}>
                   <W.C f={eff} set={setEff} />
                 </SortableItem>
               );
