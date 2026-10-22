@@ -3,12 +3,13 @@ import { useCallback, useEffect, useState } from "react";
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, rectSortingStrategy, useSortable, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Bell, GripVertical, LayoutGrid, Monitor, Sparkles, X, Save, RotateCcw, Check } from "lucide-react";
+import { GripVertical, LayoutGrid, Monitor, Sparkles, X, Save, RotateCcw, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { COMPANIES, SELLERS, TEAMS, sellerName, type Filters, type Period, type Stage } from "@/lib/crm-data";
 import { DEFAULT_ORDER, KpiStrip, WIDGETS, type WidgetId } from "@/components/dash/widgets";
 import { AiPanel } from "@/components/dash/ai-panel";
 import { TvMode } from "@/components/dash/tv-mode";
+import { AppShell, Segmented } from "@/components/dash/app-shell";
 import type { AiAction } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/")({
@@ -25,14 +26,14 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-const LAYOUT_KEY = "vsh-layout-v1";
+const LAYOUT_KEY = "vsh-layout-v2";
 const ME = "s1"; // simulated logged-in seller
 
 function SortableItem({ id, edit, children, span }: { id: string; edit: boolean; children: React.ReactNode; span: string }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   return (
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={cn("relative", span, isDragging && "z-10 opacity-80", edit && "rounded-2xl ring-2 ring-primary/40")}>
+      className={cn("relative", span, isDragging && "z-10 opacity-80", edit && "rounded-xl ring-2 ring-primary/40 ring-offset-2 ring-offset-background")}>
       {edit && (
         <button {...attributes} {...listeners} aria-label="Arrastar" className="absolute left-1/2 top-2 z-10 -translate-x-1/2 cursor-grab rounded-lg bg-primary px-3 py-1 text-primary-foreground active:cursor-grabbing">
           <GripVertical className="size-4" />
@@ -46,7 +47,7 @@ function SortableItem({ id, edit, children, span }: { id: string; edit: boolean;
 function Select<T extends string>({ value, onChange, options, label }: { value?: T | undefined; onChange: (v?: T) => void; options: { v: T; l: string }[]; label: string }) {
   return (
     <select aria-label={label} value={value ?? ""} onChange={(e) => onChange((e.target.value || undefined) as T | undefined)}
-      className="h-10 rounded-full border border-border bg-card px-4 text-sm font-medium outline-none focus:ring-2 focus:ring-primary">
+      className="h-8 rounded-md border border-border bg-card px-2.5 text-[13px] font-medium outline-none focus:ring-2 focus:ring-primary">
       <option value="">{label}</option>
       {options.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
     </select>
@@ -100,88 +101,68 @@ function Index() {
   const me = SELLERS.find((s) => s.id === ME)!;
 
   return (
-    <div className="min-h-screen bg-background p-3 sm:p-6">
-      <div className="mx-auto max-w-[1500px] p-2 sm:p-4">
-        {/* Top bar */}
-        <header className="flex flex-wrap items-center justify-between gap-4">
-          <div className="text-2xl font-extrabold tracking-tight">Violeta<span className="text-primary">.</span></div>
-          <nav className="hidden items-center gap-1 rounded-full border border-border bg-card p-1 md:flex">
-            {(["month", "quarter", "year"] as Period[]).map((p) => (
-              <button key={p} onClick={() => set({ period: p })} className={cn("rounded-full px-5 py-2 text-sm transition", f.period === p ? "bg-primary font-semibold text-primary-foreground" : "hover:bg-muted")}>
-                {{ month: "Mês", quarter: "Trimestre", year: "Ano" }[p]}
-              </button>
-            ))}
-          </nav>
-          <div className="flex items-center gap-2">
-            <div className="flex rounded-full border border-border bg-card p-1">
-              {(["manager", "seller"] as const).map((p) => (
-                <button key={p} onClick={() => setProfile(p)} className={cn("rounded-full px-4 py-2 text-sm", profile === p ? "bg-primary-soft font-semibold text-accent-foreground" : "text-muted-foreground")}>
-                  {p === "manager" ? "Gestor" : "Vendedor"}
-                </button>
-              ))}
-            </div>
-            <button onClick={() => setTv(true)} className="flex h-11 items-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-medium"><Monitor className="size-4" />Modo TV</button>
-            <button onClick={() => setAi((v) => !v)} className="flex h-11 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-glow"><Sparkles className="size-4" />Assistente IA</button>
-            <span className="grid size-11 place-items-center rounded-full border border-border bg-card"><Bell className="size-4" /></span>
-          </div>
-        </header>
-
-        <div className="mt-8 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-sm text-muted-foreground">Bitrix24 · sincronizado há 2 min</p>
-            <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">{profile === "manager" ? "Bem-vindo, " : "Olá, "}<span className="highlight">{profile === "manager" ? "Gestor" : me.name.split(" ")[0]}</span></h1>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Select label="Todas empresas" value={f.company} onChange={(v) => set({ company: v })} options={COMPANIES.map((c) => ({ v: c, l: c }))} />
-            {profile === "manager" && <>
-              <Select label="Todas equipes" value={f.team} onChange={(v) => set({ team: v, sellerId: undefined })} options={TEAMS.map((t) => ({ v: t, l: t }))} />
-              <Select label="Todos vendedores" value={f.sellerId} onChange={(v) => set({ sellerId: v })} options={SELLERS.filter((s) => !f.team || s.team === f.team).map((s) => ({ v: s.id, l: s.name }))} />
-            </>}
-            {edit ? <>
-              <button onClick={() => { setOrder(DEFAULT_ORDER); }} className="flex h-10 items-center gap-1 rounded-full border border-border bg-card px-4 text-sm"><RotateCcw className="size-4" />Padrão</button>
-              <button onClick={saveLayout} className="flex h-10 items-center gap-1 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-glow"><Save className="size-4" />Salvar layout</button>
-            </> : (
-              <button onClick={() => setEdit(true)} className="flex h-10 items-center gap-1 rounded-full border border-border bg-card px-4 text-sm font-medium">
-                {saved ? <><Check className="size-4 text-primary" />Salvo</> : <><LayoutGrid className="size-4" />Organizar</>}
-              </button>
-            )}
-          </div>
+    <AppShell userName={profile === "manager" ? "Gestor Comercial" : me.name} userPhoto={profile === "manager" ? "https://i.pravatar.cc/80?img=68" : me.photo}
+      topRight={<>
+        <Segmented value={profile} onChange={setProfile} options={[{ v: "manager", l: "Gestor" }, { v: "seller", l: "Vendedor" }]} />
+        <button onClick={() => setTv(true)} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted"><Monitor className="size-3.5" />Modo TV</button>
+        <button onClick={() => setAi((v) => !v)} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[13px] font-medium text-primary-foreground hover:bg-primary/90"><Sparkles className="size-3.5" />Copilot</button>
+      </>}>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{profile === "manager" ? "Visão geral comercial" : `Meu desempenho · ${me.name}`}</h1>
+          <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground"><span className="size-1.5 rounded-full bg-success" />Sincronizado com Bitrix24 há 2 min</p>
         </div>
-
-        {/* Active filter chips */}
-        {chips.length > 0 && (
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            {chips.map((c) => (
-              <span key={c.k} className="flex items-center gap-1.5 rounded-full bg-primary-soft py-1 pl-3 pr-1 text-sm font-medium text-foreground">
-                {c.label}
-                <button onClick={() => set({ [c.k]: undefined } as Partial<Filters>)} aria-label="Remover filtro" className="grid size-6 place-items-center rounded-full bg-card"><X className="size-3" /></button>
-              </span>
-            ))}
-            <button onClick={() => setF({ period: f.period })} className="text-sm text-muted-foreground underline-offset-4 hover:underline">Limpar tudo</button>
-          </div>
-        )}
-
-        <div className="mt-6"><KpiStrip f={eff} set={setEff} /></div>
-
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-          <SortableContext items={order} strategy={rectSortingStrategy}>
-            <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-3">
-              {order.map((id) => {
-                const W = WIDGETS[id];
-                return (
-                  <SortableItem key={id} id={id} edit={edit} span={W.span}>
-                    <W.C f={eff} set={setEff} />
-                  </SortableItem>
-                );
-              })}
-            </div>
-          </SortableContext>
-        </DndContext>
+        <div className="flex flex-wrap items-center gap-2">
+          <Segmented value={f.period} onChange={(p: Period) => set({ period: p })} options={[{ v: "month", l: "Mês" }, { v: "quarter", l: "Trimestre" }, { v: "year", l: "Ano" }]} />
+          <Select label="Todas empresas" value={f.company} onChange={(v) => set({ company: v })} options={COMPANIES.map((c) => ({ v: c, l: c }))} />
+          {profile === "manager" && <>
+            <Select label="Todas equipes" value={f.team} onChange={(v) => set({ team: v, sellerId: undefined })} options={TEAMS.map((t) => ({ v: t, l: t }))} />
+            <Select label="Todos vendedores" value={f.sellerId} onChange={(v) => set({ sellerId: v })} options={SELLERS.filter((s) => !f.team || s.team === f.team).map((s) => ({ v: s.id, l: s.name }))} />
+          </>}
+          {edit ? <>
+            <button onClick={() => setOrder(DEFAULT_ORDER)} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted"><RotateCcw className="size-3.5" />Padrão</button>
+            <button onClick={saveLayout} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[13px] font-medium text-primary-foreground"><Save className="size-3.5" />Salvar layout</button>
+          </> : (
+            <button onClick={() => setEdit(true)} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted">
+              {saved ? <><Check className="size-3.5 text-success" />Salvo</> : <><LayoutGrid className="size-3.5" />Personalizar</>}
+            </button>
+          )}
+        </div>
       </div>
+
+      {chips.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
+          <span className="text-xs font-medium text-muted-foreground">Filtros ativos</span>
+          {chips.map((c) => (
+            <span key={c.k} className="inline-flex items-center gap-1 rounded-md border border-primary/20 bg-primary-soft py-0.5 pl-2 pr-0.5 text-xs font-medium text-accent-foreground">
+              {c.label}
+              <button onClick={() => set({ [c.k]: undefined } as Partial<Filters>)} aria-label="Remover filtro" className="grid size-5 place-items-center rounded hover:bg-card"><X className="size-3" /></button>
+            </span>
+          ))}
+          <button onClick={() => setF({ period: f.period })} className="ml-auto text-xs font-medium text-muted-foreground hover:text-foreground">Limpar tudo</button>
+        </div>
+      )}
+
+      <div className="mt-5"><KpiStrip f={eff} set={setEff} /></div>
+
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+        <SortableContext items={order} strategy={rectSortingStrategy}>
+          <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+            {order.map((id) => {
+              const W = WIDGETS[id];
+              return (
+                <SortableItem key={id} id={id} edit={edit} span={W.span}>
+                  <W.C f={eff} set={setEff} />
+                </SortableItem>
+              );
+            })}
+          </div>
+        </SortableContext>
+      </DndContext>
 
       <AiPanel open={ai} onClose={() => setAi(false)} f={eff} onAction={onAi} />
       {tv && <TvMode f={eff} set={setEff} onClose={() => setTv(false)} />}
-    </div>
+    </AppShell>
   );
 }
 

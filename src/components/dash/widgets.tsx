@@ -1,109 +1,134 @@
-import { AlertTriangle, Clock } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  atRisk, brl, funnel, kpis, lossReasons, pace, pct, ranking, sellerName, type Filters, type Stage,
+  atRisk, brl, funnel, goalFor, kpis, lossReasons, pace, pct, previousKpis, ranking, sellerName, type Filters, type Stage,
 } from "@/lib/crm-data";
 
 export type SetFilter = (patch: Partial<Filters>) => void;
 type P = { f: Filters; set: SetFilter; big?: boolean | undefined };
 
-export function Tag({ children, tone = "primary" }: { children: React.ReactNode; tone?: "primary" | "danger" | "muted" }) {
+export function Card({ className, children, title, subtitle, right }: { className?: string; children: React.ReactNode; title?: string; subtitle?: string; right?: React.ReactNode }) {
   return (
-    <span className={cn("inline-flex rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]",
-      tone === "primary" && "bg-primary-soft text-accent-foreground",
-      tone === "danger" && "bg-danger-soft text-danger",
-      tone === "muted" && "bg-muted text-muted-foreground")}>{children}</span>
+    <section className={cn("flex h-full flex-col rounded-xl border border-border bg-card text-card-foreground shadow-soft", className)}>
+      {title && (
+        <header className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
+          <div><h3 className="text-sm font-semibold">{title}</h3>{subtitle && <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>}</div>
+          {right ?? <MoreHorizontal className="size-4 text-subtle-foreground" />}
+        </header>
+      )}
+      <div className="flex-1 p-5">{children}</div>
+    </section>
   );
 }
 
-export function Card({ className, children, title, tag, right }: { className?: string; children: React.ReactNode; title?: string; tag?: React.ReactNode; right?: React.ReactNode }) {
+function Delta({ cur, prev, invert = false }: { cur: number; prev: number; invert?: boolean }) {
+  if (!prev) return <span className="text-xs text-subtle-foreground">sem base</span>;
+  const d = (cur - prev) / prev;
+  const good = invert ? d < 0 : d >= 0;
+  const Icon = d >= 0 ? ArrowUpRight : ArrowDownRight;
   return (
-    <div className={cn("h-full rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-soft", className)}>
-      {title && (
-        <div className="mb-5 flex items-start justify-between gap-3">
-          <div className="space-y-2">{tag}<h3 className="text-lg font-bold tracking-tight">{title}</h3></div>
-          {right}
-        </div>
-      )}
-      {children}
-    </div>
+    <span className={cn("inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs font-medium tabular-nums", good ? "bg-success-soft text-success" : "bg-danger-soft text-danger")}>
+      <Icon className="size-3" />{Math.abs(Math.round(d * 100))}%
+    </span>
+  );
+}
+
+function Spark({ data, className }: { data: number[]; className?: string }) {
+  const max = Math.max(...data, 1), w = 100, h = 32;
+  const pts = data.map((v, i) => [(i / Math.max(data.length - 1, 1)) * w, h - (v / max) * (h - 4) - 2] as const);
+  const line = pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className={cn("h-8 w-full text-primary", className)}>
+      <path d={`${line} L${w},${h} L0,${h} Z`} fill="currentColor" opacity="0.08" />
+      <path d={line} fill="none" stroke="currentColor" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+    </svg>
   );
 }
 
 export function KpiStrip({ f, big }: P) {
-  const k = kpis(f);
-  const num = cn("font-bold tracking-tight tabular-nums", big ? "text-6xl" : "text-3xl");
+  const k = kpis(f), p = previousKpis(f);
+  const trend = pace(f).map((d) => d.value);
+  const num = cn("font-semibold tracking-tight tabular-nums", big ? "text-6xl" : "text-[28px] leading-9");
+  const items = [
+    { label: "Receita realizada", value: brl(k.revenue), delta: <Delta cur={k.revenue} prev={p.revenue} />, foot: (
+      <div className="mt-3">
+        <div className="flex justify-between text-xs text-muted-foreground"><span>{pct(k.goalPct)} da meta</span><span>{brl(k.goal)}</span></div>
+        <div className="mt-1.5 h-1.5 rounded-full bg-muted"><div className="h-1.5 rounded-full bg-primary" style={{ width: `${Math.min(k.goalPct, 1) * 100}%` }} /></div>
+      </div>) },
+    { label: "Ticket médio", value: brl(k.ticket), delta: <Delta cur={k.ticket} prev={p.ticket} />, foot: <Spark data={trend} className="mt-3" /> },
+    { label: "Negócios abertos", value: String(k.openCount), delta: <span className="text-xs text-muted-foreground">{brl(k.openValue)}</span>, foot: <Spark data={trend.map((_, i) => k.openCount * (0.8 + ((i * 37) % 9) / 30))} className="mt-3" /> },
+    { label: "Taxa de conversão", value: pct(k.conversion), delta: <Delta cur={k.conversion} prev={p.conversion} />, foot: <Spark data={trend.map((v) => v * (0.6 + k.conversion))} className="mt-3" /> },
+  ];
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <Card className="sm:col-span-2 lg:col-span-1">
-        <Tag>Faturado vs. meta</Tag>
-        <div className={cn("mt-3", num)}>{brl(k.revenue)}</div>
-        <div className="mt-3 h-2.5 rounded-full bg-muted">
-          <div className="h-2.5 rounded-full bg-primary" style={{ width: `${Math.min(k.goalPct, 1) * 100}%` }} />
-        </div>
-        <div className="mt-2 flex justify-between text-sm text-muted-foreground"><span className="font-semibold text-foreground">{pct(k.goalPct)} da meta</span><span>Meta {brl(k.goal)}</span></div>
-      </Card>
-      <Card><Tag tone="muted">Ticket médio</Tag><div className={cn("mt-3", num)}>{brl(k.ticket)}</div><p className="mt-2 text-sm text-muted-foreground">{k.wonCount} negócios ganhos</p></Card>
-      <Card><Tag tone="muted">Negócios abertos</Tag><div className={cn("mt-3", num)}>{k.openCount}</div><p className="mt-2 text-sm text-muted-foreground">{brl(k.openValue)} em pipeline</p></Card>
-      <Card><Tag tone="muted">Conversão</Tag><div className={cn("mt-3", num)}>{pct(k.conversion)}</div><p className="mt-2 text-sm text-muted-foreground">ganhos ÷ (ganhos + perdidos)</p></Card>
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {items.map((it) => (
+        <section key={it.label} className="rounded-xl border border-border bg-card p-5 shadow-soft">
+          <div className="flex items-center justify-between"><span className={cn("text-[13px] font-medium text-muted-foreground", big && "text-lg")}>{it.label}</span>{it.delta}</div>
+          <div className={cn("mt-2", num)}>{it.value}</div>
+          {it.foot}
+        </section>
+      ))}
     </div>
   );
 }
-
-const STAGE_SHADES = ["bg-primary-soft", "bg-lilac/50", "bg-lilac", "bg-primary/80", "bg-primary"];
 
 export function FunnelWidget({ f, set, big }: P) {
   const data = funnel(f);
   const max = data[0]?.value || 1;
   return (
-    <Card title="Funil de vendas" tag={<Tag>Pipeline</Tag>} right={<span className="text-sm text-muted-foreground">Clique numa etapa para filtrar</span>}>
-      <div className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-x-4 gap-y-3 text-sm">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Etapa</span><span />
-        <span className="text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Valor</span>
-        <span className="text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Qtd</span>
-        <span className="text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Passagem</span>
-        {data.map((s, i) => {
-          const active = f.stage === s.stage;
-          const dim = f.stage && !active;
-          const click = () => set({ stage: active ? undefined : (s.stage as Stage) });
-          return (
-            <button key={s.stage} onClick={click} className={cn("col-span-5 grid grid-cols-subgrid items-center rounded-xl px-2 py-1.5 text-left transition hover:bg-muted", active && "bg-primary-soft", dim && "opacity-45")}>
-              <span className={cn("w-28 font-semibold", big && "w-40 text-lg")}>{s.stage}</span>
-              <span className="h-full min-w-24"><span className={cn("block rounded-md", big ? "h-8" : "h-5", STAGE_SHADES[i])} style={{ width: `${Math.max((s.value / max) * 100, 4)}%` }} /></span>
-              <span className={cn("text-right font-semibold tabular-nums", big && "text-lg")}>{brl(s.value)}</span>
-              <span className="w-10 text-right tabular-nums text-muted-foreground">{s.count}</span>
-              <span className="w-16 text-right tabular-nums text-muted-foreground">{i ? pct(s.pass) : "—"}</span>
-            </button>
-          );
-        })}
-      </div>
+    <Card title="Funil de vendas" subtitle="Clique numa etapa para filtrar o painel">
+      <table className={cn("w-full text-sm", big && "text-lg")}>
+        <thead><tr className="text-left text-xs font-medium text-muted-foreground">
+          <th className="pb-3 font-medium">Etapa</th><th className="w-1/2 pb-3" /><th className="pb-3 text-right font-medium">Negócios</th><th className="pb-3 text-right font-medium">Valor</th><th className="pb-3 text-right font-medium">Passagem</th>
+        </tr></thead>
+        <tbody>
+          {data.map((s, i) => {
+            const active = f.stage === s.stage;
+            return (
+              <tr key={s.stage} onClick={() => set({ stage: active ? undefined : (s.stage as Stage) })}
+                className={cn("cursor-pointer transition-colors hover:bg-muted/60", active && "bg-primary-soft", f.stage && !active && "opacity-40")}>
+                <td className="whitespace-nowrap py-2.5 pr-4 font-medium">{s.stage}</td>
+                <td className="py-2.5 pr-4"><div className="h-2 rounded-full bg-muted"><div className="h-2 rounded-full bg-primary" style={{ width: `${Math.max((s.value / max) * 100, 2)}%`, opacity: 0.35 + (i / (data.length - 1)) * 0.65 }} /></div></td>
+                <td className="py-2.5 text-right tabular-nums text-muted-foreground">{s.count}</td>
+                <td className="py-2.5 pl-4 text-right font-medium tabular-nums">{brl(s.value)}</td>
+                <td className="py-2.5 pl-4 text-right tabular-nums">{i ? <span className={cn("font-medium", s.pass < 0.4 ? "text-danger" : "text-foreground")}>{pct(s.pass)}</span> : <span className="text-subtle-foreground">—</span>}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </Card>
   );
 }
 
 export function RankingWidget({ f, set, big }: P) {
   const data = ranking(f);
-  const max = data[0]?.total || 1;
   return (
-    <Card title="Ranking de executivos" tag={<Tag>Vendas ganhas</Tag>}>
-      <div className="space-y-1">
+    <Card title="Ranking de executivos" subtitle="Receita ganha e % da meta individual">
+      <ul className="-my-1 divide-y divide-border">
         {data.map((s, i) => {
           const active = f.sellerId === s.id;
+          const goal = goalFor({ period: f.period, sellerId: s.id, company: f.company });
+          const g = goal ? s.total / goal : 0;
           return (
-            <button key={s.id} onClick={() => set({ sellerId: active ? undefined : s.id })}
-              className={cn("flex w-full items-center gap-3 rounded-xl p-2 text-left transition hover:bg-muted", active && "bg-primary-soft", f.sellerId && !active && "opacity-45")}>
-              <span className="w-5 text-sm font-semibold text-muted-foreground">{i + 1}</span>
-              <img src={s.photo} alt={s.name} className={cn("rounded-lg object-cover", big ? "size-14" : "size-10")} loading="lazy" />
-              <div className="min-w-0 flex-1">
-                <div className="flex justify-between gap-2 text-sm"><span className={cn("truncate font-semibold", big && "text-lg")}>{s.name}</span><span className="font-semibold tabular-nums">{brl(s.total)}</span></div>
-                <div className="mt-1.5 h-2 rounded-full bg-muted">
-                  <div className="h-2 rounded-full bg-primary" style={{ width: `${(s.total / max) * 100}%` }} />
+            <li key={s.id}>
+              <button onClick={() => set({ sellerId: active ? undefined : s.id })}
+                className={cn("-mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-muted/60", active && "bg-primary-soft", f.sellerId && !active && "opacity-40")}>
+                <span className="w-4 text-xs tabular-nums text-subtle-foreground">{i + 1}</span>
+                <img src={s.photo} alt={s.name} className={cn("rounded-full object-cover", big ? "size-12" : "size-8")} loading="lazy" />
+                <div className="min-w-0 flex-1">
+                  <div className={cn("truncate text-sm font-medium", big && "text-lg")}>{s.name}</div>
+                  <div className="text-xs text-muted-foreground">{s.team}</div>
                 </div>
-              </div>
-            </button>
+                <div className="w-24 text-right">
+                  <div className={cn("text-sm font-semibold tabular-nums", big && "text-lg")}>{brl(s.total)}</div>
+                  <div className="mt-1 flex items-center gap-1.5"><div className="h-1 flex-1 rounded-full bg-muted"><div className="h-1 rounded-full bg-primary" style={{ width: `${Math.min(g, 1) * 100}%` }} /></div><span className="text-[11px] tabular-nums text-muted-foreground">{pct(g)}</span></div>
+                </div>
+              </button>
+            </li>
           );
         })}
-      </div>
+      </ul>
     </Card>
   );
 }
@@ -112,21 +137,24 @@ export function RiskWidget({ f, big }: P) {
   const data = atRisk(f);
   const total = data.reduce((a, d) => a + d.value, 0);
   return (
-    <Card title="Negócios em risco" tag={<Tag tone="danger">Atenção</Tag>}
-      right={<div className="text-right"><div className={cn("font-bold tabular-nums text-danger", big ? "text-6xl" : "text-3xl")}>{data.length}</div><div className="text-sm text-muted-foreground">{brl(total)}</div></div>}>
-      <p className="-mt-2 mb-3 text-sm text-muted-foreground">Acima de R$ 20 mil e sem atividade há 10+ dias</p>
-      <div className="max-h-80 divide-y divide-border overflow-auto">
-        {data.slice(0, big ? 6 : 8).map((d) => (
-          <div key={d.id} className="flex items-center gap-3 py-2.5">
-            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-danger-soft"><AlertTriangle className="size-4 text-danger" /></span>
-            <div className="min-w-0 flex-1">
-              <div className={cn("truncate text-sm font-semibold", big && "text-base")}>{d.title}</div>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground"><Clock className="size-3" />{d.lastActivityDays} dias · {sellerName(d.sellerId)} · {d.stage}</div>
-            </div>
-            <span className="text-sm font-bold tabular-nums">{brl(d.value)}</span>
-          </div>
-        ))}
-        {!data.length && <p className="py-6 text-center text-sm text-muted-foreground">Nenhum negócio crítico</p>}
+    <Card title="Negócios em risco" subtitle="≥ R$ 20 mil, sem atividade há 10+ dias"
+      right={<span className="rounded-md bg-danger-soft px-2 py-0.5 text-xs font-medium text-danger">{data.length} · {brl(total)}</span>}>
+      <div className="-mx-5 -my-5 max-h-[22rem] overflow-auto">
+        <table className={cn("w-full text-sm", big && "text-base")}>
+          <thead className="sticky top-0 bg-card"><tr className="border-b border-border text-left text-xs text-muted-foreground">
+            <th className="px-5 py-2.5 font-medium">Negócio</th><th className="py-2.5 font-medium">Inativo</th><th className="px-5 py-2.5 text-right font-medium">Valor</th>
+          </tr></thead>
+          <tbody className="divide-y divide-border">
+            {data.slice(0, big ? 6 : 12).map((d) => (
+              <tr key={d.id}>
+                <td className="px-5 py-2.5"><div className="font-medium">{d.title}</div><div className="text-xs text-muted-foreground">{sellerName(d.sellerId)} · {d.stage}</div></td>
+                <td className="py-2.5"><span className="inline-flex items-center gap-1.5 text-xs tabular-nums"><span className={cn("size-1.5 rounded-full", d.lastActivityDays >= 20 ? "bg-danger" : "bg-warning")} />{d.lastActivityDays}d</span></td>
+                <td className="px-5 py-2.5 text-right font-semibold tabular-nums">{brl(d.value)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!data.length && <p className="py-10 text-center text-sm text-muted-foreground">Nenhum negócio crítico</p>}
       </div>
     </Card>
   );
@@ -134,18 +162,20 @@ export function RiskWidget({ f, big }: P) {
 
 export function LossWidget({ f, set, big }: P) {
   const data = lossReasons(f);
-  const max = Math.max(...data.map((d) => d.count), 1);
-  const total = data.reduce((a, d) => a + d.count, 0);
+  const total = data.reduce((a, d) => a + d.count, 0) || 1;
   return (
-    <Card title="Motivos de perda" tag={<Tag tone="muted">{total} perdidos</Tag>}>
-      <div className="space-y-2">
-        {data.map((d, i) => {
+    <Card title="Motivos de perda" subtitle={`${data.reduce((a, d) => a + d.count, 0)} negócios perdidos`}>
+      <div className="space-y-1">
+        {data.map((d) => {
           const active = f.lossReason === d.reason;
           return (
             <button key={d.reason} onClick={() => set({ lossReason: active ? undefined : d.reason })}
-              className={cn("w-full rounded-xl p-2 text-left transition hover:bg-muted", active && "bg-primary-soft", f.lossReason && !active && "opacity-45")}>
-              <div className={cn("flex justify-between text-sm", big && "text-base")}><span className="font-semibold">{d.reason}</span><span className="tabular-nums text-muted-foreground"><b className="text-foreground">{d.count}</b> · {brl(d.value)}</span></div>
-              <div className="mt-1.5 h-2 rounded-full bg-muted"><div className={cn("h-2 rounded-full", i === 0 ? "bg-primary" : "bg-lilac")} style={{ width: `${(d.count / max) * 100}%` }} /></div>
+              className={cn("-mx-2 w-[calc(100%+1rem)] rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted/60", active && "bg-primary-soft", f.lossReason && !active && "opacity-40")}>
+              <div className={cn("flex items-baseline justify-between text-sm", big && "text-base")}>
+                <span className="font-medium">{d.reason}</span>
+                <span className="tabular-nums"><span className="font-semibold">{pct(d.count / total)}</span><span className="ml-2 text-xs text-muted-foreground">{d.count} · {brl(d.value)}</span></span>
+              </div>
+              <div className="mt-1.5 h-1.5 rounded-full bg-muted"><div className="h-1.5 rounded-full bg-primary/70" style={{ width: `${(d.count / total) * 100}%` }} /></div>
             </button>
           );
         })}
@@ -156,23 +186,26 @@ export function LossWidget({ f, set, big }: P) {
 
 export function PaceWidget({ f, big }: P) {
   const data = pace(f);
-  const max = Math.max(...data.map((d) => d.value), 1);
+  const target = goalFor(f) / Math.max(data.length, 1);
+  const max = Math.max(...data.map((d) => d.value), target, 1) * 1.1;
+  const W = 300, H = 140;
+  const x = (i: number) => (i / Math.max(data.length - 1, 1)) * W;
+  const y = (v: number) => H - (v / max) * H;
+  const line = data.map((d, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(d.value).toFixed(1)}`).join(" ");
   const last = data[data.length - 1];
   return (
-    <Card title={f.period === "month" ? "Ritmo semanal" : "Ritmo mensal"} tag={<Tag>Fechamentos</Tag>}
-      right={<div className="text-right"><div className="text-sm text-muted-foreground">Período atual</div><div className="text-lg font-bold">{brl(last?.value ?? 0)}</div></div>}>
-      <div className={cn("flex items-end justify-between gap-2", big ? "h-64" : "h-44")}>
-        {data.map((d, i) => {
-          const isLast = i === data.length - 1;
-          return (
-            <div key={d.label} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
-              <span className="text-[11px] font-semibold tabular-nums text-muted-foreground">{d.value ? brl(d.value).replace("R$ ", "") : ""}</span>
-              <div className={cn("w-full max-w-9 rounded-md", isLast ? "bg-primary" : "bg-lilac/60")} style={{ height: `${Math.max((d.value / max) * 75, 3)}%` }} />
-              <span className="text-xs font-medium text-muted-foreground">{d.label}</span>
-            </div>
-          );
-        })}
+    <Card title={f.period === "month" ? "Ritmo de fechamento semanal" : "Ritmo de fechamento mensal"} subtitle="Realizado vs. meta proporcional"
+      right={<span className="text-sm font-semibold tabular-nums">{brl(last?.value ?? 0)}</span>}>
+      <div className={cn("relative", big ? "h-64" : "h-44")}>
+        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="h-full w-full overflow-visible text-primary">
+          {[0.25, 0.5, 0.75].map((t) => <line key={t} x1="0" x2={W} y1={H * t} y2={H * t} className="stroke-border" strokeWidth="1" vectorEffect="non-scaling-stroke" />)}
+          <line x1="0" x2={W} y1={y(target)} y2={y(target)} className="stroke-muted-foreground" strokeDasharray="4 4" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+          <path d={`${line} L${W},${H} L0,${H} Z`} fill="currentColor" opacity="0.1" />
+          <path d={line} fill="none" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+        </svg>
+        <span className="absolute right-0 rounded bg-card px-1 text-[11px] text-muted-foreground" style={{ top: `calc(${(y(target) / H) * 100}% - 18px)` }}>meta {brl(target)}</span>
       </div>
+      <div className="mt-2 flex justify-between text-[11px] text-muted-foreground">{data.map((d) => <span key={d.label}>{d.label}</span>)}</div>
     </Card>
   );
 }
@@ -180,9 +213,9 @@ export function PaceWidget({ f, big }: P) {
 export const WIDGETS = {
   funnel: { title: "Funil", C: FunnelWidget, span: "lg:col-span-2" },
   ranking: { title: "Ranking", C: RankingWidget, span: "" },
-  risk: { title: "Risco", C: RiskWidget, span: "" },
+  pace: { title: "Ritmo", C: PaceWidget, span: "lg:col-span-2" },
   loss: { title: "Perdas", C: LossWidget, span: "" },
-  pace: { title: "Ritmo", C: PaceWidget, span: "" },
+  risk: { title: "Risco", C: RiskWidget, span: "lg:col-span-3" },
 } as const;
 export type WidgetId = keyof typeof WIDGETS;
-export const DEFAULT_ORDER: WidgetId[] = ["funnel", "ranking", "risk", "pace", "loss"];
+export const DEFAULT_ORDER: WidgetId[] = ["funnel", "ranking", "pace", "loss", "risk"];
