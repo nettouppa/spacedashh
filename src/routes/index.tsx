@@ -3,11 +3,12 @@ import { useCallback, useEffect, useState } from "react";
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, rectSortingStrategy, useSortable, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, LayoutGrid, Monitor, Sparkles, X, Save, RotateCcw, Check } from "lucide-react";
+import { GripVertical, LayoutGrid, Monitor, X, Save, RotateCcw, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { COMPANIES, SELLERS, TEAMS, sellerName, type Filters, type Period, type Stage } from "@/lib/crm-data";
 import { DEFAULT_ORDER, KpiStrip, WIDGETS, type WidgetId } from "@/components/dash/widgets";
 import { AiPanel } from "@/components/dash/ai-panel";
+import { AtlasContext, AtlasIcon, type AtlasRequest } from "@/components/dash/atlas";
 import { TvMode } from "@/components/dash/tv-mode";
 import { AppShell, Segmented } from "@/components/dash/app-shell";
 import type { AiAction } from "@/lib/ai.functions";
@@ -15,9 +16,9 @@ import type { AiAction } from "@/lib/ai.functions";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Violeta Sales Hub — Painel de CRM e Vendas Bitrix24" },
+      { title: "Spacedash — Painel de CRM e Vendas Bitrix24" },
       { name: "description", content: "Painel gerencial multi-empresa integrado ao Bitrix24: funil, ranking, metas, riscos, modo TV e assistente de IA." },
-      { property: "og:title", content: "Violeta Sales Hub — Painel de CRM e Vendas" },
+      { property: "og:title", content: "Spacedash — Painel de CRM e Vendas" },
       { property: "og:description", content: "BI comercial com cross-filtering, modo TV e IA sobre seus dados do Bitrix24." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -99,6 +100,8 @@ function Index() {
   const [saved, setSaved] = useState(false);
   const [ai, setAi] = useState(false);
   const [tv, setTv] = useState(false);
+  const [atlasReq, setAtlasReq] = useState<AtlasRequest | null>(null);
+  const atlasCtx = { hidden: edit, request: (mode: "explain" | "ask", topic: string) => { setAi(true); setAtlasReq({ mode, topic, id: Date.now() }); } };
 
   useEffect(() => {
     try { const s = JSON.parse(localStorage.getItem(LAYOUT_KEY) || "null"); if (Array.isArray(s) && s.length === DEFAULT_ORDER.length) setOrder(s); } catch { /* ignore */ }
@@ -143,7 +146,7 @@ function Index() {
       topRight={<>
         <Segmented value={profile} onChange={setProfile} options={[{ v: "manager", l: "Gestor" }, { v: "seller", l: "Vendedor" }]} />
         <button onClick={() => setTv(true)} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted"><Monitor className="size-3.5" />Modo TV</button>
-        <button onClick={() => setAi((v) => !v)} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[13px] font-medium text-primary-foreground hover:bg-primary/90"><Sparkles className="size-3.5" />Copilot</button>
+        <button onClick={() => setAi((v) => !v)} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[13px] font-medium text-primary-foreground hover:bg-primary/90"><AtlasIcon className="size-4" />Atlas</button>
       </>}>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -181,6 +184,7 @@ function Index() {
         </div>
       )}
 
+      <AtlasContext.Provider value={atlasCtx}>
       <div className="mt-5"><KpiStrip f={eff} set={setEff} /></div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
@@ -197,8 +201,9 @@ function Index() {
           </div>
         </SortableContext>
       </DndContext>
+      </AtlasContext.Provider>
 
-      <AiPanel open={ai} onClose={() => setAi(false)} f={eff} onAction={onAi} />
+      <AiPanel open={ai} onClose={() => setAi(false)} f={eff} onAction={onAi} request={atlasReq} />
       {tv && <TvMode f={eff} set={setEff} onClose={() => setTv(false)} />}
     </AppShell>
   );

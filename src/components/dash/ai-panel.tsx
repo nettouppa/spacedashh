@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { useServerFn } from "@tanstack/react-start";
-import { Sparkles, X, Send, Loader2 } from "lucide-react";
+import { X, Send, Loader2 } from "lucide-react";
 import { askAssistant, type AiAction } from "@/lib/ai.functions";
 import { atRisk, brl, funnel, kpis, lossReasons, pct, ranking, COMPANIES, TEAMS, STAGES, LOSS_REASONS, type Filters } from "@/lib/crm-data";
+import { AtlasIcon, type AtlasRequest } from "./atlas";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -20,20 +21,23 @@ function buildContext(f: Filters) {
   });
 }
 
-export function AiPanel({ open, onClose, f, onAction }: { open: boolean; onClose: () => void; f: Filters; onAction: (a: AiAction) => void }) {
+export function AiPanel({ open, onClose, f, onAction, request }: { open: boolean; onClose: () => void; f: Filters; onAction: (a: AiAction) => void; request: AtlasRequest | null }) {
   const ask = useServerFn(askAssistant);
-  const [msgs, setMsgs] = useState<Msg[]>([{ role: "assistant", content: "Olá! Pergunte sobre suas vendas ou peça: *“mostre só a equipe Enterprise”*, *“quem está em risco?”*, *“abra o modo TV”*." }]);
+  const [msgs, setMsgs] = useState<Msg[]>([{ role: "assistant", content: "Olá, eu sou o **Atlas**! Pergunte sobre suas vendas ou peça: *“mostre só a equipe Enterprise”*, *“quem está em risco?”*, *“abra o modo TV”*." }]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [topic, setTopic] = useState<string | null>(null);
   const end = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     end.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs]);
 
   async function send(text: string) {
     if (!text.trim() || busy) return;
-    const next = [...msgs, { role: "user" as const, content: text }];
-    setMsgs(next); setInput(""); setBusy(true);
+    const content = topic && !text.includes(topic) ? `Sobre o card "${topic}": ${text}` : text;
+    const next = [...msgs, { role: "user" as const, content }];
+    setMsgs(next); setInput(""); setTopic(null); setBusy(true);
     try {
       const r = await ask({ data: { messages: next.slice(1).slice(-20), context: buildContext(f) } });
       if (r.action) onAction(r.action);
@@ -43,10 +47,21 @@ export function AiPanel({ open, onClose, f, onAction }: { open: boolean; onClose
     } finally { setBusy(false); }
   }
 
+  useEffect(() => {
+    if (!request) return;
+    if (request.mode === "explain") {
+      void send(`Explique o card "${request.topic}": o que ele mostra, como interpretar os números atuais e o que merece atenção.`);
+    } else {
+      setTopic(request.topic);
+      setTimeout(() => inputRef.current?.focus(), 320);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [request?.id]);
+
   return (
     <aside className={`fixed inset-y-0 right-0 z-40 flex w-[min(400px,100vw)] flex-col border-l border-border bg-card text-card-foreground shadow-soft transition-transform duration-300 ${open ? "translate-x-0" : "translate-x-[110%]"}`}>
       <div className="flex items-center justify-between border-b border-border px-5 py-3">
-        <div className="flex items-center gap-2"><span className="grid size-8 place-items-center rounded-md bg-primary text-primary-foreground"><Sparkles className="size-4" /></span><div><div className="font-bold">Copilot de vendas</div><div className="text-xs text-muted-foreground">IA sobre seus dados de CRM</div></div></div>
+        <div className="flex items-center gap-2"><span className="grid size-8 place-items-center rounded-md bg-primary text-primary-foreground"><AtlasIcon className="size-5" /></span><div><div className="font-bold">Atlas</div><div className="text-xs text-muted-foreground">Seu copiloto de vendas</div></div></div>
         <button onClick={onClose} aria-label="Fechar" className="grid size-9 place-items-center rounded-full bg-muted"><X className="size-4" /></button>
       </div>
       <div className="flex-1 space-y-3 overflow-auto px-5 py-4">
@@ -63,8 +78,14 @@ export function AiPanel({ open, onClose, f, onAction }: { open: boolean; onClose
           <button key={s} onClick={() => send(s)} className="block w-full rounded-md px-2 py-1.5 text-left text-[13px] text-muted-foreground hover:bg-muted hover:text-foreground">{s}</button>
         ))}
       </div>
-      <form onSubmit={(e) => { e.preventDefault(); send(input); }} className="m-4 flex items-center gap-2 rounded-lg border border-border bg-background p-1.5 pl-3">
-        <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Pergunte algo…" className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground" />
+      {topic && (
+        <div className="mx-4 mt-3 flex items-center justify-between rounded-md bg-primary-soft px-3 py-1.5 text-xs font-medium text-primary">
+          Sobre: {topic}
+          <button onClick={() => setTopic(null)} aria-label="Remover tópico"><X className="size-3" /></button>
+        </div>
+      )}
+      <form onSubmit={(e) => { e.preventDefault(); send(input); }} className="m-4 mt-2 flex items-center gap-2 rounded-lg border border-border bg-background p-1.5 pl-3">
+        <input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} placeholder={topic ? `Pergunte sobre ${topic}…` : "Pergunte ao Atlas…"} className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground" />
         <button disabled={busy} className="grid size-8 place-items-center rounded-md bg-primary text-primary-foreground"><Send className="size-4" /></button>
       </form>
     </aside>

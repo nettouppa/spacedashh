@@ -13,8 +13,8 @@ export function AppShell({ children, topRight, userName, userPhoto }: { children
     <div className="min-h-screen bg-background">
       <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-border bg-card lg:flex">
         <div className="flex h-14 items-center gap-2 border-b border-border px-5">
-          <span className="grid size-7 place-items-center rounded-md bg-primary text-sm font-bold text-primary-foreground">V</span>
-          <span className="text-sm font-semibold">Violeta Sales Hub</span>
+          <span className="grid size-7 place-items-center rounded-md bg-primary text-sm font-bold text-primary-foreground">S</span>
+          <span className="text-sm font-semibold">Spacedash</span>
         </div>
         <nav className="flex-1 space-y-0.5 p-3">
           <p className="px-2 pb-1 pt-2 text-[11px] font-medium text-subtle-foreground">Análise</p>
