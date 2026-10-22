@@ -135,7 +135,7 @@ export function FunnelWidget({ f, set, big }: P) {
                     // Dark bands get light text; narrow bands (text overflows onto the card) keep dark text.
                     const light = i / n > 0.45 && w > 35;
                     return (
-                      <div className={cn("relative leading-tight", light ? "text-primary-foreground" : "text-foreground")}>
+                      <div className={cn("relative leading-tight", light ? "text-primary-foreground" : "text-foreground", w <= 35 && "rounded-lg border border-border bg-card/95 px-3 py-1 shadow-soft")}>
                         <div className={cn("font-semibold", big ? "text-xl" : "text-sm")}>{s.stage}</div>
                         <div className={cn("tabular-nums", big ? "text-lg" : "text-xs", light ? "opacity-90" : "text-muted-foreground")}>{s.count} negócios</div>
                         <div className={cn("font-semibold tabular-nums", big ? "text-xl" : "text-sm", !light && "text-primary")}>{brl(s.value)}</div>
