@@ -80,8 +80,8 @@ const passTone = (r: number) =>
 export function FunnelWidget({ f, set, big }: P) {
   const data = funnel(f);
   const top = data[0]?.count || 1;
-  const MIN = 30;
-  const widths = data.map((s) => Math.max((s.count / top) * 100, MIN));
+  // Strictly proportional to deal count; names are rendered above the bar, so no minimum width is needed.
+  const widths = data.map((s) => (s.count / top) * 100);
   const last = data[data.length - 1];
   const overall = data[0]?.count ? (last?.count ?? 0) / data[0].count : 0;
   let gap = { i: 1, pass: 1 };
@@ -97,9 +97,8 @@ export function FunnelWidget({ f, set, big }: P) {
       <div>
         {data.map((s, i) => {
           const w = widths[i]!;
-          const next = widths[i + 1] ?? w * 0.92;
+          const next = widths[i + 1] ?? w;
           const active = f.stage === s.stage;
-          const strong = i >= 2;
           return (
             <div key={s.stage}>
               {i > 0 && (
@@ -111,11 +110,10 @@ export function FunnelWidget({ f, set, big }: P) {
               )}
               <button onClick={() => set({ stage: active ? undefined : (s.stage as Stage) })}
                 className={cn("group flex w-full items-center gap-4 text-left transition-opacity", f.stage && !active && "opacity-35")}>
-                <div className="flex-1">
-                <div className={cn("flex items-center justify-between gap-2 rounded-l-md pl-3 pr-8 transition-all group-hover:brightness-110", rowH, active && "outline-2 outline-offset-2 outline-primary")}
-                  style={{ width: `${w}%`, background: `color-mix(in oklab, var(--primary) ${30 + (i / Math.max(data.length - 1, 1)) * 70}%, var(--card))`, clipPath: `polygon(0 0, 100% 0, ${(next / w) * 100}% 100%, 0 100%)` }}>
-                  <span className={cn("truncate font-medium", big ? "text-lg" : "text-[13px]", strong ? "text-primary-foreground" : "text-foreground")}>{s.stage}</span>
-                </div>
+                <div className="min-w-0 flex-1">
+                  <div className={cn("mb-1 truncate font-medium", big ? "text-lg" : "text-[13px]")}>{s.stage}</div>
+                  <div className={cn("rounded-l-md transition-all group-hover:brightness-110", big ? "h-10" : "h-7", active && "outline-2 outline-offset-2 outline-primary")}
+                    style={{ width: `${w}%`, minWidth: s.count ? 2 : 0, background: `color-mix(in oklab, var(--primary) ${30 + (i / Math.max(data.length - 1, 1)) * 70}%, var(--card))`, clipPath: w ? `polygon(0 0, 100% 0, ${Math.min((next / w) * 100, 100)}% 100%, 0 100%)` : undefined }} />
                 </div>
                 <div className="w-32 shrink-0 text-right">
                   <div className={cn("font-semibold tabular-nums", big ? "text-2xl" : "text-sm")}>{s.count}<span className="ml-1 text-xs font-normal text-muted-foreground">negócios</span></div>
