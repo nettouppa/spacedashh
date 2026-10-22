@@ -198,5 +198,6 @@
 }
 
 @media (min-width: 1024px) {
+  .dash-grid { grid-template-columns: repeat(12, minmax(0, 1fr)); }
   .dash-span { min-width: 0; grid-column: span var(--span) / span var(--span); }
 }
