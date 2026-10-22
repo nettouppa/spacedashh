@@ -124,10 +124,10 @@ export function FunnelWidget({ f, set, big }: P) {
         const selIdx = data.findIndex((s) => s.stage === f.stage);
         return (
           <div>
-            <div className="grid" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+            <div className="grid" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
               {data.map((s, i) => (
                 <button key={s.stage} onClick={() => set({ stage: f.stage === s.stage ? undefined : (s.stage as Stage) })}
-                  className={cn("border-l border-border px-4 pb-3 text-left transition-opacity first:border-l-0", f.stage && f.stage !== s.stage && "opacity-40")}>
+                  className={cn("min-w-0 border-l border-border px-4 pb-3 text-left transition-opacity first:border-l-0", f.stage && f.stage !== s.stage && "opacity-40")}>
                   <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><span className="size-2 rounded-full" style={{ background: `color-mix(in oklab, var(--primary) ${35 + (i / n) * 65}%, var(--card))` }} />{s.stage}</div>
                   <div className={cn("mt-1 whitespace-nowrap font-semibold tracking-tight tabular-nums", big ? "text-4xl" : "text-xl")}>{s.count}<span className="ml-1 text-xs font-normal text-muted-foreground">negócios</span></div>
                   <div className={cn("whitespace-nowrap tabular-nums font-medium text-primary", big ? "text-xl" : "text-sm")}>{brl(s.value)}</div>
@@ -153,7 +153,7 @@ export function FunnelWidget({ f, set, big }: P) {
                 </span>
               ))}
             </div>
-            <div className="grid pt-3" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+            <div className="grid pt-3" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
               {data.map((s, i) => {
                 const lost = i < data.length - 1 ? s.count - (data[i + 1]?.count ?? 0) : 0;
                 return (
