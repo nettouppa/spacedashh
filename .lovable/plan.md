@@ -23,8 +23,8 @@ Redesenhar o funil para ser o destaque visual do painel: bonito, claro de ler e 
 - Funil simétrico e centralizado de verdade (SVG), com faixas que se afunilam suavemente de uma etapa para a próxima — forma contínua, sem degraus nem "meio funil".
 - Largura de cada faixa estritamente proporcional à quantidade (ou ao valor, conforme o seletor Qtd/Valor).
 - Degradê de violeta claro (topo) a violeta forte (fundo); etapa selecionada destacada, demais esmaecidas levemente.
-- Coluna esquerda fixa com nome da etapa (sempre legível, nunca dentro da faixa); coluna direita fixa com quantidade e valor alinhados em números tabulares.
-- Taxa de conversão entre etapas como pílula discreta centralizada na junção das faixas, com cor por desempenho (verde / âmbar / vermelho).
+- Nome da etapa, quantidade absoluta e valor financeiro aparecem em cima de cada faixa do funil (centralizados, em texto legível com bom contraste sobre o violeta).
+- Taxa de conversão entre etapas como pílula centralizada no espaço entre uma faixa e a seguinte, com cor por desempenho (verde / âmbar / vermelho).
 - Faixa de resumo no topo com 3 indicadores grandes: eficiência topo→fundo, valor convertido e maior gargalo (etapa com pior passagem, em vermelho).
 - Passar o mouse mostra detalhes (ticket médio da etapa, % do total); clicar continua filtrando o painel inteiro.
 - Cartão posicionado primeiro e em largura total, com mais altura que os demais.
