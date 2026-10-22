@@ -1,0 +1,24 @@
+# Spacedash roadmap
+
+## Fase 1 — Base real
+- [ ] Ativar Lovable Cloud
+- [ ] Login por convite + multi-empresa (seletor de empresa)
+- [ ] Perfis: admin / gestor / colaborador (RLS)
+- [ ] Layout dos cards salvo por usuário
+
+## Fase 2 — Bitrix24 (aplicativo pelo portal) — aguarda client_id/secret do usuário
+- [ ] Instalação/OAuth do app Bitrix24
+- [ ] Sync: negócios, atividades, tarefas, atendimento, usuários/departamentos
+- [ ] Sync automático + "Sincronizar agora"
+
+## Fase 3 — Módulos e painéis
+- [ ] Biblioteca de cards (Vendas, Atividades, Tarefas, Atendimento)
+- [ ] Meus painéis (criar/duplicar/compartilhar)
+- [ ] Cards de atividades, tarefas, atendimento, evolução mensal
+- [ ] Filtros completos (datas livres, responsável, departamento)
+
+## Fase 4 — Acabamento
+- [ ] Atlas ponta a ponta (erro 403 da IA)
+- [ ] Modo TV com link próprio
+- [ ] Relatórios PDF/Excel
+- [ ] Metas por pessoa/mês
