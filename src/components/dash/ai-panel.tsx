@@ -128,7 +128,6 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
               {insights(f).map((it, i) => (
                 <button key={it.title} onClick={() => send(it.q, null)} style={{ animationDelay: `${80 * (i + 1)}ms` }}
                   className="atlas-in group flex w-full items-start gap-3 rounded-lg border border-border bg-background p-3 text-left transition hover:border-primary/40 hover:bg-primary-soft/40">
-                  <it.icon className={cn("mt-0.5 size-4 shrink-0", it.tone)} />
                   <div className="min-w-0 flex-1"><div className="text-sm font-medium tabular-nums">{it.title}</div><div className="text-xs text-muted-foreground tabular-nums">{it.sub}</div></div>
                   <span className="text-xs font-medium text-primary opacity-0 transition group-hover:opacity-100">Aprofundar →</span>
                 </button>
