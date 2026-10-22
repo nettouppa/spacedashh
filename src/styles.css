@@ -198,5 +198,5 @@
 }
 
 @media (min-width: 1024px) {
-  .dash-span { grid-column: span var(--span) / span var(--span); }
+  .dash-span { min-width: 0; grid-column: span var(--span) / span var(--span); }
 }
