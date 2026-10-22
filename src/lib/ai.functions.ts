@@ -14,7 +14,7 @@ export type AiAction = {
 export const askAssistant = createServerFn({ method: "POST" })
   .inputValidator((d) => Input.parse(d))
   .handler(async ({ data }) => {
-    const key = process.env.LOVABLE_API_KEY;
+    const key = process.env['LOVABLE_API_KEY'];
     if (!key) return { reply: "Assistente indisponível no momento.", action: null as AiAction | null };
     const system = `Você é o analista de vendas do painel Violeta Sales Hub (dados do CRM Bitrix24). Responda em português, de forma objetiva, usando markdown curto. Use APENAS os dados do contexto abaixo. Quando o usuário pedir para filtrar, mostrar, focar, limpar ou abrir modo TV, chame a ferramenta apply_dashboard_action. Para remover um filtro específico envie null.\n\nCONTEXTO:\n${data.context}`;
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

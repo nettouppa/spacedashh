@@ -33,7 +33,7 @@ export const DEALS: Deal[] = (() => {
   const r = rng(42);
   const out: Deal[] = [];
   for (let i = 0; i < 420; i++) {
-    const s = SELLERS[Math.floor(r() * SELLERS.length)];
+    const s = SELLERS[Math.floor(r() * SELLERS.length)]!;
     const daysAgo = Math.floor(r() * 365);
     const createdAt = new Date(NOW.getTime() - daysAgo * 864e5);
     const roll = r();
@@ -41,11 +41,11 @@ export const DEALS: Deal[] = (() => {
     const base = s.team === "Enterprise" ? 38000 : s.team === "SMB" ? 16000 : 8000;
     const value = Math.round((base * (0.4 + r() * 1.8)) / 100) * 100;
     let stage: Stage = "Ganho";
-    if (status !== "won") stage = STAGES[Math.floor(r() * 4)];
+    if (status !== "won") stage = STAGES[Math.floor(r() * 4)]!;
     const closedAt = status === "open" ? undefined : new Date(Math.min(NOW.getTime(), createdAt.getTime() + Math.floor(r() * 40) * 864e5));
     out.push({
       id: `D-${1000 + i}`, title: `${CLIENTS[i % CLIENTS.length]} · ${["Licenças", "Implantação", "Consultoria", "Renovação"][i % 4]}`,
-      company: COMPANIES[Math.floor(r() * COMPANIES.length)], sellerId: s.id, team: s.team, stage, status, value,
+      company: COMPANIES[Math.floor(r() * COMPANIES.length)]!, sellerId: s.id, team: s.team, stage, status, value,
       createdAt, closedAt, lossReason: status === "lost" ? LOSS_REASONS[Math.floor(r() * LOSS_REASONS.length)] : undefined,
       lastActivityDays: status === "open" ? Math.floor(r() * 30) : 0,
     });
@@ -142,11 +142,11 @@ export function pace(f: Filters) {
       const end = NOW.getTime() - w * 7 * 864e5, start = end - 7 * 864e5;
       buckets.push({ label: `S-${w}`, value: won.filter((d) => d.closedAt!.getTime() > start && d.closedAt!.getTime() <= end).reduce((a, d) => a + d.value, 0) });
     }
-    buckets[buckets.length - 1].label = "Atual";
+    buckets[buckets.length - 1]!.label = "Atual";
   } else {
     const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
     for (let m = 0; m <= NOW.getUTCMonth(); m++)
-      buckets.push({ label: months[m], value: won.filter((d) => d.closedAt!.getUTCMonth() === m && d.closedAt!.getUTCFullYear() === NOW.getUTCFullYear()).reduce((a, d) => a + d.value, 0) });
+      buckets.push({ label: months[m]!, value: won.filter((d) => d.closedAt!.getUTCMonth() === m && d.closedAt!.getUTCFullYear() === NOW.getUTCFullYear()).reduce((a, d) => a + d.value, 0) });
   }
   return buckets;
 }
