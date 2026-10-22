@@ -151,7 +151,12 @@ export function pace(f: Filters) {
   return buckets;
 }
 
-export const brl = (n: number, compact = true) =>
-  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", notation: compact ? "compact" : "standard", maximumFractionDigits: compact ? 1 : 0 }).format(n);
+// Manual formatting: Intl output differs between server and browser runtimes (hydration mismatch).
+export const brl = (n: number, compact = true) => {
+  const sep = (x: number) => Math.round(x).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  if (!compact || Math.abs(n) < 1000) return `R$ ${sep(n)}`;
+  const [v, u] = Math.abs(n) >= 1e6 ? [n / 1e6, "mi"] : [n / 1e3, "mil"];
+  return `R$ ${(Math.round(v * 10) / 10).toString().replace(".", ",")} ${u}`;
+};
 export const pct = (n: number) => `${Math.round(n * 100)}%`;
 export const sellerName = (id?: string) => SELLERS.find((s) => s.id === id)?.name;
