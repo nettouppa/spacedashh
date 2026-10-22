@@ -1,28 +1,34 @@
-# Redesign: visual "Clean claro" com leitura fácil
+# Redesign: visual "Clean claro" no estilo soueraldo.com
 
-Objetivo: manter todas as funções (filtros cruzados, arrastar cards, Modo TV, IA), trocando só o visual por um estilo limpo, claro e de alto contraste.
+Objetivo: manter todas as funções (filtros cruzados, arrastar cards, Modo TV, IA) e trocar só o visual por um estilo limpo e claro, de alto contraste, inspirado em soueraldo.com.
 
-## O que muda
+## Linguagem visual (baseada na referência)
 
-- **Fundo e cards**: fundo cinza bem claro e liso (sem degradês), cards brancos com borda fina e sombra discreta. Cantos arredondados mais moderados.
-- **Sem caixas pretas**: o card "Negócios em risco", a barra de meta, o funil, os gráficos e o painel da IA deixam de ser pretos. Passam a ser brancos, com destaques em roxo e em vermelho suave para alertas de risco.
-- **Sem listras**: todas as barras listradas viram cores sólidas (roxo forte, roxo claro, cinza claro). O texto nunca fica em cima de padrão.
-- **Texto mais legível**:
-  - Fonte com peso normal/semibold nos números, no lugar da fina.
-  - Rótulos em cinza escuro (não cinza claro), tamanho mínimo de 13–14px.
-  - Valores ficam ao lado das barras, não dentro delas.
-- **KPIs**: quatro cards separados (Faturado vs. Meta com barra de progresso simples, Ticket médio, Negócios abertos, Conversão), cada um com título, número grande e uma linha de apoio.
-- **Funil**: barras horizontais sólidas em tons de roxo, com etapa, valor, quantidade e taxa de passagem em colunas alinhadas.
-- **Ranking**: foto, nome, valor e barra de progresso roxa sólida, em fundo branco.
-- **Motivos de perda e ritmo**: gráficos de barras sólidas com rótulos legíveis e valores visíveis.
-- **Filtros ativos**: chips roxo-claro com texto escuro, em destaque.
-- **Modo TV**: continua escuro (próprio para TV), mas sem listras e com textos maiores e mais contrastados.
+- **Fundo**: cinza quente bem claro e liso (tipo papel), sem degradês nem listras.
+- **Texto**: grafite-azulado escuro (quase preto) com títulos em negrito forte. Fonte Inter (títulos bold, textos regular).
+- **Cor principal**: roxo-ameixa/magenta (como o botão "Solicitar orçamento"), com um lilás-orquídea claro para destaques.
+- **Destaque tipo marca-texto**: palavra-chave do título com um traço lilás por baixo (ex.: "Bem-vindo, **Gestor**").
+- **Etiquetas**: pílulas suaves em CAIXA ALTA espaçada (ex.: "EM RISCO" em rosa claro com texto vermelho, "META" em lilás).
+- **Botões**: roxo sólido, cantos levemente arredondados, com halo lilás suave.
+- **Cards**: brancos com borda fina e sombra mínima, cantos arredondados moderados (~16px).
+
+## O que muda no painel
+
+- **Sem caixas pretas**: o card "Negócios em risco", o funil, os gráficos e o painel da IA passam a ser brancos. O risco ganha etiqueta e detalhes em vermelho-rosado.
+- **Sem listras**: barras em cores sólidas (roxo, lilás, cinza claro). O texto nunca fica sobre padrões.
+- **Legibilidade**: números em semibold/bold; rótulos em cinza escuro com no mínimo 13–14px; valores ao lado das barras, nunca dentro delas.
+- **KPIs**: 4 cards separados (Faturado vs. Meta com barra de progresso simples, Ticket médio, Abertos, Conversão), cada um com etiqueta, número grande e linha de apoio.
+- **Funil**: barras horizontais sólidas em degradê de tons de roxo por etapa, com etapa, valor, quantidade e taxa de passagem alinhados em colunas.
+- **Ranking, Perdas e Ritmo**: barras sólidas em roxo/lilás com rótulos e valores sempre visíveis.
+- **Filtros ativos**: chips lilás com texto escuro.
+- **Modo TV**: continua escuro (grafite profundo) por ser para TV, sem listras, com roxo/lilás da nova paleta e textos maiores.
 
 ## Detalhes técnicos
 
-- `src/styles.css`: nova paleta (fundo, borda, texto muted mais escuro, tom "danger-soft" para risco), remover os utilitários `stripes` e `bg-page` com degradê e suavizar `shadow-soft`.
+- `src/styles.css`: nova paleta oklch (fundo quente ~#EAE8E6, texto ~#2A2438, primário ameixa ~#9B4A9E, lilás ~#D08BD8, danger-soft); remover `stripes` e o degradê de `bg-page`; utilitários `highlight` (traço marca-texto) e `shadow-glow` lilás. Raio base ~1rem.
+- `src/routes/__root.tsx`: trocar a fonte Outfit por Inter.
 - `src/components/dash/widgets.tsx`: reescrever o visual de cada widget sem `bg-ink`/`stripes`; KpiStrip vira uma grade de 4 cards.
-- `src/components/dash/ai-panel.tsx`: painel branco com borda; mensagens do usuário em roxo, da IA em cinza claro.
-- `src/routes/index.tsx`: header e controles com estilo claro; a lógica fica intacta.
-- `src/components/dash/tv-mode.tsx`: só ajustes de tamanho e contraste.
-- Salvar a preferência de design ("clean claro, sem listras, sem caixas pretas") na memória do projeto.
+- `src/components/dash/ai-panel.tsx`: painel branco com borda; mensagens do usuário em roxo e da IA em cinza claro.
+- `src/routes/index.tsx`: header, filtros e botões no novo estilo; a lógica fica intacta.
+- `src/components/dash/tv-mode.tsx`: ajustes de paleta, tamanho e contraste.
+- Salvar a preferência de design na memória do projeto (claro, inspirado em soueraldo.com, sem listras, sem caixas pretas).
