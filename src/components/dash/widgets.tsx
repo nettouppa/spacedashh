@@ -72,31 +72,59 @@ export function KpiStrip({ f, big }: P) {
   );
 }
 
+// Pass-rate color thresholds between funnel stages.
+export const PASS_THRESHOLDS = { good: 0.6, warn: 0.4 } as const;
+const passTone = (r: number) =>
+  r >= PASS_THRESHOLDS.good ? "bg-success-soft text-success" : r >= PASS_THRESHOLDS.warn ? "bg-warning-soft text-warning" : "bg-danger-soft text-danger";
+
 export function FunnelWidget({ f, set, big }: P) {
   const data = funnel(f);
-  const max = data[0]?.value || 1;
+  const top = data[0]?.count || 1;
+  const MIN = 18;
+  const widths = data.map((s) => Math.max((s.count / top) * 100, MIN));
+  const last = data[data.length - 1];
+  const overall = data[0]?.count ? (last?.count ?? 0) / data[0].count : 0;
+  let gap = { i: 1, pass: 1 };
+  data.forEach((s, i) => { if (i && s.pass < gap.pass) gap = { i, pass: s.pass }; });
+  const rowH = big ? "h-20" : "h-14";
   return (
     <Card title="Funil de vendas" subtitle="Clique numa etapa para filtrar o painel">
-      <table className={cn("w-full text-sm", big && "text-lg")}>
-        <thead><tr className="text-left text-xs font-medium text-muted-foreground">
-          <th className="pb-3 font-medium">Etapa</th><th className="w-1/2 pb-3" /><th className="pb-3 text-right font-medium">Negócios</th><th className="pb-3 text-right font-medium">Valor</th><th className="pb-3 text-right font-medium">Passagem</th>
-        </tr></thead>
-        <tbody>
-          {data.map((s, i) => {
-            const active = f.stage === s.stage;
-            return (
-              <tr key={s.stage} onClick={() => set({ stage: active ? undefined : (s.stage as Stage) })}
-                className={cn("cursor-pointer transition-colors hover:bg-muted/60", active && "bg-primary-soft", f.stage && !active && "opacity-40")}>
-                <td className="whitespace-nowrap py-2.5 pr-4 font-medium">{s.stage}</td>
-                <td className="py-2.5 pr-4"><div className="h-2 rounded-full bg-muted"><div className="h-2 rounded-full bg-primary" style={{ width: `${Math.max((s.value / max) * 100, 2)}%`, opacity: 0.35 + (i / (data.length - 1)) * 0.65 }} /></div></td>
-                <td className="py-2.5 text-right tabular-nums text-muted-foreground">{s.count}</td>
-                <td className="py-2.5 pl-4 text-right font-medium tabular-nums">{brl(s.value)}</td>
-                <td className="py-2.5 pl-4 text-right tabular-nums">{i ? <span className={cn("font-medium", s.pass < 0.4 ? "text-danger" : "text-foreground")}>{pct(s.pass)}</span> : <span className="text-subtle-foreground">—</span>}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <div className="mb-5 grid grid-cols-3 gap-3 rounded-lg bg-muted/60 p-3">
+        <div><div className="text-xs text-muted-foreground">Eficiência topo → fundo</div><div className={cn("font-semibold tabular-nums text-primary", big ? "text-4xl" : "text-2xl")}>{(overall * 100).toFixed(1).replace(".", ",")}%</div></div>
+        <div><div className="text-xs text-muted-foreground">Valor convertido</div><div className={cn("font-semibold tabular-nums", big ? "text-4xl" : "text-2xl")}>{brl(last?.value ?? 0)}</div></div>
+        <div><div className="text-xs text-muted-foreground">Maior gargalo</div><div className={cn("font-semibold", big ? "text-xl" : "text-sm")}>{data[gap.i - 1]?.stage} → {data[gap.i]?.stage}</div><span className={cn("mt-0.5 inline-block rounded px-1.5 text-xs font-medium tabular-nums", passTone(gap.pass))}>{pct(gap.pass)}</span></div>
+      </div>
+      <div className="space-y-0">
+        {data.map((s, i) => {
+          const w = widths[i]!;
+          const next = widths[i + 1] ?? w * 0.85;
+          const inset = ((w - next) / 2 / w) * 100;
+          const active = f.stage === s.stage;
+          return (
+            <div key={s.stage}>
+              {i > 0 && (
+                <div className="flex h-6 items-center">
+                  <div className="flex-1" />
+                  <div className="w-44 pl-4"><span className={cn("inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-semibold tabular-nums", passTone(s.pass))}>↓ {pct(s.pass)} conversão</span></div>
+                </div>
+              )}
+              <button onClick={() => set({ stage: active ? undefined : (s.stage as Stage) })}
+                className={cn("group flex w-full items-center text-left transition-opacity", f.stage && !active && "opacity-35")}>
+                <div className="flex flex-1 justify-center">
+                  <div className={cn("flex items-center justify-center bg-primary text-primary-foreground transition-all group-hover:brightness-110", rowH, active && "ring-2 ring-primary ring-offset-2 ring-offset-card")}
+                    style={{ width: `${w}%`, opacity: 0.3 + (i / Math.max(data.length - 1, 1)) * 0.7, clipPath: `polygon(0 0, 100% 0, ${100 - inset}% 100%, ${inset}% 100%)` }}>
+                    <span className={cn("font-semibold tabular-nums", big ? "text-2xl" : "text-sm", i < 2 && "text-foreground")}>{s.count}</span>
+                  </div>
+                </div>
+                <div className="w-44 pl-4">
+                  <div className={cn("font-medium", big ? "text-lg" : "text-sm")}>{s.stage}</div>
+                  <div className="text-xs tabular-nums text-muted-foreground">{s.count} negócios · {brl(s.value)}</div>
+                </div>
+              </button>
+            </div>
+          );
+        })}
+      </div>
     </Card>
   );
 }
