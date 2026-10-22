@@ -106,49 +106,68 @@ export function FunnelWidget({ f, set, big }: P) {
         <div className="p-4"><div className="text-xs font-medium text-muted-foreground">Valor convertido</div><div className={cn("mt-1 font-semibold tabular-nums", big ? "text-5xl" : "text-2xl", "whitespace-nowrap")}>{brl(last?.value ?? 0)}</div><div className="mt-0.5 text-xs text-muted-foreground">de {brl(data[0]?.value ?? 0)} no topo</div></div>
         <div className="p-4"><div className="text-xs font-medium text-muted-foreground">Maior gargalo</div><div className={cn("mt-1 font-semibold", big ? "text-2xl" : "text-base")}>{data[gap.i - 1]?.stage} → {data[gap.i]?.stage}</div><span className={cn("mt-1 inline-block rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums", passTone(gap.pass))}>{pct(gap.pass)} de passagem</span></div>
       </div>
-      <div className="mx-auto max-w-3xl">
-        {data.map((s, i) => {
-          const w = widths[i]!;
-          const next = widths[i + 1] ?? w * 0.85;
-          const inset = w ? Math.max(0, ((w - next) / 2 / w) * 100) : 0;
-          const active = f.stage === s.stage;
-          const ticket = s.count ? s.value / s.count : 0;
-          return (
-            <div key={s.stage}>
-              {i > 0 && (
-                <div className="flex justify-center py-1.5">
-                  <span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-semibold tabular-nums", big ? "text-sm" : "text-[11px]", passTone(s.pass))}>↓ {pct(s.pass)} conversão</span>
-                </div>
-              )}
-              <button onClick={() => set({ stage: active ? undefined : (s.stage as Stage) })}
-                title={`Ticket médio ${brl(ticket)} · ${pct(s.count / (data[0]?.count || 1))} do topo`}
-                className={cn("group block w-full text-center transition-opacity", f.stage && !active && "opacity-40")}>
-                <div className={cn("relative grid place-items-center", big ? "h-32" : "h-[84px]")}>
-                  <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 transition-all group-hover:brightness-110"
-                    style={{
-                      width: `${w}%`, minWidth: s.count ? 2 : 0,
-                      background: `color-mix(in oklab, var(--primary) ${28 + (i / n) * 72}%, var(--card))`,
-                      clipPath: w ? `polygon(0 0, 100% 0, ${100 - inset}% 100%, ${inset}% 100%)` : undefined,
-                      outline: active ? "2px solid var(--primary)" : undefined, outlineOffset: 3,
-                    }} />
-                  {(() => {
-                    // Dark bands get light text; narrow bands (text overflows onto the card) keep dark text.
-                    const light = i / n > 0.45 && w > 35;
-                    return (
-                      <div className={cn("relative leading-tight", light ? "text-primary-foreground" : "text-foreground", w <= 35 && "rounded-lg border border-border bg-card/95 px-3 py-1 shadow-soft")}>
-                        <div className={cn("font-semibold", big ? "text-xl" : "text-sm")}>{s.stage}</div>
-                        <div className={cn("tabular-nums", big ? "text-lg" : "text-xs", light ? "opacity-90" : "text-muted-foreground")}>{s.count} negócios</div>
-                        <div className={cn("font-semibold tabular-nums", big ? "text-xl" : "text-sm", !light && "text-primary")}>{brl(s.value)}</div>
-                      </div>
-                    );
-                  })()}
-                </div>
-
-              </button>
+      {(() => {
+        // Horizontal flow funnel: a smooth ribbon whose thickness is proportional to each stage.
+        const VW = 1000, VH = 240, cols = data.length || 1, cw = VW / cols, mid = VH / 2;
+        const hs = widths.map((w) => (w / 100) * (VH - 8));
+        const xs = data.map((_, i) => i * cw);
+        let top = `M0,${mid - (hs[0] ?? 0) / 2}`, bot = "";
+        data.forEach((_, i) => {
+          const h = hs[i]!, x0 = xs[i]!, flat = x0 + cw * 0.55, x1 = x0 + cw, hn = hs[i + 1] ?? h;
+          top += ` L${flat},${mid - h / 2} C${flat + cw * 0.25},${mid - h / 2} ${x1 - cw * 0.2},${mid - hn / 2} ${x1},${mid - hn / 2}`;
+        });
+        for (let i = data.length - 1; i >= 0; i--) {
+          const h = hs[i]!, x0 = xs[i]!, flat = x0 + cw * 0.55, x1 = x0 + cw, hn = hs[i + 1] ?? h;
+          bot += ` L${x1},${mid + hn / 2} C${x1 - cw * 0.2},${mid + hn / 2} ${flat + cw * 0.25},${mid + h / 2} ${flat},${mid + h / 2} L${x0},${mid + h / 2}`;
+        }
+        const d = `${top}${bot} Z`;
+        const selIdx = data.findIndex((s) => s.stage === f.stage);
+        return (
+          <div>
+            <div className="grid" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+              {data.map((s, i) => (
+                <button key={s.stage} onClick={() => set({ stage: f.stage === s.stage ? undefined : (s.stage as Stage) })}
+                  className={cn("border-l border-border px-4 pb-3 text-left transition-opacity first:border-l-0", f.stage && f.stage !== s.stage && "opacity-40")}>
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><span className="size-2 rounded-full" style={{ background: `color-mix(in oklab, var(--primary) ${35 + (i / n) * 65}%, var(--card))` }} />{s.stage}</div>
+                  <div className={cn("mt-1 font-semibold tracking-tight tabular-nums", big ? "text-4xl" : "text-2xl")}>{s.count}<span className="ml-1 text-xs font-normal text-muted-foreground">negócios</span></div>
+                  <div className={cn("tabular-nums font-medium text-primary", big ? "text-xl" : "text-sm")}>{brl(s.value)}</div>
+                </button>
+              ))}
             </div>
-          );
-        })}
-      </div>
+            <div className="relative">
+              <svg viewBox={`0 0 ${VW} ${VH}`} preserveAspectRatio="none" className={cn("block w-full", big ? "h-72" : "h-52")}>
+                <defs>
+                  <linearGradient id="fnl" x1="0" x2="1" y1="0" y2="0">
+                    <stop offset="0%" stopColor="color-mix(in oklab, var(--primary) 30%, var(--card))" />
+                    <stop offset="100%" stopColor="var(--primary)" />
+                  </linearGradient>
+                </defs>
+                {xs.slice(1).map((x) => <line key={x} x1={x} x2={x} y1={0} y2={VH} stroke="var(--border)" vectorEffect="non-scaling-stroke" />)}
+                {selIdx >= 0 && <rect x={xs[selIdx]} y={0} width={cw} height={VH} fill="var(--primary)" opacity="0.06" />}
+                <path d={d} fill="url(#fnl)" />
+              </svg>
+              {data.slice(1).map((s, k) => (
+                <span key={s.stage} className={cn("absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-card px-2.5 py-1 font-semibold tabular-nums shadow-soft", big ? "text-base" : "text-xs", passTone(s.pass))}
+                  style={{ left: `${((k + 1) / cols) * 100}%` }}>
+                  {pct(s.pass)}
+                </span>
+              ))}
+            </div>
+            <div className="grid pt-3" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+              {data.map((s, i) => {
+                const lost = i < data.length - 1 ? s.count - (data[i + 1]?.count ?? 0) : 0;
+                return (
+                  <div key={s.stage} className="border-l border-border px-4 text-xs first:border-l-0">
+                    {i < data.length - 1
+                      ? <><span className="font-semibold tabular-nums text-danger">−{lost}</span> <span className="text-muted-foreground">não avançaram</span></>
+                      : <span className="font-semibold text-success">Ticket {brl(s.count ? s.value / s.count : 0)}</span>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
     </Card>
   );
 }
