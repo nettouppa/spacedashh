@@ -27,30 +27,52 @@ export const Route = createFileRoute("/")({
 });
 
 const LAYOUT_KEY = "vsh-layout-v3";
-const SIZE_KEY = "vsh-sizes-v1";
+const SIZE_KEY = "vsh-sizes-v2";
 const ME = "s1"; // simulated logged-in seller
 
-type Size = 1 | 2 | 3;
-const SPAN: Record<Size, string> = { 1: "lg:col-span-1", 2: "lg:col-span-2", 3: "lg:col-span-3" };
-const SIZE_LABEL: Record<Size, string> = { 1: "1/3", 2: "2/3", 3: "Inteira" };
-const defaultSize = (span: string): Size => (span.includes("3") ? 3 : span.includes("2") ? 2 : 1);
+// Widths are in 12-column grid units; presets map to 1/3, 2/3 and full row.
+type Size = number;
+const COLS = 12;
+const PRESETS: { v: Size; l: string }[] = [{ v: 4, l: "1/3" }, { v: 8, l: "2/3" }, { v: 12, l: "Inteira" }];
+const defaultSize = (span: string): Size => (span.includes("3") ? 12 : span.includes("2") ? 8 : 4);
+const clampSize = (n: number) => Math.min(COLS, Math.max(3, Math.round(n)));
 
 function SortableItem({ id, edit, children, size, onSize }: { id: string; edit: boolean; children: React.ReactNode; size: Size; onSize: (s: Size) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const [resizing, setResizing] = useState(false);
+  const startResize = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault(); e.stopPropagation();
+    const el = (e.currentTarget.parentElement as HTMLElement);
+    const grid = el.parentElement as HTMLElement;
+    const gap = parseFloat(getComputedStyle(grid).columnGap) || 0;
+    const colW = (grid.clientWidth - gap * (COLS - 1)) / COLS;
+    const left = el.getBoundingClientRect().left;
+    setResizing(true);
+    const move = (ev: PointerEvent) => onSize(clampSize((ev.clientX - left + gap) / (colW + gap)));
+    const up = () => { setResizing(false); window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+    window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);
+  };
   return (
-    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={cn("relative", SPAN[size], isDragging && "z-10 opacity-80", edit && "rounded-xl ring-2 ring-primary/40 ring-offset-2 ring-offset-background")}>
+    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition: resizing ? undefined : transition, ["--span" as string]: size }}
+      className={cn("relative dash-span", isDragging && "z-10 opacity-80", edit && "rounded-xl ring-2 ring-primary/40 ring-offset-2 ring-offset-background")}>
       {edit && (
         <div className="absolute left-1/2 top-2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-lg border border-border bg-card p-1 shadow-soft">
           <button {...attributes} {...listeners} aria-label="Arrastar" className="cursor-grab rounded-md bg-primary px-2 py-1 text-primary-foreground active:cursor-grabbing">
             <GripVertical className="size-4" />
           </button>
-          {([1, 2, 3] as Size[]).map((s) => (
-            <button key={s} onClick={() => onSize(s)} aria-label={`Largura ${SIZE_LABEL[s]}`}
-              className={cn("rounded-md px-2 py-1 text-xs font-medium", size === s ? "bg-primary-soft text-primary" : "text-muted-foreground hover:bg-muted")}>
-              {SIZE_LABEL[s]}
+          {PRESETS.map((p) => (
+            <button key={p.v} onClick={() => onSize(p.v)} aria-label={`Largura ${p.l}`}
+              className={cn("rounded-md px-2 py-1 text-xs font-medium", size === p.v ? "bg-primary-soft text-primary" : "text-muted-foreground hover:bg-muted")}>
+              {p.l}
             </button>
           ))}
+          <span className="px-1.5 text-xs tabular-nums text-subtle-foreground">{size}/{COLS}</span>
+        </div>
+      )}
+      {edit && (
+        <div onPointerDown={startResize} role="separator" aria-label="Redimensionar largura"
+          className="group absolute -right-2 top-0 z-10 hidden h-full w-4 cursor-ew-resize touch-none items-center justify-center lg:flex">
+          <span className={cn("h-12 w-1.5 rounded-full bg-primary/50 transition-colors group-hover:bg-primary", resizing && "bg-primary")} />
         </div>
       )}
       {children}
@@ -163,7 +185,7 @@ function Index() {
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={order} strategy={rectSortingStrategy}>
-          <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="mt-4 grid grid-cols-1 gap-4 dash-grid">
             {order.map((id) => {
               const W = WIDGETS[id];
               return (

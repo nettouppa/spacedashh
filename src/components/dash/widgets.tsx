@@ -283,7 +283,7 @@ export function PaceWidget({ f, big }: P) {
 }
 
 export const WIDGETS = {
-  funnel: { title: "Funil", C: FunnelWidget, span: "lg:col-span-2" },
+  funnel: { title: "Funil", C: FunnelWidget, span: "lg:col-span-3" },
   ranking: { title: "Ranking", C: RankingWidget, span: "" },
   pace: { title: "Ritmo", C: PaceWidget, span: "lg:col-span-2" },
   loss: { title: "Perdas", C: LossWidget, span: "" },
