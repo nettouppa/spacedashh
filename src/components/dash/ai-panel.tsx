@@ -31,6 +31,8 @@ import { askAssistant, type AiAction } from "@/lib/ai.functions";
 import { atRisk, brl, funnel, kpis, lossReasons, pct, ranking, sellerName, COMPANIES, TEAMS, STAGES, LOSS_REASONS, type Filters } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
 import { AtlasIcon, type AtlasRequest } from "./atlas";
+import { VoiceMode } from "./voice-mode";
+import { AudioLines } from "lucide-react";
 
 type Msg = { role: "user" | "assistant"; content: string; topic?: string | undefined; action?: { label: string; prev: Filters } | undefined };
 
@@ -97,6 +99,9 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
   const [hello, setHello] = useState("Olá");
   const end = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [voiceOpen, setVoiceOpen] = useState(false);
+  const fRef = useRef(f);
+  fRef.current = f;
   useEffect(() => { setHello(greeting()); }, []);
   useEffect(() => {
     end.current?.scrollIntoView({ behavior: "smooth" });
@@ -135,6 +140,10 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
 
   return (
     <aside className={cn("fixed inset-y-0 right-0 z-40 flex w-[min(400px,100vw)] flex-col border-l border-border bg-card text-card-foreground shadow-soft transition-transform duration-300 ease-out", open ? "translate-x-0" : "translate-x-[110%]")}>
+      {voiceOpen && open && (
+        <VoiceMode history={msgs.map(({ role, content }) => ({ role, content }))} context={() => buildContext(fRef.current)} onAction={onAction}
+          onClose={(turns) => { setVoiceOpen(false); if (turns.length) setMsgs((m) => [...m, ...turns]); }} />
+      )}
       <div className="flex items-center gap-3 border-b border-border px-4 py-3">
         <span className={cn("grid size-10 place-items-center rounded-xl bg-primary-soft text-primary", busy && "atlas-pulse")}><AtlasIcon className="size-6" /></span>
         <div className="min-w-0 flex-1">
@@ -224,6 +233,12 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
             <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-[11px] text-subtle-foreground">
               {chips.length ? <>Usando filtros:{chips.map((c) => <span key={c} className="truncate rounded bg-muted px-1.5 py-0.5 text-muted-foreground">{c}</span>)}</> : "Atlas usa os filtros ativos do painel"}
             </div>
+            {voice.supported && (
+              <button type="button" onClick={() => setVoiceOpen(true)} disabled={busy} aria-label="Conversar por voz" title="Conversar por voz"
+                className="grid size-7 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground">
+                <AudioLines className="size-4" />
+              </button>
+            )}
             {voice.supported && (
               <button type="button" onClick={voice.toggle} disabled={busy} aria-label={voice.listening ? "Parar de ouvir" : "Falar com o Atlas"} title={voice.listening ? "Ouvindo… clique para parar" : "Falar com o Atlas"}
                 className={cn("grid size-7 shrink-0 place-items-center rounded-lg transition", voice.listening ? "bg-danger-soft text-danger atlas-pulse" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
