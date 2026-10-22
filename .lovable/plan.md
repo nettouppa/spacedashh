@@ -1,32 +1,54 @@
 # Próximos passos do Spacedash
 
-Hoje o painel está completo no visual: funil, ranking, negócios em risco, filtros cruzados, cards que você arrasta e redimensiona, Modo TV e o Atlas com chat e voz. Mas tudo roda com **dados de exemplo**. Para cumprir as premissas do projeto (vários clientes, integração com o Bitrix24, perfis Gestor/Vendedor), sugiro esta ordem:
+Hoje temos um painel de Vendas/CRM completo no visual, mas com **dados de exemplo**. Abaixo está o caminho para cumprir os 5 requisitos mínimos, a integração por aplicativo do Bitrix24 e o acesso por convite.
 
-## Fase 1 — Base real (prioridade)
-1. **Ativar o Lovable Cloud** para guardar empresas, usuários, layouts e dados sincronizados.
-2. **Login por convite e várias empresas:** sem cadastro aberto; você convida empresas e pessoas. Cada cliente vê só os próprios dados, e um usuário pode acessar mais de uma empresa (com seletor no topo).
-3. **Perfis de verdade:** Gestor vê a equipe toda; o Vendedor só vê os próprios negócios. Isso substitui a troca de perfil simulada que existe hoje.
-4. **Layout salvo por usuário:** a ordem e o tamanho dos cards ficam guardados na conta, e não só no navegador.
+## Como cada requisito será atendido
 
-## Fase 2 — Integração com o Bitrix24
-5. **Aplicativo Spacedash no Bitrix24:** o cliente instala pelo portal e autoriza; trazemos negócios, etapas, vendedores, motivos de perda e atividades.
+| Requisito | Situação hoje | O que falta |
+|---|---|---|
+| Dashboards personalizados com indicadores de vários módulos | Um painel fixo de vendas; dá para mover e redimensionar os cards | Criar vários painéis, escolher os cards numa biblioteca e salvar na conta |
+| Vendas, funil, atividades, tarefas e atendimento | Só vendas e funil | Novos módulos: Atividades, Tarefas e Atendimento |
+| Filtros por período, equipe, responsável e outros | Período, empresa, equipe e vendedor | Período personalizado (datas), filtros por módulo e filtros salvos por painel |
+| Gráficos, comparativos e evolução | Variação contra o período anterior, mini gráficos e ritmo de vendas | Gráficos de evolução mês a mês, comparar períodos e comparar equipes |
+| Permissões: Gestor x Colaborador | Troca de perfil simulada | Perfis reais: o colaborador vê só os próprios dados |
+
+## Fase 1: Base real
+1. **Ativar o Lovable Cloud** para guardar empresas, usuários, painéis e dados sincronizados.
+2. **Login por convite e várias empresas:** você convida empresas e pessoas, e cada empresa vê só os próprios dados. A estrutura já fica pronta para abrir a venda no futuro.
+3. **Perfis e permissões:** Administrador (você), Gestor (vê a equipe toda) e Colaborador (vê só o que é dele). Isso vale para todos os módulos e também para o Atlas.
+
+## Fase 2: Integração com o Bitrix24 (aplicativo pelo portal)
+4. **Aplicativo Spacedash no Bitrix24:** o cliente instala pelo portal e autoriza, e a empresa é criada no Spacedash automaticamente.
+5. **Dados trazidos do Bitrix24:**
+   - Vendas: negócios, etapas, motivos de perda
+   - Atividades: ligações, e-mails e reuniões por responsável
+   - Tarefas: abertas, concluídas, atrasadas e prazos
+   - Atendimento: conversas dos canais abertos, tempo de resposta e avaliação
+   - Pessoas e departamentos, para montar equipes e permissões
 6. **Sincronização automática** a cada poucos minutos, mais um botão "Sincronizar agora" e um aviso de "última atualização".
-7. **Metas** cadastradas no Spacedash por vendedor e por mês, já que o Bitrix24 não tem um campo padrão para isso.
 
-## Fase 3 — Completar o produto
-8. **Atlas funcionando de ponta a ponta:** resolver o erro de acesso ao serviço de IA visto nos testes e validar o chat, as ações de filtro e a voz.
-9. **Páginas do menu** que ainda são só ícones: Pipeline (lista de negócios com detalhes), Equipe (desempenho individual) e Relatórios (exportar em PDF ou Excel).
-10. **Modo TV com link próprio:** um endereço para deixar fixo na televisão da sala, sem precisar fazer login toda vez.
-11. **Alertas:** aviso quando um negócio grande ficar parado ou quando a meta estiver em risco.
+## Fase 3: Novos módulos e painéis personalizados
+7. **Biblioteca de cards** com indicadores de todos os módulos (Vendas, Atividades, Tarefas, Atendimento).
+8. **Meus painéis:** criar, renomear, duplicar e compartilhar painéis com a equipe. O Gestor pode publicar um painel padrão para os colaboradores.
+9. **Novos cards:**
+   - Atividades por pessoa e por tipo
+   - Tarefas atrasadas e cumprimento de prazo
+   - Atendimento: volume, tempo de resposta e satisfação
+   - Evolução mensal e comparação de períodos
+10. **Filtros completos:** período com datas livres, responsável, equipe, departamento e filtros próprios de cada módulo, mantendo a filtragem cruzada.
 
-## Decisões tomadas
-- **Bitrix24:** o cliente instala o aplicativo Spacedash pelo próprio portal Bitrix24. A instalação cria a empresa no Spacedash automaticamente.
-- **Acesso:** por enquanto só entram clientes convidados por você, com uma tela simples de administrador para convidar empresas e pessoas. A estrutura já fica pronta para, no futuro, abrir o cadastro e a venda com planos e pagamento, sem precisar refazer nada.
+## Fase 4: Acabamento
+11. **Atlas funcionando de ponta a ponta:** resolver o erro de acesso ao serviço de IA visto nos testes. O Atlas também passa a entender os novos módulos e a respeitar as permissões.
+12. **Modo TV com link próprio** para deixar fixo na televisão, sem precisar fazer login toda vez.
+13. **Relatórios:** exportar em PDF ou Excel.
+14. **Metas** por pessoa e por mês, cadastradas no Spacedash.
 
-## O que vou precisar de você na Fase 2
-- Criar o aplicativo no Bitrix24 Partner (ou em "Aplicativo local" do seu portal) e me passar o código do cliente e a chave secreta. Eu indico onde colar cada um.
+## O que vou precisar de você
+- Na Fase 2: criar o aplicativo (Bitrix24 Partner ou "Aplicativo local" no seu portal) e me passar o código do cliente e a chave secreta. Eu indico onde colar cada um.
 
 ## Detalhes técnicos
-- Tabelas: empresas, membros (com papel gestor/vendedor), conexões Bitrix24, negócios, etapas, vendedores, metas e layouts. Acesso isolado por empresa com regras de segurança na base de dados.
-- Sincronização por rota de servidor agendada que chama `crm.deal.list`, `crm.status.list` e `user.get`, guardando um cursor incremental.
-- `src/lib/crm-data.ts` passa a ler os negócios da base; os widgets não mudam, porque continuam usando `filterDeals`.
+- Tabelas isoladas por empresa: empresas, membros, papéis (tabela separada de papéis, com função de verificação), conexões Bitrix24, negócios, atividades, tarefas, atendimentos, usuários e departamentos, painéis e metas. As regras de segurança na base de dados garantem o isolamento entre empresas e a visão do colaborador.
+- Instalação e autorização do aplicativo por rota pública que valida a assinatura do Bitrix24 e guarda os tokens de acesso e renovação.
+- Sincronização incremental agendada com `crm.deal.list`, `crm.activity.list`, `tasks.task.list`, `imopenlines.*`, `user.get` e `department.get`.
+- Os widgets continuam usando funções de filtro (`filterDeals` e equivalentes por módulo); o arquivo de dados de exemplo é substituído pela leitura da base.
+- Painéis guardados como lista de cards com tamanho, ordem e filtros.
