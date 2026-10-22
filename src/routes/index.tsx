@@ -54,7 +54,7 @@ function SortableItem({ id, edit, children, size, onSize }: { id: string; edit: 
   };
   return (
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition: resizing ? undefined : transition, ["--span" as string]: size }}
-      className={cn("relative lg:[grid-column:span_var(--span)/span_var(--span)]", isDragging && "z-10 opacity-80", edit && "rounded-xl ring-2 ring-primary/40 ring-offset-2 ring-offset-background")}>
+      className={cn("relative dash-span", isDragging && "z-10 opacity-80", edit && "rounded-xl ring-2 ring-primary/40 ring-offset-2 ring-offset-background")}>
       {edit && (
         <div className="absolute left-1/2 top-2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-lg border border-border bg-card p-1 shadow-soft">
           <button {...attributes} {...listeners} aria-label="Arrastar" className="cursor-grab rounded-md bg-primary px-2 py-1 text-primary-foreground active:cursor-grabbing">
