@@ -32,9 +32,9 @@ function SortableItem({ id, edit, children, span }: { id: string; edit: boolean;
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   return (
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={cn("relative", span, isDragging && "z-10 opacity-80", edit && "rounded-[2rem] ring-2 ring-dashed ring-primary/40")}>
+      className={cn("relative", span, isDragging && "z-10 opacity-80", edit && "rounded-2xl ring-2 ring-primary/40")}>
       {edit && (
-        <button {...attributes} {...listeners} aria-label="Arrastar" className="absolute left-1/2 top-2 z-10 -translate-x-1/2 cursor-grab rounded-full bg-primary px-3 py-1 text-primary-foreground shadow-glow active:cursor-grabbing">
+        <button {...attributes} {...listeners} aria-label="Arrastar" className="absolute left-1/2 top-2 z-10 -translate-x-1/2 cursor-grab rounded-lg bg-primary px-3 py-1 text-primary-foreground active:cursor-grabbing">
           <GripVertical className="size-4" />
         </button>
       )}
@@ -46,7 +46,7 @@ function SortableItem({ id, edit, children, span }: { id: string; edit: boolean;
 function Select<T extends string>({ value, onChange, options, label }: { value?: T | undefined; onChange: (v?: T) => void; options: { v: T; l: string }[]; label: string }) {
   return (
     <select aria-label={label} value={value ?? ""} onChange={(e) => onChange((e.target.value || undefined) as T | undefined)}
-      className="h-10 rounded-full border-0 bg-card px-4 text-sm shadow-soft outline-none focus:ring-2 focus:ring-primary">
+      className="h-10 rounded-full border border-border bg-card px-4 text-sm font-medium outline-none focus:ring-2 focus:ring-primary">
       <option value="">{label}</option>
       {options.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
     </select>
@@ -100,36 +100,36 @@ function Index() {
   const me = SELLERS.find((s) => s.id === ME)!;
 
   return (
-    <div className="min-h-screen bg-page p-3 sm:p-6">
-      <div className="mx-auto max-w-[1500px] rounded-[2.5rem] border border-card/60 bg-card/30 p-5 shadow-soft backdrop-blur-sm sm:p-8">
+    <div className="min-h-screen bg-background p-3 sm:p-6">
+      <div className="mx-auto max-w-[1500px] p-2 sm:p-4">
         {/* Top bar */}
         <header className="flex flex-wrap items-center justify-between gap-4">
-          <div className="rounded-full border border-foreground/30 px-5 py-2 text-2xl tracking-tight">Violeta<span className="text-primary">.</span></div>
-          <nav className="hidden items-center gap-1 rounded-full bg-card/70 p-1.5 shadow-soft md:flex">
+          <div className="text-2xl font-extrabold tracking-tight">Violeta<span className="text-primary">.</span></div>
+          <nav className="hidden items-center gap-1 rounded-full border border-border bg-card p-1 md:flex">
             {(["month", "quarter", "year"] as Period[]).map((p) => (
-              <button key={p} onClick={() => set({ period: p })} className={cn("rounded-full px-5 py-2 text-sm transition", f.period === p ? "bg-ink text-ink-foreground" : "hover:bg-background")}>
+              <button key={p} onClick={() => set({ period: p })} className={cn("rounded-full px-5 py-2 text-sm transition", f.period === p ? "bg-primary font-semibold text-primary-foreground" : "hover:bg-muted")}>
                 {{ month: "Mês", quarter: "Trimestre", year: "Ano" }[p]}
               </button>
             ))}
           </nav>
           <div className="flex items-center gap-2">
-            <div className="flex rounded-full bg-card/70 p-1 shadow-soft">
+            <div className="flex rounded-full border border-border bg-card p-1">
               {(["manager", "seller"] as const).map((p) => (
-                <button key={p} onClick={() => setProfile(p)} className={cn("rounded-full px-4 py-2 text-sm", profile === p ? "bg-primary text-primary-foreground shadow-glow" : "")}>
+                <button key={p} onClick={() => setProfile(p)} className={cn("rounded-full px-4 py-2 text-sm", profile === p ? "bg-primary-soft font-semibold text-accent-foreground" : "text-muted-foreground")}>
                   {p === "manager" ? "Gestor" : "Vendedor"}
                 </button>
               ))}
             </div>
-            <button onClick={() => setTv(true)} className="flex h-11 items-center gap-2 rounded-full bg-card px-4 text-sm shadow-soft"><Monitor className="size-4" />Modo TV</button>
-            <button onClick={() => setAi((v) => !v)} className="flex h-11 items-center gap-2 rounded-full bg-ink px-4 text-sm text-ink-foreground"><Sparkles className="size-4 text-primary" />IA</button>
-            <span className="grid size-11 place-items-center rounded-full bg-card shadow-soft"><Bell className="size-4" /></span>
+            <button onClick={() => setTv(true)} className="flex h-11 items-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-medium"><Monitor className="size-4" />Modo TV</button>
+            <button onClick={() => setAi((v) => !v)} className="flex h-11 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-glow"><Sparkles className="size-4" />Assistente IA</button>
+            <span className="grid size-11 place-items-center rounded-full border border-border bg-card"><Bell className="size-4" /></span>
           </div>
         </header>
 
         <div className="mt-8 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-sm text-muted-foreground">Bitrix24 · sincronizado há 2 min</p>
-            <h1 className="text-4xl font-light tracking-tight sm:text-5xl">{profile === "manager" ? "Bem-vindo, Gestor" : `Olá, ${me.name.split(" ")[0]}`}</h1>
+            <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">{profile === "manager" ? "Bem-vindo, " : "Olá, "}<span className="highlight">{profile === "manager" ? "Gestor" : me.name.split(" ")[0]}</span></h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Select label="Todas empresas" value={f.company} onChange={(v) => set({ company: v })} options={COMPANIES.map((c) => ({ v: c, l: c }))} />
@@ -138,10 +138,10 @@ function Index() {
               <Select label="Todos vendedores" value={f.sellerId} onChange={(v) => set({ sellerId: v })} options={SELLERS.filter((s) => !f.team || s.team === f.team).map((s) => ({ v: s.id, l: s.name }))} />
             </>}
             {edit ? <>
-              <button onClick={() => { setOrder(DEFAULT_ORDER); }} className="flex h-10 items-center gap-1 rounded-full bg-card px-4 text-sm shadow-soft"><RotateCcw className="size-4" />Padrão</button>
-              <button onClick={saveLayout} className="flex h-10 items-center gap-1 rounded-full bg-primary px-4 text-sm text-primary-foreground shadow-glow"><Save className="size-4" />Salvar layout</button>
+              <button onClick={() => { setOrder(DEFAULT_ORDER); }} className="flex h-10 items-center gap-1 rounded-full border border-border bg-card px-4 text-sm"><RotateCcw className="size-4" />Padrão</button>
+              <button onClick={saveLayout} className="flex h-10 items-center gap-1 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-glow"><Save className="size-4" />Salvar layout</button>
             </> : (
-              <button onClick={() => setEdit(true)} className="flex h-10 items-center gap-1 rounded-full bg-card px-4 text-sm shadow-soft">
+              <button onClick={() => setEdit(true)} className="flex h-10 items-center gap-1 rounded-full border border-border bg-card px-4 text-sm font-medium">
                 {saved ? <><Check className="size-4 text-primary" />Salvo</> : <><LayoutGrid className="size-4" />Organizar</>}
               </button>
             )}
@@ -152,7 +152,7 @@ function Index() {
         {chips.length > 0 && (
           <div className="mt-4 flex flex-wrap items-center gap-2">
             {chips.map((c) => (
-              <span key={c.k} className="flex items-center gap-1.5 rounded-full bg-primary-soft py-1 pl-3 pr-1 text-sm text-accent-foreground">
+              <span key={c.k} className="flex items-center gap-1.5 rounded-full bg-primary-soft py-1 pl-3 pr-1 text-sm font-medium text-foreground">
                 {c.label}
                 <button onClick={() => set({ [c.k]: undefined } as Partial<Filters>)} aria-label="Remover filtro" className="grid size-6 place-items-center rounded-full bg-card"><X className="size-3" /></button>
               </span>

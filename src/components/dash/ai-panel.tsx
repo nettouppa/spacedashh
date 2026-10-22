@@ -42,15 +42,15 @@ export function AiPanel({ open, onClose, f, onAction }: { open: boolean; onClose
   }
 
   return (
-    <aside className={`fixed inset-y-3 right-3 z-40 flex w-[min(400px,calc(100vw-1.5rem))] flex-col rounded-[2rem] bg-ink text-ink-foreground shadow-soft transition-transform duration-300 ${open ? "translate-x-0" : "translate-x-[110%]"}`}>
+    <aside className={`fixed inset-y-3 right-3 z-40 flex w-[min(400px,calc(100vw-1.5rem))] flex-col rounded-2xl border border-border bg-card text-card-foreground shadow-soft transition-transform duration-300 ${open ? "translate-x-0" : "translate-x-[110%]"}`}>
       <div className="flex items-center justify-between p-5">
-        <div className="flex items-center gap-2"><span className="grid size-10 place-items-center rounded-full bg-primary"><Sparkles className="size-4" /></span><div><div>Assistente Violeta</div><div className="text-xs opacity-60">IA sobre seus dados de CRM</div></div></div>
-        <button onClick={onClose} aria-label="Fechar" className="grid size-9 place-items-center rounded-full bg-ink-muted"><X className="size-4" /></button>
+        <div className="flex items-center gap-2"><span className="grid size-10 place-items-center rounded-lg bg-primary text-primary-foreground"><Sparkles className="size-4" /></span><div><div className="font-bold">Assistente Violeta</div><div className="text-xs text-muted-foreground">IA sobre seus dados de CRM</div></div></div>
+        <button onClick={onClose} aria-label="Fechar" className="grid size-9 place-items-center rounded-full bg-muted"><X className="size-4" /></button>
       </div>
       <div className="flex-1 space-y-3 overflow-auto px-5">
         {msgs.map((m, i) => (
-          <div key={i} className={m.role === "user" ? "ml-8 rounded-3xl rounded-br-md bg-primary px-4 py-2.5 text-sm text-primary-foreground" : "mr-6 rounded-3xl rounded-bl-md bg-ink-muted px-4 py-2.5 text-sm"}>
-            <div className="prose prose-sm prose-invert max-w-none [&_p]:my-1"><ReactMarkdown>{m.content}</ReactMarkdown></div>
+          <div key={i} className={m.role === "user" ? "ml-8 rounded-2xl rounded-br-md bg-primary px-4 py-2.5 text-sm text-primary-foreground" : "mr-6 rounded-2xl rounded-bl-md bg-muted px-4 py-2.5 text-sm"}>
+            <div className="max-w-none [&_p]:my-1"><ReactMarkdown>{m.content}</ReactMarkdown></div>
           </div>
         ))}
         {busy && <Loader2 className="size-4 animate-spin opacity-60" />}
@@ -58,12 +58,12 @@ export function AiPanel({ open, onClose, f, onAction }: { open: boolean; onClose
       </div>
       <div className="flex flex-wrap gap-1.5 px-5 pt-3">
         {["Resumo do mês", "Quem está em risco?", "Filtrar Enterprise", "Limpar filtros"].map((s) => (
-          <button key={s} onClick={() => send(s)} className="rounded-full bg-ink-muted px-3 py-1 text-xs">{s}</button>
+          <button key={s} onClick={() => send(s)} className="rounded-full bg-primary-soft px-3 py-1 text-xs font-medium text-accent-foreground">{s}</button>
         ))}
       </div>
-      <form onSubmit={(e) => { e.preventDefault(); send(input); }} className="m-4 flex items-center gap-2 rounded-full bg-ink-muted p-1.5 pl-4">
-        <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Pergunte algo…" className="flex-1 bg-transparent text-sm outline-none placeholder:opacity-50" />
-        <button disabled={busy} className="grid size-9 place-items-center rounded-full bg-primary"><Send className="size-4" /></button>
+      <form onSubmit={(e) => { e.preventDefault(); send(input); }} className="m-4 flex items-center gap-2 rounded-full border border-border bg-background p-1.5 pl-4">
+        <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Pergunte algo…" className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground" />
+        <button disabled={busy} className="grid size-9 place-items-center rounded-full bg-primary text-primary-foreground"><Send className="size-4" /></button>
       </form>
     </aside>
   );
