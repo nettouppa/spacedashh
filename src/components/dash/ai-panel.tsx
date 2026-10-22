@@ -1,7 +1,32 @@
 import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { useServerFn } from "@tanstack/react-start";
-import { X, ArrowUp, Copy, RotateCw, Check, SquarePen, Filter, Undo2, TrendingUp, AlertTriangle, Target } from "lucide-react";
+import { X, ArrowUp, Copy, RotateCw, Check, SquarePen, Filter, Undo2, TrendingUp, AlertTriangle, Target, Mic } from "lucide-react";
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function useVoice(onPartial: (t: string) => void, onFinal: (t: string) => void) {
+  const [supported, setSupported] = useState(false);
+  const [listening, setListening] = useState(false);
+  const rec = useRef<any>(null);
+  const cbs = useRef({ onPartial, onFinal });
+  cbs.current = { onPartial, onFinal };
+  useEffect(() => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) return;
+    setSupported(true);
+    const r = new SR();
+    r.lang = "pt-BR"; r.interimResults = true; r.continuous = false;
+    let text = "";
+    r.onstart = () => { text = ""; setListening(true); };
+    r.onresult = (e: any) => { text = Array.from(e.results).map((x: any) => x[0].transcript).join(""); cbs.current.onPartial(text); };
+    r.onend = () => { setListening(false); cbs.current.onFinal(text); };
+    r.onerror = () => setListening(false);
+    rec.current = r;
+    return () => { r.abort(); };
+  }, []);
+  const toggle = () => { if (!rec.current) return; if (listening) rec.current.stop(); else { try { rec.current.start(); } catch { /* já ativo */ } } };
+  return { supported, listening, toggle };
+}
 import { askAssistant, type AiAction } from "@/lib/ai.functions";
 import { atRisk, brl, funnel, kpis, lossReasons, pct, ranking, sellerName, COMPANIES, TEAMS, STAGES, LOSS_REASONS, type Filters } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
@@ -106,6 +131,7 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
 
   const lastUser = (i: number) => { for (let j = i - 1; j >= 0; j--) if (msgs[j]?.role === "user") return msgs[j]!; return null; };
   const chips = [f.company, f.team, f.sellerId && sellerName(f.sellerId), f.stage, f.lossReason].filter(Boolean) as string[];
+  const voice = useVoice((text) => setInput(text), (text) => { if (text.trim()) void send(text); });
 
   return (
     <aside className={cn("fixed inset-y-0 right-0 z-40 flex w-[min(400px,100vw)] flex-col border-l border-border bg-card text-card-foreground shadow-soft transition-transform duration-300 ease-out", open ? "translate-x-0" : "translate-x-[110%]")}>
@@ -198,6 +224,12 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
             <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-[11px] text-subtle-foreground">
               {chips.length ? <>Usando filtros:{chips.map((c) => <span key={c} className="truncate rounded bg-muted px-1.5 py-0.5 text-muted-foreground">{c}</span>)}</> : "Atlas usa os filtros ativos do painel"}
             </div>
+            {voice.supported && (
+              <button type="button" onClick={voice.toggle} disabled={busy} aria-label={voice.listening ? "Parar de ouvir" : "Falar com o Atlas"} title={voice.listening ? "Ouvindo… clique para parar" : "Falar com o Atlas"}
+                className={cn("grid size-7 shrink-0 place-items-center rounded-lg transition", voice.listening ? "bg-danger-soft text-danger atlas-pulse" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
+                <Mic className="size-4" />
+              </button>
+            )}
             <button disabled={busy || !input.trim()} aria-label="Enviar" className="grid size-7 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground transition disabled:bg-muted disabled:text-subtle-foreground"><ArrowUp className="size-4" /></button>
           </div>
         </form>
