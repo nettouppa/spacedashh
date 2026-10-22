@@ -123,20 +123,27 @@ export function FunnelWidget({ f, set, big }: P) {
               <button onClick={() => set({ stage: active ? undefined : (s.stage as Stage) })}
                 title={`Ticket médio ${brl(ticket)} · ${pct(s.count / (data[0]?.count || 1))} do topo`}
                 className={cn("group block w-full text-center transition-opacity", f.stage && !active && "opacity-40")}>
-                <div className={cn("mb-1.5 flex items-baseline justify-center gap-2", big ? "text-xl" : "text-sm")}>
-                  <span className="font-semibold text-foreground">{s.stage}</span>
-                  <span className="text-subtle-foreground">·</span>
-                  <span className="font-semibold tabular-nums">{s.count}</span><span className="text-muted-foreground">negócios</span>
-                  <span className="text-subtle-foreground">·</span>
-                  <span className="font-semibold tabular-nums text-primary">{brl(s.value)}</span>
+                <div className={cn("relative grid place-items-center", big ? "h-32" : "h-[84px]")}>
+                  <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 transition-all group-hover:brightness-110"
+                    style={{
+                      width: `${w}%`, minWidth: s.count ? 2 : 0,
+                      background: `color-mix(in oklab, var(--primary) ${28 + (i / n) * 72}%, var(--card))`,
+                      clipPath: w ? `polygon(0 0, 100% 0, ${100 - inset}% 100%, ${inset}% 100%)` : undefined,
+                      outline: active ? "2px solid var(--primary)" : undefined, outlineOffset: 3,
+                    }} />
+                  {(() => {
+                    // Dark bands get light text; narrow bands (text overflows onto the card) keep dark text.
+                    const light = i / n > 0.45 && w > 35;
+                    return (
+                      <div className={cn("relative leading-tight", light ? "text-primary-foreground" : "text-foreground")}>
+                        <div className={cn("font-semibold", big ? "text-xl" : "text-sm")}>{s.stage}</div>
+                        <div className={cn("tabular-nums", big ? "text-lg" : "text-xs", light ? "opacity-90" : "text-muted-foreground")}>{s.count} negócios</div>
+                        <div className={cn("font-semibold tabular-nums", big ? "text-xl" : "text-sm", !light && "text-primary")}>{brl(s.value)}</div>
+                      </div>
+                    );
+                  })()}
                 </div>
-                <div className={cn("mx-auto transition-all group-hover:brightness-110", big ? "h-12" : "h-9")}
-                  style={{
-                    width: `${w}%`, minWidth: s.count ? 2 : 0,
-                    background: `color-mix(in oklab, var(--primary) ${28 + (i / n) * 72}%, var(--card))`,
-                    clipPath: w ? `polygon(0 0, 100% 0, ${100 - inset}% 100%, ${inset}% 100%)` : undefined,
-                    outline: active ? "2px solid var(--primary)" : undefined, outlineOffset: 3,
-                  }} />
+
               </button>
             </div>
           );
