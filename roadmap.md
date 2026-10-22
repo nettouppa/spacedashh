@@ -7,7 +7,7 @@
 - [x] Layout dos cards salvo por usuário
 
 ## Fase 2 — Bitrix24 (aplicativo pelo portal)
-- [ ] Definir aplicativo distribuível para clientes ou aplicativo local para piloto — aguarda definição do usuário
+- [x] Definir aplicativo distribuível para instalação por várias empresas
 - [ ] Configurar credenciais do aplicativo com armazenamento seguro — aguarda criação do aplicativo Bitrix24
 - [ ] Instalação/OAuth do app Bitrix24
 - [ ] Sync: negócios, atividades, tarefas, atendimento, usuários/departamentos
