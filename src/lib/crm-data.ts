@@ -160,3 +160,32 @@ export const brl = (n: number, compact = true) => {
 };
 export const pct = (n: number) => `${Math.round(n * 100)}%`;
 export const sellerName = (id?: string) => SELLERS.find((s) => s.id === id)?.name;
+
+export function periodPrevRange(p: Period) {
+  const start = periodStart(p);
+  const d = new Date(start);
+  if (p === "month") d.setUTCMonth(d.getUTCMonth() - 1);
+  else if (p === "quarter") d.setUTCMonth(d.getUTCMonth() - 3);
+  else d.setUTCFullYear(d.getUTCFullYear() - 1);
+  // same elapsed length as current period, for fair comparison
+  return { start: d, end: new Date(d.getTime() + (NOW.getTime() - start.getTime())) };
+}
+
+/** KPIs for the equivalent elapsed window of the previous period. */
+export function previousKpis(f: Filters) {
+  const { start, end } = periodPrevRange(f.period);
+  const deals = DEALS.filter((d) => {
+    if (d.status === "open" || !d.closedAt || d.closedAt < start || d.closedAt > end) return false;
+    if (f.company && d.company !== f.company) return false;
+    if (f.team && d.team !== f.team) return false;
+    if (f.sellerId && d.sellerId !== f.sellerId) return false;
+    if (f.stage && d.stage !== f.stage) return false;
+    if (f.lossReason && d.lossReason !== f.lossReason) return false;
+    return true;
+  });
+  const won = deals.filter((d) => d.status === "won");
+  const lost = deals.filter((d) => d.status === "lost");
+  const revenue = won.reduce((a, d) => a + d.value, 0);
+  const openCount = DEALS.filter((d) => d.status === "open" && d.createdAt <= end && (!f.sellerId || d.sellerId === f.sellerId) && (!f.team || d.team === f.team)).length;
+  return { revenue, ticket: won.length ? revenue / won.length : 0, conversion: won.length + lost.length ? won.length / (won.length + lost.length) : 0, openCount };
+}
