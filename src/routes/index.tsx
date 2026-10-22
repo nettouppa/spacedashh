@@ -203,7 +203,7 @@ function Index() {
       </DndContext>
       </AtlasContext.Provider>
 
-      <AiPanel open={ai} onClose={() => setAi(false)} f={eff} onAction={onAi} request={atlasReq} />
+      <AiPanel open={ai} onClose={() => setAi(false)} f={eff} onAction={onAi} request={atlasReq} onRestore={setF} userName={profile === "manager" ? "Gestor" : me.name.split(" ")[0]!} />
       {tv && <TvMode f={eff} set={setEff} onClose={() => setTv(false)} />}
     </AppShell>
   );
