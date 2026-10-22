@@ -11,5 +11,8 @@
 
 ## Project rules
 - CRM data is a deterministic mock in `src/lib/crm-data.ts` standing in for Bitrix24 `crm.deal.list`; all widgets derive from `filterDeals`, so swapping in a real Bitrix24 sync only requires replacing `DEALS`.
-- Cross-filtering: one `Filters` state in the index route; widgets call `set()` and each widget skips its own dimension so siblings stay visible.
+- Cross-filtering: one `Filters` state in `src/routes/_authenticated/dashboard.tsx`; widgets call `set()` and each widget skips its own dimension so siblings stay visible.
 - AI assistant uses a server function (`src/lib/ai.functions.ts`) with tool calling to return dashboard filter actions.
+- Tenancy: `companies` + `company_members` (role gestor|colaborador, `seller_ref` maps a member to a CRM seller); RLS via security-definer `is_member`/`member_role_of`; global admin lives in `user_roles` (`has_role`). Keeps tenant isolation in the database.
+- Access is invite-only: users without a membership see "Aguardando convite"; the first user ever becomes admin (trigger `handle_new_user`). Admin invites from `/admin` via server functions in `src/lib/account.functions.ts`.
+- Per-user, per-company card layout is stored in `user_layouts.layout` ({order, sizes}), not localStorage, so it follows the account.

@@ -1,10 +1,10 @@
 # Spacedash roadmap
 
 ## Fase 1 — Base real
-- [ ] Ativar Lovable Cloud
-- [ ] Login por convite + multi-empresa (seletor de empresa)
-- [ ] Perfis: admin / gestor / colaborador (RLS)
-- [ ] Layout dos cards salvo por usuário
+- [x] Ativar Lovable Cloud
+- [x] Login por convite + multi-empresa (seletor de empresa)
+- [x] Perfis: admin / gestor / colaborador (RLS)
+- [x] Layout dos cards salvo por usuário
 
 ## Fase 2 — Bitrix24 (aplicativo pelo portal) — aguarda client_id/secret do usuário
 - [ ] Instalação/OAuth do app Bitrix24
