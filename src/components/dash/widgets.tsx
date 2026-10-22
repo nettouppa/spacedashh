@@ -102,8 +102,8 @@ export function FunnelWidget({ f, set, big }: P) {
         </div>
       }>
       <div className="mb-6 grid grid-cols-3 divide-x divide-border rounded-lg border border-border">
-        <div className="p-4"><div className="text-xs font-medium text-muted-foreground">Eficiência topo → fundo</div><div className={cn("mt-1 font-semibold tabular-nums text-primary", big ? "text-5xl" : "text-3xl")}>{(overall * 100).toFixed(1).replace(".", ",")}%</div><div className="mt-0.5 text-xs text-muted-foreground">{last?.count ?? 0} ganhos de {data[0]?.count ?? 0} entradas</div></div>
-        <div className="p-4"><div className="text-xs font-medium text-muted-foreground">Valor convertido</div><div className={cn("mt-1 font-semibold tabular-nums", big ? "text-5xl" : "text-3xl")}>{brl(last?.value ?? 0)}</div><div className="mt-0.5 text-xs text-muted-foreground">de {brl(data[0]?.value ?? 0)} no topo</div></div>
+        <div className="p-4"><div className="text-xs font-medium text-muted-foreground">Eficiência topo → fundo</div><div className={cn("mt-1 font-semibold tabular-nums text-primary", big ? "text-5xl" : "text-2xl")}>{(overall * 100).toFixed(1).replace(".", ",")}%</div><div className="mt-0.5 text-xs text-muted-foreground">{last?.count ?? 0} ganhos de {data[0]?.count ?? 0} entradas</div></div>
+        <div className="p-4"><div className="text-xs font-medium text-muted-foreground">Valor convertido</div><div className={cn("mt-1 font-semibold tabular-nums", big ? "text-5xl" : "text-2xl", "whitespace-nowrap")}>{brl(last?.value ?? 0)}</div><div className="mt-0.5 text-xs text-muted-foreground">de {brl(data[0]?.value ?? 0)} no topo</div></div>
         <div className="p-4"><div className="text-xs font-medium text-muted-foreground">Maior gargalo</div><div className={cn("mt-1 font-semibold", big ? "text-2xl" : "text-base")}>{data[gap.i - 1]?.stage} → {data[gap.i]?.stage}</div><span className={cn("mt-1 inline-block rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums", passTone(gap.pass))}>{pct(gap.pass)} de passagem</span></div>
       </div>
       <div className="mx-auto max-w-3xl">
