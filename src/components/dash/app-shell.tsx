@@ -34,8 +34,8 @@ export function AppShell({ children, topRight, userName, userPhoto, compact = fa
       </aside>
       <div className={cn("transition-[padding] duration-300", compact ? "lg:pl-16 lg:pr-[400px]" : "lg:pl-60")}>
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-card/95 px-4 backdrop-blur sm:px-6">
-          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">Dashboards<ChevronRight className="size-3.5" /><span className="font-medium text-foreground">CRM & Vendas</span></div>
-          <div className="mx-auto hidden h-8 w-72 items-center gap-2 rounded-md border border-border bg-background px-2.5 text-sm text-subtle-foreground md:flex">
+          <div className="flex items-center gap-1.5 whitespace-nowrap text-sm text-muted-foreground">Dashboards<ChevronRight className="size-3.5" /><span className="font-medium text-foreground">CRM & Vendas</span></div>
+          <div className={cn("mx-auto hidden h-8 w-72 items-center gap-2 rounded-md border border-border bg-background px-2.5 text-sm text-subtle-foreground", compact ? "2xl:flex" : "md:flex")}>
             <Search className="size-3.5" />Buscar negócios, pessoas…<kbd className="ml-auto rounded border border-border px-1 text-[10px]">⌘K</kbd>
           </div>
           <div className="ml-auto flex items-center gap-2">{topRight}<button aria-label="Notificações" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted"><Bell className="size-4" /></button></div>
