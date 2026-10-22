@@ -208,3 +208,7 @@
 @utility atlas-in { animation: atlas-in .28s ease-out both; }
 @utility atlas-dot { animation: atlas-dot 1.2s infinite ease-in-out; }
 @utility atlas-pulse { animation: atlas-pulse 1.6s infinite; }
+@keyframes voice-ring { 0% { transform: scale(.85); opacity: .9; } 100% { transform: scale(1.15); opacity: 0; } }
+@keyframes voice-wave { 0%, 100% { transform: scale(.92); } 50% { transform: scale(1.06); } }
+@utility voice-ring { animation: voice-ring 1.8s ease-out infinite; }
+@utility voice-wave { animation: voice-wave .9s ease-in-out infinite; }
