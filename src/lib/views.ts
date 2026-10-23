@@ -4,8 +4,8 @@ export type StoredLayout = { order?: string[]; sizes?: Record<string, number>; v
 
 export const PRESET_VIEWS = (all: string[]): View[] => [
   { id: "geral", name: "Visão geral", order: [...all], sizes: {} },
-  { id: "comercial", name: "Comercial & Funil", order: ["funnel", "ranking", "pace", "loss"].filter((x) => all.includes(x)), sizes: {} },
-  { id: "operacao", name: "Operação & Produtividade", order: ["activity", "tasks", "risk"].filter((x) => all.includes(x)), sizes: {} },
+  { id: "comercial", name: "Comercial & Funil", order: ["funnel", "evolution", "ranking", "pace", "loss"].filter((x) => all.includes(x)), sizes: {} },
+  { id: "operacao", name: "Operação & Produtividade", order: ["activity", "tasks", "support", "risk"].filter((x) => all.includes(x)), sizes: {} },
 ];
 
 /** Builds the view list from a stored layout; legacy {order,sizes} becomes the "Visão geral" view. */
