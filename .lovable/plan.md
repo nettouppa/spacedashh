@@ -11,13 +11,14 @@ Hoje cada fala passa por 3 etapas em sequência, cada uma esperando a anterior t
 ## Como
 1. **Resposta em fluxo**: o Atlas envia a resposta aos pedaços, conforme vai escrevendo, em vez de tudo de uma vez.
 2. **Fala frase a frase**: assim que a primeira frase chega, ela já é convertida em voz e tocada; as próximas são preparadas em paralelo e tocam em sequência, sem pausa.
-3. **Modelo rápido para voz**: no modo conversa, usar por padrão um modelo leve e sem raciocínio estendido (a escolha manual nas configurações continua valendo).
-4. **Contexto enxuto na voz**: enviar um resumo compacto dos dados do painel, não o contexto completo.
+3. **Mesmo modelo e mesmos dados**: o Atlas continua com o modelo configurado e recebe todos os dados do painel, como hoje. Nada que reduza a precisão das respostas.
+4. **Raciocínio leve só em pedidos simples**: perguntas diretas ("qual a receita do mês?") usam raciocínio curto; análises e comparações mantêm o raciocínio normal.
 5. **Silêncio menor**: padrão de detecção de fim de fala cai de 1s para 0,7s (ajustável nas configurações, como hoje).
 6. **Som de "pensando"**: um retorno sonoro discreto e a frase aparece na tela imediatamente, para a espera não parecer vazia.
 
 ## Detalhes técnicos
 - Nova rota de streaming `src/routes/api/atlas-stream.ts` (auth via bearer + `is_member`), chamando OpenAI chat completions com `stream: true`, repassando SSE de texto; tool call de filtros acumulado e enviado como evento final.
+- Mesmo system prompt, contexto completo e modelo do chat; sem corte de `max_tokens` que trunque números.
 - `voice-mode.tsx`: ler o stream, cortar por fim de frase (`. ! ? \n`), fila de TTS com até 2 requisições em paralelo e reprodução encadeada; fallback para voz do navegador por frase.
 - `ai.functions.ts`: para voz, `reasoning_effort: "minimal"`/modelo mini por padrão, `max_tokens` baixo.
 - `voice-settings.ts`: default `silenceMs` 700.
