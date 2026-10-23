@@ -1,18 +1,18 @@
 # Roadmap — Spacedash: o básico bem feito
 
 ## Etapa 1 — nada quebrado nem enganoso
-- [ ] Avisos (toasts) montados no app; falhas de salvar avisam
-- [ ] Painel: carregando / erro / demonstração só sem Bitrix24
-- [ ] Integrações: status real por módulo
-- [ ] Páginas de erro/404 em português
-- [ ] Topo sem sino e busca falsos
+- [x] Avisos (toasts) montados no app; falhas de salvar avisam
+- [x] Painel: carregando / erro / demonstração só sem Bitrix24
+- [x] Integrações: status real por módulo
+- [x] Páginas de erro/404 em português
+- [x] Topo sem sino e busca falsos
 
 ## Etapa 2 — menus que funcionam
-- [ ] Pipeline abre a aba Comercial & Funil
-- [ ] Página Equipe
-- [ ] Página Relatórios (CSV/PDF)
-- [ ] Página Configurações (Atlas + Minha conta)
-- [ ] Menu no celular + marcar página ativa
+- [x] Pipeline abre a aba Comercial & Funil
+- [x] Página Equipe
+- [x] Página Relatórios (CSV/PDF)
+- [x] Página Configurações (Atlas + Minha conta: nome, senha, empresa padrão)
+- [x] Menu no celular + marcar página ativa
 
 ## Etapa 3 — contas e administração
 - [ ] Esqueci minha senha + nova senha
