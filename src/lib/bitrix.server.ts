@@ -51,6 +51,54 @@ async function call<T>(conn: Conn, method: string, params: Record<string, unknow
 
 type Deal = { ID: string; TITLE?: string; STAGE_ID?: string; CATEGORY_ID?: string; OPPORTUNITY?: string; CURRENCY_ID?: string; ASSIGNED_BY_ID?: string; CLOSED?: string; DATE_CREATE?: string; CLOSEDATE?: string; DATE_MODIFY?: string };
 
+type BxUser = { ID: string; NAME?: string; LAST_NAME?: string; PERSONAL_PHOTO?: string; UF_DEPARTMENT?: number[]; ACTIVE?: boolean };
+type BxStatus = { STATUS_ID: string; NAME: string; SORT: string | number; ENTITY_ID: string; EXTRA?: { SEMANTICS?: string }; SEMANTICS?: string };
+
+/** Users (names, photos, departments) and pipeline stage names; best-effort so a missing scope never blocks deal sync. */
+async function syncMeta(db: Awaited<ReturnType<typeof admin>>, conn: Conn, companyId: string) {
+  try {
+    const depts = new Map<string, string>();
+    try {
+      const { result } = await call<{ ID: string; NAME: string }[]>(conn, "department.get", {});
+      (result ?? []).forEach((d) => depts.set(String(d.ID), d.NAME));
+    } catch { /* optional */ }
+    const users: BxUser[] = [];
+    let start = 0, pages = 0;
+    do {
+      const { result, next } = await call<BxUser[]>(conn, "user.get", { start, FILTER: { USER_TYPE: "employee" } });
+      users.push(...(result ?? []));
+      start = next ?? -1; pages++;
+    } while (start >= 0 && pages < 20);
+    const urows = users.map((u) => ({
+      company_id: companyId, user_id: String(u.ID),
+      name: [u.NAME, u.LAST_NAME].filter(Boolean).join(" ").trim() || `Usuário ${u.ID}`,
+      photo: u.PERSONAL_PHOTO || null,
+      department: depts.get(String(u.UF_DEPARTMENT?.[0] ?? "")) ?? null,
+      active: u.ACTIVE !== false,
+    }));
+    if (urows.length) await db.from("bitrix_users" as never).upsert(urows as never, { onConflict: "company_id,user_id" });
+  } catch (e) { console.error("bitrix user sync", e); }
+  try {
+    const cats = new Map<string, string>([["0", "Funil geral"]]);
+    try {
+      const { result } = await call<{ categories?: { id: number; name: string }[] }>(conn, "crm.category.list", { entityTypeId: 2 });
+      (result?.categories ?? []).forEach((c) => cats.set(String(c.id), c.name));
+    } catch { /* optional */ }
+    const all: BxStatus[] = [];
+    let st = 0, pg = 0;
+    do {
+      const { result, next } = await call<BxStatus[]>(conn, "crm.status.list", { order: { SORT: "ASC" }, start: st });
+      all.push(...(result ?? []));
+      st = next ?? -1; pg++;
+    } while (st >= 0 && pg < 40);
+    const srows = all.filter((s) => s.ENTITY_ID === "DEAL_STAGE" || s.ENTITY_ID.startsWith("DEAL_STAGE_")).map((s) => {
+      const cat = s.ENTITY_ID === "DEAL_STAGE" ? "0" : s.ENTITY_ID.slice("DEAL_STAGE_".length);
+      return { company_id: companyId, stage_id: s.STATUS_ID, category_id: cat, category_name: cats.get(cat) ?? `Funil ${cat}`, name: s.NAME, sort: Number(s.SORT) || 0, semantics: s.EXTRA?.SEMANTICS ?? s.SEMANTICS ?? null };
+    });
+    if (srows.length) await db.from("bitrix_stages" as never).upsert(srows as never, { onConflict: "company_id,stage_id" });
+  } catch (e) { console.error("bitrix stage sync", e); }
+}
+
 const MAX_PAGES = 40; // 2.000 negócios por execução, para caber no tempo do servidor
 
 export async function syncDeals(companyId: string) {
@@ -60,6 +108,7 @@ export async function syncDeals(companyId: string) {
   await db.from("bitrix_connections").update({ last_sync_status: "running", last_sync_error: null }).eq("company_id", companyId);
   try {
     const conn = await freshToken(row);
+    await syncMeta(db, conn, companyId);
     let start = 0, pages = 0, total = 0;
     do {
       const { result, next } = await call<Deal[]>(conn, "crm.deal.list", {
