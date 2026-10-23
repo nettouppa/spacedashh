@@ -53,7 +53,8 @@ function describe(a: AiAction): string {
   if (a.tvMode) return "Modo TV aberto";
   if (a.clear) return "Filtros limpos";
   const parts: string[] = [];
-  if (a.period) parts.push(`Período: ${{ month: "Mês", quarter: "Trimestre", year: "Ano" }[a.period]}`);
+  if (a.from && a.to) parts.push(`Período: ${a.from.split("-").reverse().join("/")} – ${a.to.split("-").reverse().join("/")}`);
+  else if (a.period) parts.push(`Período: ${PRESET_LABELS[a.period]}`);
   if (a.company) parts.push(`Empresa: ${a.company}`);
   if (a.team) parts.push(`Equipe: ${a.team}`);
   if (a.sellerId) parts.push(`Vendedor: ${sellerName(a.sellerId)}`);
@@ -158,7 +159,7 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
         {msgs.length === 0 ? (
           <div className="atlas-in">
             <h2 className="text-xl font-semibold tracking-tight">{hello}, {userName}.</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Analisei seu {{ month: "mês", quarter: "trimestre", year: "ano" }[f.period]}. Veja o que chamou minha atenção:</p>
+            <p className="mt-1 text-sm text-muted-foreground">Analisei o período {periodLabel(f.period, true).toLowerCase()}. Veja o que chamou minha atenção:</p>
             <div className="mt-4 space-y-2">
               {insights(f).map((it, i) => (
                 <button key={it.title} onClick={() => send(it.q, null)} style={{ animationDelay: `${80 * (i + 1)}ms` }}

@@ -11,7 +11,7 @@ import { SortableContext, arrayMove, rectSortingStrategy, useSortable, sortableK
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, LayoutGrid, Monitor, X, Save, RotateCcw, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { COMPANIES, SELLERS, TEAMS, sellerName, setDataset, setGoals, type Filters, type Period, type Stage } from "@/lib/crm-data";
+import { COMPANIES, SELLERS, TEAMS, sellerName, rng, setDataset, setGoals, type Filters, type Period, type Stage } from "@/lib/crm-data";
 import { getGoals, saveGoals as saveGoalsFn } from "@/lib/goals.functions";
 import { GoalsDialog } from "@/components/dash/goals-dialog";
 import { Target, Plus, Copy, Pencil, Trash2 } from "lucide-react";
@@ -20,6 +20,7 @@ import { DEFAULT_ORDER, KpiStrip, WIDGETS, type WidgetId } from "@/components/da
 import { AiPanel } from "@/components/dash/ai-panel";
 import { AtlasContext, AtlasIcon, type AtlasRequest } from "@/components/dash/atlas";
 import { TvMode } from "@/components/dash/tv-mode";
+import { DateRangePicker } from "@/components/dash/date-range-picker";
 import { AppShell, Segmented } from "@/components/dash/app-shell";
 import type { AiAction } from "@/lib/ai.functions";
 
@@ -223,9 +224,10 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
 
   const onAi = (a: AiAction) => {
     if (a.tvMode) setTv(true);
-    if (a.clear) { setF({ period: a.period ?? f.period }); return; }
+    const period: Period | undefined = a.from && a.to ? { from: new Date(`${a.from}T00:00:00Z`), to: new Date(`${a.to}T23:59:59.999Z`) } : a.period;
+    if (a.clear) { setF({ period: period ?? f.period }); return; }
     const patch: Partial<Filters> = {};
-    if (a.period) patch.period = a.period;
+    if (period && !Number.isNaN(rng(period).from.getTime()) && !Number.isNaN(rng(period).to.getTime())) patch.period = period;
     (["company", "team", "sellerId", "stage", "lossReason"] as const).forEach((k) => {
       if (k in a) (patch as Record<string, unknown>)[k] = a[k] ?? undefined;
     });
@@ -263,7 +265,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
             : <><span className="size-1.5 rounded-full bg-warning" />Dados de demonstração · Bitrix24 não conectado <Link to="/integrations" className="ml-1 text-primary hover:underline">Configurar integração</Link></>}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Segmented value={f.period} onChange={(p: Period) => set({ period: p })} options={[{ v: "month", l: "Mês" }, { v: "quarter", l: "Trimestre" }, { v: "year", l: "Ano" }]} />
+          <DateRangePicker value={f.period} onChange={(p: Period) => set({ period: p })} />
           <Select label={real ? "Todos funis" : "Todas empresas"} value={f.company} onChange={(v) => set({ company: v })} options={COMPANIES.map((c) => ({ v: c, l: c }))} />
           {profile === "manager" && <>
             <Select label="Todas equipes" value={f.team} onChange={(v) => set({ team: v, sellerId: undefined })} options={TEAMS.map((t) => ({ v: t, l: t }))} />

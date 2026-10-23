@@ -267,7 +267,7 @@ export function PaceWidget({ f, big }: P) {
   const line = data.map((d, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(d.value).toFixed(1)}`).join(" ");
   const last = data[data.length - 1];
   return (
-    <Card title={f.period === "month" ? "Ritmo de fechamento semanal" : "Ritmo de fechamento mensal"} subtitle="Realizado vs. meta proporcional"
+    <Card title={paceWeekly(f.period) ? "Ritmo de fechamento semanal" : "Ritmo de fechamento mensal"} subtitle="Realizado vs. meta proporcional"
       right={<span className="text-sm font-semibold tabular-nums">{brl(last?.value ?? 0)}</span>}>
       <div className={cn("relative", big ? "h-64" : "h-44")}>
         <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="h-full w-full overflow-visible text-primary">
