@@ -20,3 +20,4 @@
 - Integration setup reads company access through authenticated RLS queries and exposes no credentials; manager/admin controls are derived from a shared policy to keep UI and future operations consistent.
 - Atlas AI uses each company's own OpenAI key stored in `ai_settings` (service_role only, status via `ai_status()`); `askAssistant` requires auth + membership. Keeps tenant billing and credentials isolated.
 - Atlas personality lives under `ai_settings.voice_settings.personality` and shares one prompt policy across chat and voice; dedicated manager-authorized saves preserve voice preferences, and voice saves preserve personality to avoid cross-setting overwrites.
+- Atlas conversations persist per user+company in `atlas_conversations` (messages as jsonb, RLS owner+member); the panel saves after each exchange and remembers the last one per company, so history follows the account.
