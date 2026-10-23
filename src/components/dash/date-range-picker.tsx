@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { CalendarIcon } from "lucide-react";
 import { ptBR } from "date-fns/locale";
-import type { DateRange as DayRange } from "react-day-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -16,7 +15,7 @@ const endUtc = (d: Date) => new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.g
 export function DateRangePicker({ value, onChange }: { value: Period; onChange: (p: Period) => void }) {
   const r = rng(value);
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState<DayRange | undefined>();
+  const [draft, setDraft] = useState<{ from: Date; to: Date | undefined } | undefined>();
   const selected = draft ?? { from: toLocal(r.from), to: toLocal(r.to) };
   return (
     <Popover open={open} onOpenChange={(o) => { setOpen(o); setDraft(undefined); }}>
@@ -38,9 +37,10 @@ export function DateRangePicker({ value, onChange }: { value: Period; onChange: 
           ))}
         </div>
         <Calendar mode="range" numberOfMonths={2} locale={ptBR} defaultMonth={selected.from} selected={selected}
-          onSelect={(v) => {
-            setDraft(v);
-            if (v?.from && v.to && draft?.from) { onChange({ from: startUtc(v.from), to: endUtc(v.to) }); setOpen(false); setDraft(undefined); }
+          onSelect={(_v, day) => {
+            if (!draft?.from) { setDraft({ from: day, to: undefined }); return; }
+            const [a, b] = day < draft.from ? [day, draft.from] : [draft.from, day];
+            onChange({ from: startUtc(a), to: endUtc(b) }); setOpen(false); setDraft(undefined);
           }}
           className="p-3 pointer-events-auto" />
       </PopoverContent>
