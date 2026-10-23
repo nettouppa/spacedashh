@@ -8,6 +8,13 @@
       "when": 1792706944295,
       "tag": "0000_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792714048512,
+      "tag": "0001_bitrix_connections",
+      "breakpoints": true
     }
   ]
 }
