@@ -15,6 +15,8 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedIntegrationsRouteImport } from './routes/_authenticated/integrations'
+import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
+import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as TvTokenRouteImport } from './routes/tv.$token'
 import { Route as ApiPublicBitrixCallbackRouteImport } from './routes/api/public/bitrix/callback'
 import { Route as ApiPublicBitrixInstallRouteImport } from './routes/api/public/bitrix/install'
@@ -49,6 +51,16 @@ const AuthenticatedIntegrationsRoute =
     path: '/integrations',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTeamRoute = AuthenticatedTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const TvTokenRoute = TvTokenRouteImport.update({
   id: '/tv/$token',
   path: '/tv/$token',
@@ -71,6 +83,8 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
+  '/reports': typeof AuthenticatedReportsRoute
+  '/team': typeof AuthenticatedTeamRoute
   '/tv/$token': typeof TvTokenRoute
   '/api/public/bitrix/callback': typeof ApiPublicBitrixCallbackRoute
   '/api/public/bitrix/install': typeof ApiPublicBitrixInstallRoute
@@ -81,6 +95,8 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
+  '/reports': typeof AuthenticatedReportsRoute
+  '/team': typeof AuthenticatedTeamRoute
   '/tv/$token': typeof TvTokenRoute
   '/api/public/bitrix/callback': typeof ApiPublicBitrixCallbackRoute
   '/api/public/bitrix/install': typeof ApiPublicBitrixInstallRoute
@@ -93,6 +109,8 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/integrations': typeof AuthenticatedIntegrationsRoute
+  '/_authenticated/reports': typeof AuthenticatedReportsRoute
+  '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/tv/$token': typeof TvTokenRoute
   '/api/public/bitrix/callback': typeof ApiPublicBitrixCallbackRoute
   '/api/public/bitrix/install': typeof ApiPublicBitrixInstallRoute
@@ -105,6 +123,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/integrations'
+    | '/reports'
+    | '/team'
     | '/tv/$token'
     | '/api/public/bitrix/callback'
     | '/api/public/bitrix/install'
@@ -115,6 +135,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/integrations'
+    | '/reports'
+    | '/team'
     | '/tv/$token'
     | '/api/public/bitrix/callback'
     | '/api/public/bitrix/install'
@@ -126,6 +148,8 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
     | '/_authenticated/integrations'
+    | '/_authenticated/reports'
+    | '/_authenticated/team'
     | '/tv/$token'
     | '/api/public/bitrix/callback'
     | '/api/public/bitrix/install'
@@ -184,6 +208,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIntegrationsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/reports': {
+      id: '/_authenticated/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AuthenticatedReportsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/team': {
+      id: '/_authenticated/team'
+      path: '/team'
+      fullPath: '/team'
+      preLoaderRoute: typeof AuthenticatedTeamRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/tv/$token': {
       id: '/tv/$token'
       path: '/tv/$token'
@@ -212,12 +250,16 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedIntegrationsRoute: typeof AuthenticatedIntegrationsRoute
+  AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
+  AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedIntegrationsRoute: AuthenticatedIntegrationsRoute,
+  AuthenticatedReportsRoute: AuthenticatedReportsRoute,
+  AuthenticatedTeamRoute: AuthenticatedTeamRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
