@@ -84,8 +84,14 @@ async function syncMeta(db: Awaited<ReturnType<typeof admin>>, conn: Conn, compa
       const { result } = await call<{ categories?: { id: number; name: string }[] }>(conn, "crm.category.list", { entityTypeId: 2 });
       (result?.categories ?? []).forEach((c) => cats.set(String(c.id), c.name));
     } catch { /* optional */ }
-    const { result } = await call<BxStatus[]>(conn, "crm.status.list", { order: { SORT: "ASC" } });
-    const srows = (result ?? []).filter((s) => s.ENTITY_ID === "DEAL_STAGE" || s.ENTITY_ID.startsWith("DEAL_STAGE_")).map((s) => {
+    const all: BxStatus[] = [];
+    let st = 0, pg = 0;
+    do {
+      const { result, next } = await call<BxStatus[]>(conn, "crm.status.list", { order: { SORT: "ASC" }, start: st });
+      all.push(...(result ?? []));
+      st = next ?? -1; pg++;
+    } while (st >= 0 && pg < 40);
+    const srows = all.filter((s) => s.ENTITY_ID === "DEAL_STAGE" || s.ENTITY_ID.startsWith("DEAL_STAGE_")).map((s) => {
       const cat = s.ENTITY_ID === "DEAL_STAGE" ? "0" : s.ENTITY_ID.slice("DEAL_STAGE_".length);
       return { company_id: companyId, stage_id: s.STATUS_ID, category_id: cat, category_name: cats.get(cat) ?? `Funil ${cat}`, name: s.NAME, sort: Number(s.SORT) || 0, semantics: s.EXTRA?.SEMANTICS ?? s.SEMANTICS ?? null };
     });
