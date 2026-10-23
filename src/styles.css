@@ -136,10 +136,10 @@
   --card-foreground: oklch(0.97 0.003 290);
   --popover: oklch(0.2 0.012 285);
   --popover-foreground: oklch(0.97 0.003 290);
-  --primary: oklch(0.68 0.16 322);
+  --primary: oklch(0.66 0.2 293);
   --primary-foreground: oklch(0.99 0 0);
-  --primary-soft: oklch(0.32 0.07 320);
-  --lilac: oklch(0.78 0.13 320);
+  --primary-soft: oklch(0.3 0.07 293);
+  --lilac: oklch(0.78 0.12 293);
   --danger-soft: oklch(0.32 0.07 20);
   --danger: oklch(0.72 0.16 22);
   --secondary: oklch(0.26 0.012 285);

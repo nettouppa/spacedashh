@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { ShieldCheck, LogOut } from "lucide-react";
 import { BarChart3, Users, LayoutDashboard, Filter, Plug, Settings, Search, Bell, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "./theme-toggle";
 
 const NAV = [
   { icon: LayoutDashboard, label: "Visão geral", active: true },
@@ -42,7 +43,7 @@ export function AppShell({ children, topRight, userName, userPhoto, compact = fa
           <div className={cn("mx-auto hidden h-8 w-72 items-center gap-2 rounded-md border border-border bg-background px-2.5 text-sm text-subtle-foreground", compact ? "2xl:flex" : "md:flex")}>
             <Search className="size-3.5" />Buscar negócios, pessoas…<kbd className="ml-auto rounded border border-border px-1 text-[10px]">⌘K</kbd>
           </div>
-          <div className="ml-auto flex items-center gap-2">{topRight}<button aria-label="Notificações" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted"><Bell className="size-4" /></button></div>
+          <div className="ml-auto flex items-center gap-2">{topRight}<ThemeToggle /><button aria-label="Notificações" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted"><Bell className="size-4" /></button></div>
         </header>
         <main className="mx-auto max-w-[1440px] p-4 sm:p-6">{children}</main>
       </div>
