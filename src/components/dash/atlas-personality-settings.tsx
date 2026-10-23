@@ -15,7 +15,7 @@ export function AtlasPersonalitySettings({ companyId, canManage, connected }: { 
   const [instructions, setInstructions] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
-  useEffect(() => { setInstructions(q.data?.personality.instructions ?? ""); setMessage(null); }, [q.data, companyId]);
+  useEffect(() => { setInstructions(q.data?.personality.instructions ?? ""); }, [q.data, companyId]);
   const disabled = !canManage || !connected || q.isLoading || q.isError || busy;
   async function submit() {
     setBusy(true); setMessage(null);
