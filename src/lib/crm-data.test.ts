@@ -21,7 +21,8 @@ describe("toDataset", () => {
   const d = toDataset(raw, new Date("2026-02-01"));
   it("maps won stage to Ganho", () => expect(d.DEALS[1]).toMatchObject({ status: "won", stage: "Ganho" }));
   it("uses failed stage name as loss reason", () => expect(d.DEALS[2]).toMatchObject({ status: "lost", lossReason: "Sem orçamento" }));
-  it("first open stage is Prospecção", () => expect(d.DEALS[0]!.stage).toBe("Prospecção"));
+  it("keeps the real Bitrix stage name", () => expect(d.DEALS[0]!.stage).toBe("Novo"));
+  it("funnel steps follow the pipeline's real stages", () => expect(d.PIPELINES["Vendas"]).toEqual(["Novo", "Ganho"]));
   it("uses Bitrix user name and pipeline name", () => {
     expect(d.SELLERS[0]!.name).toBe("Maria Silva");
     expect(d.COMPANIES).toEqual(["Vendas"]);

@@ -1,8 +1,12 @@
 // Mock dataset simulating deals synced from Bitrix24 Cloud (crm.deal.list).
 export let NOW = new Date("2026-10-22T12:00:00Z");
 
-export const STAGES = ["Prospecção", "Qualificação", "Proposta", "Negociação", "Ganho"] as const;
-export type Stage = (typeof STAGES)[number];
+export const DEMO_STAGES = ["Prospecção", "Qualificação", "Proposta", "Negociação", "Ganho"];
+/** Funnel steps in order (open stages + won). With Bitrix24 data they come from each pipeline's real stages. */
+export let STAGES: string[] = [...DEMO_STAGES];
+/** Bitrix24 pipeline name → ordered real stage names (open stages then won). Empty for demo data. */
+export let PIPELINES: Record<string, string[]> = {};
+export type Stage = string;
 export let LOSS_REASONS: string[] = ["Preço", "Concorrência", "Sem orçamento", "Timing", "Sem resposta"];
 export let COMPANIES: string[] = ["Violeta Matriz", "Violeta Sul", "Violeta Digital"];
 export let TEAMS: string[] = ["Enterprise", "SMB", "Inside Sales"];
@@ -103,10 +107,22 @@ export function kpis(f: Filters) {
   };
 }
 
+/** Pipeline the funnel shows: the selected one, else the pipeline with the most deals in the current filters. */
+export function funnelPipeline(f: Filters): string | undefined {
+  if (!Object.keys(PIPELINES).length) return undefined;
+  if (f.company && PIPELINES[f.company]) return f.company;
+  const count = new Map<string, number>();
+  filterDeals(f, ["stage"]).forEach((d) => { if (PIPELINES[d.company]) count.set(d.company, (count.get(d.company) ?? 0) + 1); });
+  return [...count.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? Object.keys(PIPELINES)[0];
+}
+
 export function funnel(f: Filters) {
-  const deals = filterDeals(f, ["stage"]).filter((d) => d.status !== "lost" || true);
-  const idx = (s: Stage) => STAGES.indexOf(s);
-  return STAGES.map((stage, i) => {
+  const pipe = funnelPipeline(f);
+  const steps = pipe ? PIPELINES[pipe]! : STAGES;
+  const deals = filterDeals(f, ["stage"]).filter((d) => !pipe || d.company === pipe);
+  // Lost deals sit on a failure stage outside the steps: they count as entries at the top only.
+  const idx = (s: Stage) => Math.max(0, steps.indexOf(s));
+  return steps.map((stage, i) => {
     // deals that reached at least this stage
     const reached = deals.filter((d) => idx(d.stage) >= i);
     const prev = i === 0 ? reached.length : deals.filter((d) => idx(d.stage) >= i - 1).length;
@@ -198,26 +214,31 @@ export type RawDataset = {
   stages: { stage_id: string; category_id: string | null; category_name: string | null; name: string; sort: number; semantics: string | null }[];
 };
 
-const MOCK = { NOW, DEALS, SELLERS, COMPANIES, TEAMS, LOSS_REASONS };
+const MOCK = { PIPELINES: {} as Record<string, string[]>, NOW, DEALS, SELLERS, COMPANIES, TEAMS, LOSS_REASONS };
 const avatar = (name: string) => `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(name)}&backgroundColor=ede9fe&textColor=5b21b6`;
 
 /** Maps Bitrix24 rows onto the dashboard model: open stages are spread across the 4 open funnel steps by their order in each pipeline; S = won, F = lost (stage name becomes the loss reason). */
 export function toDataset(raw: RawDataset, now = new Date()) {
   const byStage = new Map(raw.stages.map((s) => [s.stage_id, s]));
   const openByCat = new Map<string, string[]>();
-  raw.stages.filter((s) => !s.semantics || (s.semantics !== "S" && s.semantics !== "F")).sort((a, b) => a.sort - b.sort)
+  raw.stages.filter((s) => !["S", "F", "success", "failure", "apology"].includes(s.semantics ?? "") && !/(^|:)(WON|LOSE|APOLOGY)$/.test(s.stage_id)).sort((a, b) => a.sort - b.sort)
     .forEach((s) => { const k = s.category_id ?? "0"; openByCat.set(k, [...(openByCat.get(k) ?? []), s.stage_id]); });
   const catName = new Map(raw.stages.map((s) => [s.category_id ?? "0", s.category_name ?? "Funil"]));
   const users = new Map(raw.users.map((u) => [u.user_id, u]));
+  const pipelines = new Map<string, { open: string[]; won: string }>();
+  [...new Set(raw.stages.map((s) => s.category_id ?? "0"))].forEach((cat) => {
+    const ws = raw.stages.filter((s) => (s.category_id ?? "0") === cat && (s.semantics === "S" || s.semantics === "success" || s.stage_id.endsWith(":WON") || s.stage_id === "WON"));
+    pipelines.set(cat, { open: (openByCat.get(cat) ?? []).map((id) => byStage.get(id)!.name), won: ws[0]?.name ?? "Ganho" });
+  });
   const deals: Deal[] = raw.deals.map((d) => {
     const st = d.stage_id ? byStage.get(d.stage_id) : undefined;
     const code = d.stage_id?.split(":").pop() ?? "";
-    const won = st?.semantics === "S" || code === "WON";
-    const lost = st?.semantics === "F" || code === "LOSE" || code === "APOLOGY" || (d.closed && !won);
+    const won = st?.semantics === "S" || st?.semantics === "success" || code === "WON";
+    const lost = st?.semantics === "F" || st?.semantics === "failure" || st?.semantics === "apology" || code === "LOSE" || code === "APOLOGY" || (d.closed && !won);
     const cat = d.category_id ?? "0";
     const list = openByCat.get(cat) ?? [];
-    const pos = Math.max(0, list.indexOf(d.stage_id ?? ""));
-    const stage: Stage = won ? "Ganho" : STAGES[Math.min(3, Math.floor((pos / Math.max(1, list.length)) * 4))]!;
+    const wonName = pipelines.get(cat)?.won ?? "Ganho";
+    const stage: Stage = won ? wonName : lost ? (st?.name ?? "Perdido") : (st?.name ?? list.map((id) => byStage.get(id)?.name)[0] ?? "Sem etapa");
     const createdAt = new Date(d.date_create ?? now);
     const closedAt = won || lost ? new Date(d.close_date ?? d.date_modify ?? d.date_create ?? now) : undefined;
     const sellerId = d.assigned_by_id ?? "0";
@@ -239,11 +260,13 @@ export function toDataset(raw: RawDataset, now = new Date()) {
     return { id, name, team: u?.department ?? "Sem equipe", photo: u?.photo || avatar(name), goal: Math.round(((wonYear / 12) * 1.1) / 0.35) };
   });
   const uniq = (xs: string[]) => [...new Set(xs)].sort((a, b) => a.localeCompare(b, "pt-BR"));
-  return { NOW: now, DEALS: deals, SELLERS: sellers, COMPANIES: uniq(deals.map((d) => d.company)), TEAMS: uniq(sellers.map((s) => s.team)), LOSS_REASONS: uniq(deals.filter((d) => d.lossReason).map((d) => d.lossReason!)) };
+  const pipeByName: Record<string, string[]> = {};
+  pipelines.forEach((p, cat) => { if (deals.some((d) => d.company === (catName.get(cat) ?? ""))) pipeByName[catName.get(cat)!] = [...p.open, p.won]; });
+  return { PIPELINES: pipeByName, NOW: now, DEALS: deals, SELLERS: sellers, COMPANIES: uniq(deals.map((d) => d.company)), TEAMS: uniq(sellers.map((s) => s.team)), LOSS_REASONS: uniq(deals.filter((d) => d.lossReason).map((d) => d.lossReason!)) };
 }
 
 /** Swaps the module-level dataset every widget reads; pass null to go back to the demo data. */
 export function setDataset(raw: RawDataset | null) {
   const d = raw ? toDataset(raw) : MOCK;
-  NOW = d.NOW; DEALS = d.DEALS; SELLERS = d.SELLERS; COMPANIES = d.COMPANIES; TEAMS = d.TEAMS; LOSS_REASONS = d.LOSS_REASONS;
+  PIPELINES = d.PIPELINES; NOW = d.NOW; DEALS = d.DEALS; SELLERS = d.SELLERS; COMPANIES = d.COMPANIES; TEAMS = d.TEAMS; LOSS_REASONS = d.LOSS_REASONS;
 }
