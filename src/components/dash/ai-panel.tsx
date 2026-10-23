@@ -37,7 +37,8 @@ import { ConversationList } from "./conversation-list";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { listConversations, getConversation, saveConversation, updateConversation, deleteConversation } from "@/lib/conversations.functions";
 import { titleFrom, highlights, followUps } from "@/lib/conversations";
-import { History, ThumbsUp, ThumbsDown, Pencil, FileDown, ClipboardCopy } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, History, ThumbsUp, ThumbsDown, Pencil, FileDown, ClipboardCopy } from "lucide-react";
 import { AudioLines, Volume2, VolumeX } from "lucide-react";
 
 type Msg = { role: "user" | "assistant"; content: string; rating?: "up" | "down" | undefined; topic?: string | undefined; action?: { label: string; prev?: Filters | undefined } | undefined };
