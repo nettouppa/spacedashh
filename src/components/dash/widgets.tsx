@@ -3,7 +3,7 @@ import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { AtlasTrigger } from "./atlas";
 import { cn } from "@/lib/utils";
 import {
-  atRisk, brl, funnel, goalFor, kpis, lossReasons, pace, pct, previousKpis, ranking, sellerName, type Filters, type Stage,
+  atRisk, brl, funnel, funnelPipeline, goalFor, kpis, lossReasons, pace, pct, previousKpis, ranking, sellerName, type Filters, type Stage,
 } from "@/lib/crm-data";
 
 export type SetFilter = (patch: Partial<Filters>) => void;
@@ -92,7 +92,7 @@ export function FunnelWidget({ f, set, big }: P) {
   data.forEach((s, i) => { if (i && s.pass < gap.pass) gap = { i, pass: s.pass }; });
   const n = Math.max(data.length - 1, 1);
   return (
-    <Card title="Funil de vendas" subtitle="Clique numa etapa para filtrar o painel"
+    <Card title="Funil de vendas" subtitle={funnelPipeline(f) ? `${funnelPipeline(f)} · clique numa etapa para filtrar` : "Clique numa etapa para filtrar o painel"}
       right={
         <div className="inline-flex rounded-md border border-border bg-muted/60 p-0.5 text-xs font-medium">
           {(["count", "value"] as const).map((m) => (
