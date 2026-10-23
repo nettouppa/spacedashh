@@ -1,10 +1,12 @@
 import { z } from "zod";
 import { OPENAI_MODELS } from "@/lib/ai-policy";
+import { PersonalitySchema } from "@/lib/atlas-personality";
 
 export const OPENAI_VOICES = ["alloy", "ash", "coral", "echo", "sage", "shimmer", "verse", "ballad"] as const;
 export const RESPONSE_LENGTHS = { tiny: "Curtíssima (1 frase)", short: "Curta (até 3 frases)", detailed: "Detalhada" } as const;
 
 export const VoiceSettingsSchema = z.object({
+  personality: PersonalitySchema.default({ instructions: "" }),
   voiceName: z.string().max(200).nullable().default(null),
   rate: z.number().min(0.7).max(1.5).default(1.05),
   pitch: z.number().min(0.5).max(1.5).default(1),

@@ -40,8 +40,8 @@ function buildContext(f: Filters) {
   const k = kpis(f);
   return JSON.stringify({
     hoje: NOW.toISOString().slice(0, 10),
-    filtrosAtivos: { ...f, period: periodLabel(f.period) },
-    opcoes: { empresas: COMPANIES, equipes: TEAMS, etapas: STAGES, motivosPerda: LOSS_REASONS, vendedores: ranking({ period: f.period }).map((s) => ({ id: s.id, nome: s.name, equipe: s.team })) },
+    filtrosAtivos: { ...f, funil: f.company, period: periodLabel(f.period) },
+    opcoes: { funis: COMPANIES, equipes: TEAMS, etapas: STAGES, motivosPerda: LOSS_REASONS, vendedores: ranking({ period: f.period }).map((s) => ({ id: s.id, nome: s.name, equipe: s.team })) },
     kpis: { faturado: brl(k.revenue, false), meta: brl(k.goal, false), atingimento: pct(k.goalPct), ticketMedio: brl(k.ticket, false), abertos: k.openCount, conversao: pct(k.conversion) },
     funil: funnel(f).map((s) => ({ etapa: s.stage, qtd: s.count, valor: brl(s.value, false), passagem: pct(s.pass) })),
     ranking: ranking(f).map((s) => ({ nome: s.name, total: brl(s.total, false) })),
@@ -56,7 +56,7 @@ function describe(a: AiAction): string {
   const parts: string[] = [];
   if (a.from && a.to) parts.push(`Período: ${a.from.split("-").reverse().join("/")} – ${a.to.split("-").reverse().join("/")}`);
   else if (a.period) parts.push(`Período: ${PRESET_LABELS[a.period]}`);
-  if (a.company) parts.push(`Empresa: ${a.company}`);
+  if (a.company) parts.push(`Funil: ${a.company}`);
   if (a.team) parts.push(`Equipe: ${a.team}`);
   if (a.sellerId) parts.push(`Vendedor: ${sellerName(a.sellerId)}`);
   if (a.stage) parts.push(`Etapa: ${a.stage}`);
