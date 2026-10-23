@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { useServerFn } from "@tanstack/react-start";
@@ -165,7 +166,7 @@ export function AiPanel({ open, onClose, onToggle, f, onAction, request, onResto
     const mode = voiceUsed.current ? "voice" as const : "chat" as const;
     void saveFn({ data: { companyId, messages: payload, mode, ...(convId ? { id: convId } : { title: titleFrom(first?.content ?? "") }) } })
       .then((r) => { if (!convId) { setConvId(r.id); localStorage.setItem(lastKey, r.id); } void refreshList(); })
-      .catch(() => { /* mantém a conversa na tela */ });
+      .catch(() => { toast.error("Não foi possível salvar esta conversa."); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [msgs, busy]);
   const [sound, setSound] = useState(true);

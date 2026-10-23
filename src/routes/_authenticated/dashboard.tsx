@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -34,6 +35,10 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
       throw new Promise(() => {});
     }
   },
+  validateSearch: (s: Record<string, unknown>): { view?: string; seller?: string } => ({
+    ...(typeof s['view'] === "string" ? { view: s['view'].slice(0, 40) } : {}),
+    ...(typeof s['seller'] === "string" ? { seller: s['seller'].slice(0, 64) } : {}),
+  }),
   loader: ({ context }) => context.queryClient.ensureQueryData(meQuery),
   head: () => ({
     meta: [
@@ -141,6 +146,7 @@ function NoAccess({ isAdmin }: { isAdmin: boolean }) {
 
 function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
   const nav = useNavigate();
+  const search = Route.useSearch();
   const loadLayout = useServerFn(getLayout);
   const persistLayout = useServerFn(saveLayoutFn);
   const [companyId, setCompanyId] = useState(account.memberships[0]!.companyId);
@@ -157,7 +163,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
   useMemo(() => setDataset(real), [real]);
   useMemo(() => setGoals(goalsQ.data ?? []), [goalsQ.data]);
   const ME = membership.sellerRef && SELLERS.some((s) => s.id === membership.sellerRef) ? membership.sellerRef : (SELLERS[0]?.id ?? "s1");
-  const [f, setF] = useState<Filters>({ period: "month" });
+  const [f, setF] = useState<Filters>(() => (search.seller ? { period: "month", sellerId: search.seller } : { period: "month" }));
   const [views, setViews] = useState<View[]>(() => PRESET_VIEWS(DEFAULT_ORDER));
   const [active, setActive] = useState("geral");
   const current = views.find((v) => v.id === active) ?? views[0];
@@ -187,8 +193,8 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
     void loadLayout({ data: { companyId } }).then((l) => {
       if (!live) return;
       const r = loadViews(l, DEFAULT_ORDER);
-      setViews(r.views); setActive(r.active);
-    }).catch(() => { /* keep defaults */ });
+      setViews(r.views); setActive(search.view && r.views.some((v) => v.id === search.view) ? search.view : r.active);
+    }).catch(() => { toast.error("Não foi possível carregar seus painéis salvos."); });
     return () => { live = false; };
   }, [companyId, loadLayout]);
 
@@ -203,8 +209,8 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
     if (e.over && e.active.id !== e.over.id)
       setOrder((o) => arrayMove(o, o.indexOf(e.active.id as WidgetId), o.indexOf(e.over!.id as WidgetId)));
   };
-  const persist = (vs: View[], a: string) => persistLayout({ data: { companyId, layout: { views: vs, active: a } } }).catch(() => { /* ignore */ });
-  const saveLayout = async () => { await persist(views, active); setSaved(true); setEdit(false); setTimeout(() => setSaved(false), 2000); };
+  const persist = (vs: View[], a: string) => persistLayout({ data: { companyId, layout: { views: vs, active: a } } }).then(() => true).catch(() => { toast.error("Não foi possível salvar o layout. Tente de novo."); return false; });
+  const saveLayout = async () => { if (!(await persist(views, active))) return; setSaved(true); setEdit(false); setTimeout(() => setSaved(false), 2000); };
   const switchView = (id: string) => { setActive(id); setEdit(false); void persist(views, id); };
   const addView = (dup: boolean) => {
     const name = window.prompt("Nome do novo painel", dup ? `${current?.name ?? "Painel"} (cópia)` : "Meu painel")?.trim().slice(0, 60);
@@ -241,10 +247,10 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
   if (f.stage) chips.push({ k: "stage", label: `Etapa: ${f.stage}` });
   if (f.lossReason) chips.push({ k: "lossReason", label: `Perda: ${f.lossReason}` });
 
-  const me = SELLERS.find((s) => s.id === ME) ?? { id: ME, name: account.name, team: "", photo: "https://i.pravatar.cc/80?img=68", goal: 0 };
+  const me = SELLERS.find((s) => s.id === ME) ?? { id: ME, name: account.name, team: "", photo: "", goal: 0 };
 
   return (
-    <AppShell compact={ai} userName={account.name} userPhoto={profile === "manager" ? "https://i.pravatar.cc/80?img=68" : me.photo}
+    <AppShell compact={ai} userName={account.name} userPhoto="" page={active === "comercial" ? "pipeline" : "dashboard"}
       companyName={membership.companyName} roleLabel={profile === "manager" ? "Gestor" : "Colaborador"} isAdmin={account.isAdmin} onSignOut={() => signOut(nav)}
       topRight={<>
         {account.memberships.length > 1 && (
@@ -261,6 +267,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{profile === "manager" ? "Visão geral comercial" : `Meu desempenho · ${me.name}`}</h1>
           <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">{real ? <><span className="size-1.5 rounded-full bg-success" />Bitrix24 · {real.domain} · {real.deals.length} negócios{real.lastSyncAt ? ` · sincronizado em ${new Date(real.lastSyncAt).toLocaleString("pt-BR")}` : ""} <Link to="/integrations" className="ml-1 text-primary hover:underline">Sincronizar</Link></>
+            : dataQ.isError ? <><span className="size-1.5 rounded-full bg-danger" />Erro ao carregar dados do Bitrix24</>
             : dataQ.isLoading ? <><span className="size-1.5 animate-pulse rounded-full bg-primary" />Carregando dados do Bitrix24…</>
             : <><span className="size-1.5 rounded-full bg-warning" />Dados de demonstração · Bitrix24 não conectado <Link to="/integrations" className="ml-1 text-primary hover:underline">Configurar integração</Link></>}</p>
         </div>
@@ -326,7 +333,15 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
           Este painel ainda não tem cards. <button onClick={() => setEdit(true)} className="font-medium text-primary hover:underline">Personalizar</button>
         </div>
       )}
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      {dataQ.isLoading ? (
+        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">{[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="h-48 animate-pulse rounded-xl border border-border bg-card" />)}</div>
+      ) : dataQ.isError ? (
+        <div className="mt-4 rounded-xl border border-danger/30 bg-danger-soft p-6 text-sm">
+          <div className="font-semibold text-danger">Não foi possível carregar os dados do Bitrix24.</div>
+          <p className="mt-1 text-muted-foreground">Os números não são exibidos para evitar confusão com dados de demonstração.</p>
+          <button onClick={() => void dataQ.refetch()} className="mt-3 rounded-md bg-primary px-3 py-1.5 font-medium text-primary-foreground">Tentar de novo</button>
+        </div>
+      ) : <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={order} strategy={rectSortingStrategy}>
           <div className="mt-4 grid grid-cols-1 gap-4 dash-grid">
             {order.map((id) => {
@@ -339,12 +354,12 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
             })}
           </div>
         </SortableContext>
-      </DndContext>
+      </DndContext>}
       </AtlasContext.Provider>
 
       <AiPanel open={ai} onClose={() => setAi(false)} onToggle={() => setAi((v) => !v)} f={eff} onAction={onAi} request={atlasReq} onRestore={setF} userName={account.name.split(" ")[0]!} companyId={companyId} />
       {tv && <TvMode f={eff} set={setEff} views={views} onClose={closeTv} onRefresh={refreshTv} share={profile === "manager" || account.isAdmin ? { companyId } : undefined} />}
-      {goalsOpen && <GoalsDialog onClose={() => setGoalsOpen(false)} onSave={async (month, goals) => { await persistGoals({ data: { companyId, month, goals } }); await goalsQ.refetch(); }} />}
+      {goalsOpen && <GoalsDialog onClose={() => setGoalsOpen(false)} onSave={async (month, goals) => { await persistGoals({ data: { companyId, month, goals } }); toast.success("Metas salvas."); await goalsQ.refetch(); }} />}
     </AppShell>
   );
 }

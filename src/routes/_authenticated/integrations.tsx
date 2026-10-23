@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AtlasIcon } from "@/components/dash/atlas";
 import { useQuery } from "@tanstack/react-query";
 import { getAiStatus } from "@/lib/ai-settings.functions";
+import { getModuleCounts } from "@/lib/modules.functions";
 import { AtlasPersonalitySettings } from "@/components/dash/atlas-personality-settings";
 
 const setupQuery = queryOptions({ queryKey: ["bitrix-setup"], queryFn: () => getBitrixSetup() });
@@ -83,6 +84,8 @@ function Integrations() {
     if (!company) throw new Error("Nenhuma empresa disponível.");
     return aiStatus({ data: { companyId: company.id } });
   }, enabled: !!company });
+  const countsFn = useServerFn(getModuleCounts);
+  const countsQ = useQuery({ queryKey: ["module-counts", company?.id, conn?.last_sync_at], queryFn: () => countsFn({ data: { companyId: company!.id } }), enabled: !!company && !!conn });
   async function copy(label: string, value: string) {
     try { await navigator.clipboard.writeText(value); setCopied(label); setError(""); }
     catch { setError("Não foi possível copiar. Selecione o endereço e copie manualmente."); }
@@ -152,7 +155,7 @@ function Integrations() {
         <div className="mt-4 space-y-4">{[{ label: "Instalação", value: BITRIX_SETUP_URLS.installation }, { label: "Retorno da autorização", value: BITRIX_SETUP_URLS.callback }].map((item) => <div key={item.label}><label className="text-xs font-medium text-muted-foreground">{item.label}</label><div className="mt-1 flex items-center gap-2"><input aria-label={`Endereço de ${item.label}`} readOnly value={item.value} className="h-10 min-w-0 flex-1 rounded-md border border-border bg-card px-3 font-mono text-xs" /><Button variant="outline" size="icon" aria-label={`Copiar ${item.label}`} title={`Copiar ${item.label}`} onClick={() => copy(item.label, item.value)}>{copied === item.label ? <Check /> : <Copy />}</Button></div></div>)}</div>
         {copied && <p role="status" className="mt-3 text-xs text-success">{copied}: endereço copiado.</p>}{error && <p role="alert" className="mt-3 text-xs text-danger">{error}</p>}
       </div>
-      <div className="border-t border-border py-6"><h3 className="font-semibold">Módulos previstos</h3><div className="mt-4 divide-y divide-border">{["CRM e vendas", "Atividades", "Tarefas", "Atendimento", "Pessoas e departamentos"].map((module) => <div key={module} className="flex items-center justify-between gap-4 py-3 text-sm"><span>{module}</span><span className="text-xs text-muted-foreground">Não sincronizado</span></div>)}</div></div>
+      <div className="border-t border-border py-6"><h3 className="font-semibold">Módulos sincronizados</h3><div className="mt-4 divide-y divide-border">{([["CRM e vendas", "deals", "negócios"], ["Atividades", "activities", "atividades"], ["Tarefas", "tasks", "tarefas"], ["Atendimento", "support", "conversas"], ["Pessoas e departamentos", "users", "pessoas"]] as const).map(([module, key, unit]) => { const n = countsQ.data?.[key] ?? 0; return <div key={module} className="flex items-center justify-between gap-4 py-3 text-sm"><span>{module}</span><span className={`text-xs ${n ? "text-success" : "text-muted-foreground"}`}>{!conn ? "Não conectado" : countsQ.isLoading ? "…" : n ? `${n.toLocaleString("pt-BR")} ${unit}` : "Nenhum registro"}</span></div>; })}</div></div>
       <div className="flex items-start gap-3 border-t border-border py-5 text-sm text-muted-foreground"><ShieldCheck className="mt-0.5 size-4 shrink-0" /><p>Credenciais serão solicitadas por formulário seguro. A instalação não concede acesso ao Spacedash sem convite.</p></div>
     </>}
       </TabsContent>
