@@ -161,6 +161,79 @@ export type Database = {
           },
         ]
       }
+      bitrix_stages: {
+        Row: {
+          category_id: string | null
+          category_name: string | null
+          company_id: string
+          name: string
+          semantics: string | null
+          sort: number | null
+          stage_id: string
+        }
+        Insert: {
+          category_id?: string | null
+          category_name?: string | null
+          company_id: string
+          name: string
+          semantics?: string | null
+          sort?: number | null
+          stage_id: string
+        }
+        Update: {
+          category_id?: string | null
+          category_name?: string | null
+          company_id?: string
+          name?: string
+          semantics?: string | null
+          sort?: number | null
+          stage_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bitrix_stages_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bitrix_users: {
+        Row: {
+          active: boolean | null
+          company_id: string
+          department: string | null
+          name: string
+          photo: string | null
+          user_id: string
+        }
+        Insert: {
+          active?: boolean | null
+          company_id: string
+          department?: string | null
+          name: string
+          photo?: string | null
+          user_id: string
+        }
+        Update: {
+          active?: boolean | null
+          company_id?: string
+          department?: string | null
+          name?: string
+          photo?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bitrix_users_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           created_at: string
