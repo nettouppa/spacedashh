@@ -52,7 +52,8 @@ function Integrations() {
   const [domain, setDomain] = useState("");
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<{ ok: boolean; text: string } | null>(null);
-  const initialTab = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "atlas" ? "atlas" : "bitrix";
+  const [tab, setTab] = useState("bitrix");
+  useEffect(() => { if (new URLSearchParams(window.location.search).get("tab") === "atlas") setTab("atlas"); }, []);
   useEffect(() => {
     const k = new URLSearchParams(window.location.search).get("bitrix");
     if (k && FLASH[k]) { setFlash(FLASH[k]); window.history.replaceState(null, "", "/integrations"); }
@@ -95,7 +96,7 @@ function Integrations() {
       </label>}
     </div>
     {flash && <p role="status" className={`mt-5 rounded-md px-3 py-2 text-sm ${flash.ok ? "bg-success-soft text-success" : "bg-danger-soft text-danger"}`}>{flash.text}</p>}
-    <Tabs defaultValue={initialTab} className="mt-6">
+    <Tabs value={tab} onValueChange={setTab} className="mt-6">
       <TabsList>
         <TabsTrigger value="bitrix"><Plug className="size-4" />Bitrix24</TabsTrigger>
         <TabsTrigger value="atlas"><AtlasIcon className="size-4" />Atlas</TabsTrigger>
