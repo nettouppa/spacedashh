@@ -86,24 +86,48 @@ export let TASKS: Task[] = (() => {
   return out;
 })();
 
-export type Period = "month" | "quarter" | "year";
+export type Preset = "week" | "month" | "quarter" | "semester" | "year";
+export type DateRange = { preset?: Preset | undefined; from: Date; to: Date };
+/** A preset (current calendar week/month/…) or an explicit inclusive date range. */
+export type Period = Preset | DateRange;
 export type Filters = {
   period: Period; company?: string | undefined; team?: string | undefined; sellerId?: string | undefined; stage?: Stage | undefined; lossReason?: string | undefined;
 };
 
-export function periodStart(p: Period) {
-  const d = new Date(NOW);
-  if (p === "month") return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
-  if (p === "quarter") return new Date(Date.UTC(d.getUTCFullYear(), Math.floor(d.getUTCMonth() / 3) * 3, 1));
-  return new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+const DAY = 864e5;
+/** Full calendar range of the current week (Mon–Sun), month, quarter, semester or year, relative to NOW. */
+export function presetRange(p: Preset): DateRange {
+  const y = NOW.getUTCFullYear(), m = NOW.getUTCMonth();
+  if (p === "week") {
+    const from = new Date(Date.UTC(y, m, NOW.getUTCDate() - ((NOW.getUTCDay() + 6) % 7)));
+    return { preset: p, from, to: new Date(from.getTime() + 7 * DAY - 1) };
+  }
+  const len = p === "month" ? 1 : p === "quarter" ? 3 : p === "semester" ? 6 : 12;
+  const sm = Math.floor(m / len) * len;
+  return { preset: p, from: new Date(Date.UTC(y, sm, 1)), to: new Date(Date.UTC(y, sm + len, 1) - 1) };
 }
+export const rng = (p: Period): DateRange => (typeof p === "string" ? presetRange(p) : p);
+export const presetOf = (p: Period) => rng(p).preset;
+const fmt = (d: Date, year = true) => `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}${year ? `/${d.getUTCFullYear()}` : ""}`;
+export const PRESET_LABELS: Record<Preset, string> = { week: "Semana", month: "Mês", quarter: "Trimestre", semester: "Semestre", year: "Ano" };
+export function periodLabel(p: Period, short = false) {
+  const r = rng(p);
+  if (short && r.preset) return PRESET_LABELS[r.preset];
+  const sameYear = r.from.getUTCFullYear() === r.to.getUTCFullYear();
+  return `${fmt(r.from, !short || !sameYear)} – ${fmt(r.to, !short || !sameYear)}`;
+}
+/** Whether the closing pace is shown per week (ranges up to ~2 months) instead of per month. */
+export const paceWeekly = (p: Period) => { const r = rng(p); return r.to.getTime() - r.from.getTime() <= 62 * DAY; };
+
+export function periodStart(p: Period) { return rng(p).from; }
+export function periodEnd(p: Period) { return rng(p).to; }
 
 /** Apply all filters except the ones listed in `skip` (so a widget can keep showing its own siblings). */
 export function filterDeals(f: Filters, skip: (keyof Filters)[] = []) {
-  const start = periodStart(f.period);
+  const { from: start, to: end } = rng(f.period);
   return DEALS.filter((d) => {
     const ref = d.closedAt ?? d.createdAt;
-    if (d.status !== "open" && ref < start) return false;
+    if (d.status !== "open" && (ref < start || ref > end)) return false;
     if (!skip.includes("company") && f.company && d.company !== f.company) return false;
     if (!skip.includes("team") && f.team && d.team !== f.team) return false;
     if (!skip.includes("sellerId") && f.sellerId && d.sellerId !== f.sellerId) return false;
