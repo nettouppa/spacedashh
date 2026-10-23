@@ -106,25 +106,25 @@ export function presetRange(p: Preset): DateRange {
   const sm = Math.floor(m / len) * len;
   return { preset: p, from: new Date(Date.UTC(y, sm, 1)), to: new Date(Date.UTC(y, sm + len, 1) - 1) };
 }
-export const rng = (p: Period): DateRange => (typeof p === "string" ? presetRange(p) : p);
-export const presetOf = (p: Period) => rng(p).preset;
+export const range = (p: Period): DateRange => (typeof p === "string" ? presetRange(p) : p);
+export const presetOf = (p: Period) => range(p).preset;
 const fmt = (d: Date, year = true) => `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}${year ? `/${d.getUTCFullYear()}` : ""}`;
 export const PRESET_LABELS: Record<Preset, string> = { week: "Semana", month: "Mês", quarter: "Trimestre", semester: "Semestre", year: "Ano" };
 export function periodLabel(p: Period, short = false) {
-  const r = rng(p);
+  const r = range(p);
   if (short && r.preset) return PRESET_LABELS[r.preset];
   const sameYear = r.from.getUTCFullYear() === r.to.getUTCFullYear();
   return `${fmt(r.from, !short || !sameYear)} – ${fmt(r.to, !short || !sameYear)}`;
 }
 /** Whether the closing pace is shown per week (ranges up to ~2 months) instead of per month. */
-export const paceWeekly = (p: Period) => { const r = rng(p); return r.to.getTime() - r.from.getTime() <= 62 * DAY; };
+export const paceWeekly = (p: Period) => { const r = range(p); return r.to.getTime() - r.from.getTime() <= 62 * DAY; };
 
-export function periodStart(p: Period) { return rng(p).from; }
-export function periodEnd(p: Period) { return rng(p).to; }
+export function periodStart(p: Period) { return range(p).from; }
+export function periodEnd(p: Period) { return range(p).to; }
 
 /** Apply all filters except the ones listed in `skip` (so a widget can keep showing its own siblings). */
 export function filterDeals(f: Filters, skip: (keyof Filters)[] = []) {
-  const { from: start, to: end } = rng(f.period);
+  const { from: start, to: end } = range(f.period);
   return DEALS.filter((d) => {
     const ref = d.closedAt ?? d.createdAt;
     if (d.status !== "open" && (ref < start || ref > end)) return false;
@@ -154,7 +154,7 @@ export function monthlyGoal(s: Seller, month: string) {
 /** Months covered by the period (whole month/quarter/year). */
 /** Months touched by the period with the fraction of each month's days covered. */
 export function periodMonthShares(p: Period) {
-  const { from, to } = rng(p);
+  const { from, to } = range(p);
   const out: { month: string; share: number }[] = [];
   for (let c = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), 1)); c <= to; c = new Date(Date.UTC(c.getUTCFullYear(), c.getUTCMonth() + 1, 1))) {
     const next = Date.UTC(c.getUTCFullYear(), c.getUTCMonth() + 1, 1);
@@ -236,7 +236,7 @@ export function lossReasons(f: Filters) {
 }
 
 export function pace(f: Filters) {
-  const r = rng(f.period);
+  const r = range(f.period);
   const won = filterDeals({ ...f, period: { from: new Date(0), to: NOW } }).filter((d) => d.status === "won");
   const last = Math.min(r.to.getTime(), NOW.getTime());
   const buckets: { label: string; value: number }[] = [];
@@ -269,7 +269,7 @@ export const pct = (n: number) => `${Math.round(n * 100)}%`;
 export const sellerName = (id?: string) => SELLERS.find((s) => s.id === id)?.name;
 
 export function periodPrevRange(p: Period) {
-  const r = rng(p);
+  const r = range(p);
   const d = new Date(r.from);
   if (r.preset === "week") d.setUTCDate(d.getUTCDate() - 7);
   else if (r.preset) d.setUTCMonth(d.getUTCMonth() - { month: 1, quarter: 3, semester: 6, year: 12 }[r.preset]);
@@ -391,7 +391,7 @@ export function channelOf(text: string | null | undefined): string {
 }
 
 const MOCK_CONVERSATIONS: Conversation[] = (() => {
-  const r = rng(23); const out: Conversation[] = [];
+  const r = range(23); const out: Conversation[] = [];
   const ch = ["WhatsApp", "WhatsApp", "WhatsApp", "WhatsApp", "Instagram", "Instagram", "Chat do site", "Chat do site", "Telegram", "Facebook"];
   for (let i = 0; i < 1400; i++) {
     const s = SELLERS[Math.floor(r() * SELLERS.length)]!;

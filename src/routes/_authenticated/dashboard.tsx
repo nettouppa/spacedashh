@@ -11,7 +11,7 @@ import { SortableContext, arrayMove, rectSortingStrategy, useSortable, sortableK
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, LayoutGrid, Monitor, X, Save, RotateCcw, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { COMPANIES, SELLERS, TEAMS, sellerName, rng, setDataset, setGoals, type Filters, type Period, type Stage } from "@/lib/crm-data";
+import { COMPANIES, SELLERS, TEAMS, sellerName, range, setDataset, setGoals, type Filters, type Period, type Stage } from "@/lib/crm-data";
 import { getGoals, saveGoals as saveGoalsFn } from "@/lib/goals.functions";
 import { GoalsDialog } from "@/components/dash/goals-dialog";
 import { Target, Plus, Copy, Pencil, Trash2 } from "lucide-react";
@@ -227,7 +227,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
     const period: Period | undefined = a.from && a.to ? { from: new Date(`${a.from}T00:00:00Z`), to: new Date(`${a.to}T23:59:59.999Z`) } : a.period;
     if (a.clear) { setF({ period: period ?? f.period }); return; }
     const patch: Partial<Filters> = {};
-    if (period && !Number.isNaN(rng(period).from.getTime()) && !Number.isNaN(rng(period).to.getTime())) patch.period = period;
+    if (period && !Number.isNaN(range(period).from.getTime()) && !Number.isNaN(range(period).to.getTime())) patch.period = period;
     (["company", "team", "sellerId", "stage", "lossReason"] as const).forEach((k) => {
       if (k in a) (patch as Record<string, unknown>)[k] = a[k] ?? undefined;
     });

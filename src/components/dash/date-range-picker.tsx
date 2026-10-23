@@ -4,7 +4,7 @@ import { ptBR } from "date-fns/locale";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { PRESET_LABELS, periodLabel, rng, type Period, type Preset } from "@/lib/crm-data";
+import { PRESET_LABELS, periodLabel, range, type Period, type Preset } from "@/lib/crm-data";
 
 const PRESETS: Preset[] = ["week", "month", "quarter", "semester", "year"];
 // Calendar works in local time; the data layer uses UTC days.
@@ -13,7 +13,7 @@ const startUtc = (d: Date) => new Date(Date.UTC(d.getFullYear(), d.getMonth(), d
 const endUtc = (d: Date) => new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate() + 1) - 1);
 
 export function DateRangePicker({ value, onChange }: { value: Period; onChange: (p: Period) => void }) {
-  const r = rng(value);
+  const r = range(value);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<{ from: Date; to: Date | undefined } | undefined>();
   const selected = draft ?? { from: toLocal(r.from), to: toLocal(r.to) };
