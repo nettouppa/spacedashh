@@ -5,7 +5,7 @@
 - Gestor/admin cola a API key da OpenAI da empresa, escolhe o modelo (padrão `gpt-4o-mini`; opções `gpt-4o`, `gpt-4.1-mini`, `gpt-4.1`) e clica **Testar e salvar**. A chave é validada na hora.
 - Depois de salva, a chave nunca é exibida de novo: só aparece "Conectada · termina em ••••abcd", com opções **Trocar chave** e **Remover**.
 - Colaboradores veem apenas o status (conectada ou não).
-- O Atlas (chat e voz) passa a usar a OpenAI da empresa selecionada. Sem chave configurada, o Atlas mostra uma mensagem amigável: "Peça ao gestor para conectar a OpenAI em Integrações" (com link para gestores).
+- O Atlas passa a usar a OpenAI da empresa selecionada em tudo: chat por texto, pedido por microfone e **modo conversa por voz** (respostas curtas e faladas, como hoje). Sem chave configurada, o Atlas mostra uma mensagem amigável: "Peça ao gestor para conectar a OpenAI em Integrações" (com link para gestores); no modo conversa, essa mensagem também é falada.
 - Erros da OpenAI viram mensagens claras: chave inválida, sem créditos/limite, muitas solicitações.
 
 ## Segurança
