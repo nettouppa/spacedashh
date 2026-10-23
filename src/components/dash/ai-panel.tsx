@@ -89,8 +89,8 @@ function greeting() {
   return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
 }
 
-export function AiPanel({ open, onClose, f, onAction, request, onRestore, userName }: {
-  open: boolean; onClose: () => void; f: Filters; onAction: (a: AiAction) => void; request: AtlasRequest | null; onRestore: (f: Filters) => void; userName: string;
+export function AiPanel({ open, onClose, f, onAction, request, onRestore, userName, companyId }: {
+  companyId: string; open: boolean; onClose: () => void; f: Filters; onAction: (a: AiAction) => void; request: AtlasRequest | null; onRestore: (f: Filters) => void; userName: string;
 }) {
   const ask = useServerFn(askAssistant);
   const [msgs, setMsgs] = useState<Msg[]>([]);
@@ -117,7 +117,7 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
     setInput(""); setTopic(null); setBusy(true);
     const prev = f;
     try {
-      const r = await ask({ data: { messages: history.map(({ role, content }) => ({ role, content })).slice(-20), context: buildContext(f) } });
+      const r = await ask({ data: { messages: history.map(({ role, content }) => ({ role, content })).slice(-20), context: buildContext(f), companyId } });
       if (r.action) onAction(r.action);
       setMsgs((m) => [...m, { role: "assistant", content: r.reply, action: r.action ? { label: describe(r.action), prev } : undefined }]);
     } catch {
@@ -143,7 +143,7 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
   return (
     <aside className={cn("fixed inset-y-0 right-0 z-40 flex w-[min(400px,100vw)] flex-col border-l border-border bg-card text-card-foreground shadow-soft transition-transform duration-300 ease-out", open ? "translate-x-0" : "translate-x-[110%]")}>
       {voiceOpen && open && (
-        <VoiceMode history={msgs.map(({ role, content }) => ({ role, content }))} context={() => buildContext(fRef.current)} onAction={onAction}
+        <VoiceMode history={msgs.map(({ role, content }) => ({ role, content }))} companyId={companyId} context={() => buildContext(fRef.current)} onAction={onAction}
           onClose={(turns) => { setVoiceOpen(false); if (turns.length) setMsgs((m) => [...m, ...turns]); }} />
       )}
       <div className="flex items-center gap-3 border-b border-border px-4 py-3">

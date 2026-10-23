@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_settings: {
+        Row: {
+          api_key: string
+          company_id: string
+          key_last4: string
+          model: string
+          provider: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          api_key: string
+          company_id: string
+          key_last4: string
+          model?: string
+          provider?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          api_key?: string
+          company_id?: string
+          key_last4?: string
+          model?: string
+          provider?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bitrix_activities: {
         Row: {
           activity_id: string
@@ -532,6 +570,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ai_status: {
+        Args: { _company_id: string }
+        Returns: {
+          connected: boolean
+          last4: string
+          model: string
+        }[]
+      }
       bitrix_status: {
         Args: { _company_id: string }
         Returns: {
