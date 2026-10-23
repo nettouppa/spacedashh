@@ -49,5 +49,6 @@ export const sfx = {
   thinking: () => play({ f: 740, dur: 0.22, vol: 0.06, attack: 0.02 }),
   speak: () => play({ f: 1046.5, dur: 0.04, vol: 0.08, attack: 0.004 }),
   bargeIn: () => play({ f: 1400, to: 900, dur: 0.03, vol: 0.1, type: "triangle", attack: 0.002 }),
+  dockOut: () => play({ f: 320, to: 140, dur: 0.2, vol: 0.45, attack: 0.02 }, { f: 520, dur: 0.08, vol: 0.06 }),
   disconnect: () => play({ f: 659.25, to: 220, dur: 0.35, vol: 0.22, attack: 0.01 }),
 };

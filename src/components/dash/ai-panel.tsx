@@ -105,7 +105,8 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [sound, setSound] = useState(true);
   useEffect(() => { setSound(soundEnabled()); }, []);
-  useEffect(() => { if (open) sfx.dockIn(); }, [open]);
+  const wasOpen = useRef(false);
+  useEffect(() => { if (open) sfx.dockIn(); else if (wasOpen.current) sfx.dockOut(); wasOpen.current = open; }, [open]);
   const fRef = useRef(f);
   fRef.current = f;
   useEffect(() => { setHello(greeting()); }, []);
