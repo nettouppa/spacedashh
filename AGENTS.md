@@ -19,3 +19,4 @@
 - Bitrix tenant binding happens only via OAuth started by a manager (single-use 15-min state in `bitrix_oauth_states`); the portal install event stores no tokens. Tokens live in `bitrix_connections` (service_role only), status exposed via `bitrix_status()`.
 - Integration setup reads company access through authenticated RLS queries and exposes no credentials; manager/admin controls are derived from a shared policy to keep UI and future operations consistent.
 - Atlas AI uses each company's own OpenAI key stored in `ai_settings` (service_role only, status via `ai_status()`); `askAssistant` requires auth + membership. Keeps tenant billing and credentials isolated.
+- Atlas personality lives under `ai_settings.voice_settings.personality` and shares one prompt policy across chat and voice; dedicated manager-authorized saves preserve voice preferences, and voice saves preserve personality to avoid cross-setting overwrites.

@@ -71,8 +71,10 @@ export const saveVoiceSettings = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertManager(context.supabase, context.userId, data.companyId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: current, error: currentError } = await supabaseAdmin.from("ai_settings").select("voice_settings").eq("company_id", data.companyId).maybeSingle();
+    if (currentError || !current) return { ok: false as const, error: "Conecte a OpenAI antes de salvar as preferências de voz." };
     const { data: rows, error } = await supabaseAdmin.from("ai_settings")
-      .update({ voice_settings: data.settings, updated_by: context.userId, updated_at: new Date().toISOString() })
+      .update({ voice_settings: { ...data.settings, personality: parseVoiceSettings(current.voice_settings).personality }, updated_by: context.userId, updated_at: new Date().toISOString() })
       .eq("company_id", data.companyId).select("company_id");
     if (error) return { ok: false as const, error: "Não foi possível salvar." };
     if (!rows?.length) return { ok: false as const, error: "Conecte a OpenAI antes de salvar as preferências de voz." };

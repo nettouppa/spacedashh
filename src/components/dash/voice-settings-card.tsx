@@ -100,7 +100,7 @@ export function VoiceSettingsCard({ companyId, canManage, connected }: { company
     </fieldset>
     {canManage && <div className="mt-4 flex flex-wrap gap-2">
       <Button disabled={busy || !connected} onClick={() => void submit()}>{busy ? "Salvando…" : "Salvar preferências"}</Button>
-      <Button variant="ghost" disabled={busy || !connected} onClick={() => setV(DEFAULT_VOICE)}><RotateCcw />Restaurar padrão</Button>
+      <Button variant="ghost" disabled={busy || !connected} onClick={() => setV({ ...DEFAULT_VOICE, personality: v.personality })}><RotateCcw />Restaurar padrão</Button>
     </div>}
     {msg && <p role="status" className={`mt-3 text-xs ${msg.ok ? "text-success" : "text-danger"}`}>{msg.text}</p>}
   </section>;
