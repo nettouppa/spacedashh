@@ -152,13 +152,22 @@ export function monthlyGoal(s: Seller, month: string) {
   return GOALS[month]?.[s.id] ?? suggestedGoal(s);
 }
 /** Months covered by the period (whole month/quarter/year). */
-export function periodMonths(p: Period) {
-  const start = periodStart(p);
-  const n = p === "month" ? 1 : p === "quarter" ? 3 : 12;
-  return Array.from({ length: n }, (_, i) => monthKey(new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + i, 1))));
+/** Months touched by the period with the fraction of each month's days covered. */
+export function periodMonthShares(p: Period) {
+  const { from, to } = rng(p);
+  const out: { month: string; share: number }[] = [];
+  for (let c = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), 1)); c <= to; c = new Date(Date.UTC(c.getUTCFullYear(), c.getUTCMonth() + 1, 1))) {
+    const next = Date.UTC(c.getUTCFullYear(), c.getUTCMonth() + 1, 1);
+    const days = (next - c.getTime()) / DAY;
+    const covered = (Math.min(next, to.getTime() + 1) - Math.max(c.getTime(), from.getTime())) / DAY;
+    out.push({ month: monthKey(c), share: Math.min(1, Math.max(0, Math.round(covered) / days)) });
+  }
+  return out;
 }
+export function periodMonths(p: Period) { return periodMonthShares(p).map((x) => x.month); }
+/** Goal for the period; partial months are prorated by days. */
 export function sellerGoal(s: Seller, p: Period) {
-  return periodMonths(p).reduce((a, m) => a + monthlyGoal(s, m), 0);
+  return periodMonthShares(p).reduce((a, x) => a + monthlyGoal(s, x.month) * x.share, 0);
 }
 
 export function goalFor(f: Filters) {
@@ -227,18 +236,24 @@ export function lossReasons(f: Filters) {
 }
 
 export function pace(f: Filters) {
-  const won = filterDeals({ ...f, period: "year" }).filter((d) => d.status === "won");
+  const r = rng(f.period);
+  const won = filterDeals({ ...f, period: { from: new Date(0), to: NOW } }).filter((d) => d.status === "won");
+  const last = Math.min(r.to.getTime(), NOW.getTime());
   const buckets: { label: string; value: number }[] = [];
-  if (f.period === "month") {
+  if (paceWeekly(f.period)) {
     for (let w = 7; w >= 0; w--) {
-      const end = NOW.getTime() - w * 7 * 864e5, start = end - 7 * 864e5;
+      const end = last - w * 7 * DAY, start = end - 7 * DAY;
       buckets.push({ label: `S-${w}`, value: won.filter((d) => d.closedAt!.getTime() > start && d.closedAt!.getTime() <= end).reduce((a, d) => a + d.value, 0) });
     }
-    buckets[buckets.length - 1]!.label = "Atual";
+    buckets[buckets.length - 1]!.label = last >= NOW.getTime() - DAY ? "Atual" : "S-0";
   } else {
     const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-    for (let m = 0; m <= NOW.getUTCMonth(); m++)
-      buckets.push({ label: months[m]!, value: won.filter((d) => d.closedAt!.getUTCMonth() === m && d.closedAt!.getUTCFullYear() === NOW.getUTCFullYear()).reduce((a, d) => a + d.value, 0) });
+    const end = new Date(last);
+    const multiYear = r.from.getUTCFullYear() !== end.getUTCFullYear();
+    for (let c = new Date(Date.UTC(r.from.getUTCFullYear(), r.from.getUTCMonth(), 1)); c <= end; c = new Date(Date.UTC(c.getUTCFullYear(), c.getUTCMonth() + 1, 1))) {
+      const y = c.getUTCFullYear(), m = c.getUTCMonth();
+      buckets.push({ label: `${months[m]!}${multiYear ? `/${String(y).slice(2)}` : ""}`, value: won.filter((d) => d.closedAt!.getUTCMonth() === m && d.closedAt!.getUTCFullYear() === y).reduce((a, d) => a + d.value, 0) });
+    }
   }
   return buckets;
 }
@@ -254,13 +269,14 @@ export const pct = (n: number) => `${Math.round(n * 100)}%`;
 export const sellerName = (id?: string) => SELLERS.find((s) => s.id === id)?.name;
 
 export function periodPrevRange(p: Period) {
-  const start = periodStart(p);
-  const d = new Date(start);
-  if (p === "month") d.setUTCMonth(d.getUTCMonth() - 1);
-  else if (p === "quarter") d.setUTCMonth(d.getUTCMonth() - 3);
-  else d.setUTCFullYear(d.getUTCFullYear() - 1);
+  const r = rng(p);
+  const d = new Date(r.from);
+  if (r.preset === "week") d.setUTCDate(d.getUTCDate() - 7);
+  else if (r.preset) d.setUTCMonth(d.getUTCMonth() - { month: 1, quarter: 3, semester: 6, year: 12 }[r.preset]);
+  else d.setTime(r.from.getTime() - (r.to.getTime() - r.from.getTime()) - 1);
   // same elapsed length as current period, for fair comparison
-  return { start: d, end: new Date(d.getTime() + (NOW.getTime() - start.getTime())) };
+  const elapsed = Math.min(r.to.getTime(), NOW.getTime()) - r.from.getTime();
+  return { start: d, end: new Date(d.getTime() + Math.max(elapsed, 0)) };
 }
 
 /** KPIs for the equivalent elapsed window of the previous period. */
