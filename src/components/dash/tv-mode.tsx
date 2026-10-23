@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, RefreshCw, Pause, Play, ChevronLeft, ChevronRight, Link2, Copy, Check, Trash2 } from "lucide-react";
+import { X, RefreshCw, Pause, Play, ChevronLeft, ChevronRight, Link2, Copy, Check, Trash2, Sun, Moon } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { KpiStrip, WIDGETS, type SetFilter, type WidgetId } from "./widgets";
 import { AtlasContext } from "./atlas";
@@ -22,6 +22,9 @@ export function TvMode({ f, set, views, interval: initial = 30, onClose, onRefre
   const [clock, setClock] = useState(new Date());
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [shareOpen, setShareOpen] = useState(false);
+  const [dark, setDark] = useState(true);
+  useEffect(() => { if (localStorage.getItem("sd-tv-theme") === "light") setDark(false); }, []);
+  const toggleTheme = () => setDark((d) => { localStorage.setItem("sd-tv-theme", d ? "light" : "dark"); return !d; });
   const n = Math.max(list.length, 1);
   const go = (d: number) => { setView((v) => (v + d + n) % n); setElapsed(0); };
 
@@ -51,7 +54,7 @@ export function TvMode({ f, set, views, interval: initial = 30, onClose, onRefre
   const btn = "grid size-11 place-items-center rounded-full border border-border bg-card text-foreground hover:bg-muted";
   return (
     <AtlasContext.Provider value={{ request: () => {}, hidden: true }}>
-    <div className="dark fixed inset-0 z-50 overflow-auto bg-background p-8 text-foreground">
+    <div className={`${dark ? "dark " : ""}fixed inset-0 z-50 overflow-auto bg-background p-8 text-foreground`}>
       <div className="mb-5 flex items-center justify-between gap-6">
         <div className="min-w-0">
           <div className="text-sm font-medium uppercase tracking-[0.3em] text-primary">Spacedash · {title ?? "TV"}</div>
@@ -69,6 +72,7 @@ export function TvMode({ f, set, views, interval: initial = 30, onClose, onRefre
             {INTERVALS.map((s) => <option key={s} value={s}>{s < 60 ? `${s}s` : `${s / 60} min`} por painel</option>)}
           </select>
           {share && <button onClick={() => setShareOpen(true)} className={btn} aria-label="Link para TV"><Link2 /></button>}
+          <button onClick={toggleTheme} className={btn} aria-label={dark ? "Usar tema claro" : "Usar tema escuro"} title={dark ? "Tema claro" : "Tema escuro"}>{dark ? <Sun /> : <Moon />}</button>
           {onClose && <button onClick={onClose} className={btn} aria-label="Sair do modo TV"><X /></button>}
         </div>
       </div>
