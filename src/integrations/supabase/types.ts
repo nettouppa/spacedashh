@@ -23,6 +23,7 @@ export type Database = {
           provider: string
           updated_at: string
           updated_by: string | null
+          voice_settings: Json
         }
         Insert: {
           api_key: string
@@ -32,6 +33,7 @@ export type Database = {
           provider?: string
           updated_at?: string
           updated_by?: string | null
+          voice_settings?: Json
         }
         Update: {
           api_key?: string
@@ -41,6 +43,7 @@ export type Database = {
           provider?: string
           updated_at?: string
           updated_by?: string | null
+          voice_settings?: Json
         }
         Relationships: [
           {
@@ -578,6 +581,7 @@ export type Database = {
           model: string
         }[]
       }
+      ai_voice_settings: { Args: { _company_id: string }; Returns: Json }
       bitrix_status: {
         Args: { _company_id: string }
         Returns: {

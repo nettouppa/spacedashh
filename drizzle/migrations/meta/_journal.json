@@ -50,6 +50,13 @@
       "when": 1792722391979,
       "tag": "0006_ai_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792723158170,
+      "tag": "0007_ai_voice_settings",
+      "breakpoints": true
     }
   ]
 }
