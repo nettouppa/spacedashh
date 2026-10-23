@@ -400,7 +400,7 @@ const MOCK_CONVERSATIONS: Conversation[] = (() => {
     out.push({ sellerId: s.id, team: s.team, channel: ch[Math.floor(r() * ch.length)]!, createdAt, firstResponseMin: Math.round(1 + r() * r() * 40),
       closedAt: open ? undefined : new Date(createdAt.getTime() + Math.round(10 + r() * r() * 600) * 6e4) });
   }
-  return out;
+  const start = periodStart(f.period), end = periodEnd(f.period);
 })();
 export let CONVERSATIONS: Conversation[] = MOCK_CONVERSATIONS;
 
@@ -463,7 +463,7 @@ export function evolution(f: Filters) {
   const daysInMonth = new Date(Date.UTC(NOW.getUTCFullYear(), NOW.getUTCMonth() + 1, 0)).getUTCDate();
   const today = NOW.getUTCDate();
   let acc = 0;
-  const days = Array.from({ length: daysInMonth }, (_, i) => {
+  const start = periodStart(f.period), end = periodEnd(f.period);
     const day = i + 1;
     if (day <= today) acc += won.filter((x) => monthKey(x.closedAt!) === cur.key && x.closedAt!.getUTCDate() === day).reduce((a, x) => a + x.value, 0);
     return { day, actual: day <= today ? acc : null, ideal: (cur.goal * day) / daysInMonth };
@@ -489,7 +489,7 @@ export function productivity(f: Filters) {
     const wins = won.filter((d) => d.sellerId === s.id).length;
     return { id: s.id, name: s.name, photo: s.photo, total: mine.length, done: mine.filter((a) => a.completed).length, by, wins, perWin: wins ? mine.length / wins : 0 };
   }).filter((r) => r.total > 0).sort((a, b) => b.total - a.total);
-  const by = { call: 0, meeting: 0, email: 0, chat: 0, task: 0 } as Record<ActivityType, number>;
+  const start = periodStart(f.period), end = periodEnd(f.period);
   rows.forEach((r) => (Object.keys(by) as ActivityType[]).forEach((k) => { by[k] += r.by[k]; }));
   return { rows, by, total: rows.reduce((a, r) => a + r.total, 0) };
 }
