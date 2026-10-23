@@ -170,6 +170,9 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
   const [saved, setSaved] = useState(false);
   const [ai, setAi] = useState(false);
   const [tv, setTv] = useState(false);
+  const closeTv = useCallback(() => setTv(false), []);
+  const { refetch: refetchData } = dataQ, { refetch: refetchGoals } = goalsQ;
+  const refreshTv = useCallback(() => { void refetchData(); void refetchGoals(); }, [refetchData, refetchGoals]);
   const [atlasReq, setAtlasReq] = useState<AtlasRequest | null>(null);
   const atlasCtx = { hidden: edit, request: (mode: "explain" | "ask", topic: string) => { setAi(true); setAtlasReq({ mode, topic, id: Date.now() }); } };
 
@@ -338,7 +341,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
       </AtlasContext.Provider>
 
       <AiPanel open={ai} onClose={() => setAi(false)} f={eff} onAction={onAi} request={atlasReq} onRestore={setF} userName={account.name.split(" ")[0]!} />
-      {tv && <TvMode f={eff} set={setEff} onClose={() => setTv(false)} />}
+      {tv && <TvMode f={eff} set={setEff} views={views} onClose={closeTv} onRefresh={refreshTv} share={profile === "manager" || account.isAdmin ? { companyId } : undefined} />}
       {goalsOpen && <GoalsDialog onClose={() => setGoalsOpen(false)} onSave={async (month, goals) => { await persistGoals({ data: { companyId, month, goals } }); await goalsQ.refetch(); }} />}
     </AppShell>
   );
