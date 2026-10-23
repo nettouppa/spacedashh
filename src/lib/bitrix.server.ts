@@ -99,6 +99,58 @@ async function syncMeta(db: Awaited<ReturnType<typeof admin>>, conn: Conn, compa
   } catch (e) { console.error("bitrix stage sync", e); }
 }
 
+type BxActivity = { ID: string; TYPE_ID?: string; PROVIDER_ID?: string; SUBJECT?: string; RESPONSIBLE_ID?: string; OWNER_TYPE_ID?: string; OWNER_ID?: string; COMPLETED?: string; CREATED?: string; DEADLINE?: string };
+type BxTask = { id: string; title?: string; responsibleId?: string; status?: string; createdDate?: string; deadline?: string | null; closedDate?: string | null };
+
+export function activityType(a: { TYPE_ID?: string | undefined; PROVIDER_ID?: string | undefined }): string {
+  if (a.TYPE_ID === "2") return "call";
+  if (a.TYPE_ID === "1") return "meeting";
+  if (a.TYPE_ID === "4") return "email";
+  const p = (a.PROVIDER_ID ?? "").toUpperCase();
+  if (p.includes("CALL")) return "call";
+  if (p.includes("MEETING")) return "meeting";
+  if (p.includes("MAIL")) return "email";
+  if (p.includes("IMOPENLINES") || p.includes("WHATSAPP") || p.includes("SMS")) return "chat";
+  return "task";
+}
+
+/** Last 180 days of CRM activities and tasks; best-effort so a missing scope never blocks deal sync. */
+async function syncWork(db: Awaited<ReturnType<typeof admin>>, conn: Conn, companyId: string) {
+  const since = new Date(Date.now() - 180 * 864e5).toISOString();
+  try {
+    let start = 0, pages = 0;
+    do {
+      const { result, next } = await call<BxActivity[]>(conn, "crm.activity.list", {
+        order: { ID: "DESC" }, filter: { ">=CREATED": since },
+        select: ["ID", "TYPE_ID", "PROVIDER_ID", "SUBJECT", "RESPONSIBLE_ID", "OWNER_TYPE_ID", "OWNER_ID", "COMPLETED", "CREATED", "DEADLINE"], start,
+      });
+      const rows = (result ?? []).map((a) => ({
+        company_id: companyId, activity_id: String(a.ID), type: activityType(a), subject: a.SUBJECT ?? null,
+        responsible_id: a.RESPONSIBLE_ID ?? null, owner_type_id: a.OWNER_TYPE_ID ?? null, owner_id: a.OWNER_ID ?? null,
+        completed: a.COMPLETED === "Y", created_at: a.CREATED || null, deadline: a.DEADLINE || null, synced_at: new Date().toISOString(),
+      }));
+      if (rows.length) await db.from("bitrix_activities").upsert(rows, { onConflict: "company_id,activity_id" });
+      start = next ?? -1; pages++;
+    } while (start >= 0 && pages < 30);
+  } catch (e) { console.error("bitrix activity sync", e); }
+  try {
+    let start = 0, pages = 0;
+    do {
+      const { result, next } = await call<{ tasks?: BxTask[] }>(conn, "tasks.task.list", {
+        order: { ID: "DESC" }, filter: { ">=CREATED_DATE": since },
+        select: ["ID", "TITLE", "RESPONSIBLE_ID", "STATUS", "CREATED_DATE", "DEADLINE", "CLOSED_DATE"], start,
+      });
+      const rows = (result?.tasks ?? []).map((t) => ({
+        company_id: companyId, task_id: String(t.id), title: t.title ?? null, responsible_id: t.responsibleId ?? null,
+        status: t.status ?? null, created_at: t.createdDate || null, deadline: t.deadline || null, closed_at: t.closedDate || null,
+        synced_at: new Date().toISOString(),
+      }));
+      if (rows.length) await db.from("bitrix_tasks").upsert(rows, { onConflict: "company_id,task_id" });
+      start = next ?? -1; pages++;
+    } while (start >= 0 && pages < 20);
+  } catch (e) { console.error("bitrix task sync", e); }
+}
+
 const MAX_PAGES = 40; // 2.000 negócios por execução, para caber no tempo do servidor
 
 export async function syncDeals(companyId: string) {
@@ -109,6 +161,7 @@ export async function syncDeals(companyId: string) {
   try {
     const conn = await freshToken(row);
     await syncMeta(db, conn, companyId);
+    await syncWork(db, conn, companyId);
     let start = 0, pages = 0, total = 0;
     do {
       const { result, next } = await call<Deal[]>(conn, "crm.deal.list", {
