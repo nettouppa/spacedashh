@@ -264,7 +264,7 @@ export type RawDataset = {
   deals: { deal_id: string; title: string | null; stage_id: string | null; category_id: string | null; opportunity: number; assigned_by_id: string | null; closed: boolean; date_create: string | null; close_date: string | null; date_modify: string | null }[];
   users: { user_id: string; name: string; photo: string | null; department: string | null }[];
   stages: { stage_id: string; category_id: string | null; category_name: string | null; name: string; sort: number; semantics: string | null }[];
-  activities?: { type: string; responsible_id: string | null; completed: boolean; created_at: string | null; deadline: string | null }[];
+  activities?: { type: string; responsible_id: string | null; completed: boolean; created_at: string | null; deadline: string | null; provider?: string | null; channel?: string | null; start_time?: string | null; end_time?: string | null }[];
   tasks?: { responsible_id: string | null; status: string | null; created_at: string | null; deadline: string | null; closed_at: string | null }[];
 };
 
