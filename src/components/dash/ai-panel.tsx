@@ -36,8 +36,8 @@ import { VoiceMode } from "./voice-mode";
 import { ConversationList } from "./conversation-list";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { listConversations, getConversation, saveConversation, updateConversation, deleteConversation } from "@/lib/conversations.functions";
-import { titleFrom } from "@/lib/conversations";
-import { History } from "lucide-react";
+import { titleFrom, highlights, followUps } from "@/lib/conversations";
+import { History, ThumbsUp, ThumbsDown, Pencil, FileDown, ClipboardCopy } from "lucide-react";
 import { AudioLines, Volume2, VolumeX } from "lucide-react";
 
 type Msg = { role: "user" | "assistant"; content: string; rating?: "up" | "down" | undefined; topic?: string | undefined; action?: { label: string; prev?: Filters | undefined } | undefined };
@@ -230,6 +230,10 @@ export function AiPanel({ open, onClose, onToggle, f, onAction, request, onResto
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><span className="size-1.5 rounded-full bg-success" />{busy ? "Analisando seus dados…" : "Online · lendo seus dados do Bitrix24"}</div>
         </div>
         <button onClick={() => { const n = !sound; setSoundEnabled(n); setSound(n); if (n) sfx.micOpen(); }} title={sound ? "Silenciar sons" : "Ativar sons"} aria-label={sound ? "Silenciar sons" : "Ativar sons"} className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">{sound ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}</button>
+        {msgs.length > 0 && <>
+          <button onClick={() => { void navigator.clipboard.writeText(transcript()); setCopied(-1); setTimeout(() => setCopied(null), 1500); }} title="Copiar conversa" aria-label="Copiar conversa" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">{copied === -1 ? <Check className="size-4 text-success" /> : <ClipboardCopy className="size-4" />}</button>
+          <button onClick={exportPdf} title="Exportar PDF" aria-label="Exportar PDF" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><FileDown className="size-4" /></button>
+        </>}
         <button onClick={() => setHistoryOpen(true)} title="Conversas" aria-label="Conversas" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><History className="size-4" /></button>
         <button onClick={newConv} title="Nova conversa" aria-label="Nova conversa" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><SquarePen className="size-4" /></button>
         <button onClick={onClose} aria-label="Fechar" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><X className="size-4" /></button>
@@ -265,26 +269,51 @@ export function AiPanel({ open, onClose, onToggle, f, onAction, request, onResto
             {msgs.map((m, i) => m.role === "user" ? (
               <div key={i} className="atlas-in flex flex-col items-end gap-1">
                 {m.topic && <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">Sobre: {m.topic}</span>}
-                <div className="max-w-[85%] rounded-2xl rounded-br-md bg-primary-soft px-3.5 py-2 text-sm text-foreground">{m.content}</div>
+                {editIdx === i ? (
+                  <form className="w-[85%]" onSubmit={(e) => { e.preventDefault(); void send(editText, m.topic ?? null, i); }}>
+                    <textarea autoFocus rows={2} value={editText} onChange={(e) => setEditText(e.target.value)} className="block w-full resize-none rounded-xl border border-primary/40 bg-background px-3 py-2 text-sm outline-none" />
+                    <div className="mt-1 flex justify-end gap-1 text-xs">
+                      <button type="button" onClick={() => setEditIdx(null)} className="rounded px-2 py-1 text-muted-foreground hover:bg-muted">Cancelar</button>
+                      <button disabled={!editText.trim() || busy} className="rounded bg-primary px-2 py-1 font-medium text-primary-foreground disabled:opacity-50">Enviar</button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="group/u flex items-start gap-1">
+                    {i === msgs.map((x) => x.role).lastIndexOf("user") && !busy && <button onClick={() => { setEditIdx(i); setEditText(m.content); }} aria-label="Editar pergunta" title="Editar pergunta" className="mt-1.5 grid size-6 place-items-center rounded text-subtle-foreground opacity-0 transition hover:bg-muted hover:text-foreground group-hover/u:opacity-100"><Pencil className="size-3.5" /></button>}
+                    <div className="max-w-[85%] rounded-2xl rounded-br-md bg-primary-soft px-3.5 py-2 text-sm text-foreground">{m.content}</div>
+                  </div>
+                )}
               </div>
             ) : (
               <div key={i} className="atlas-in group flex gap-2.5">
                 <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-primary-soft text-primary"><AtlasIcon className="size-3.5" /></span>
                 <div className="min-w-0 flex-1">
                   <div className="text-sm leading-relaxed tabular-nums [&_li]:my-0.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-1.5 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 first:[&_p]:mt-0"><ReactMarkdown>{m.content}</ReactMarkdown></div>
+                  {highlights(m.content).length > 1 && (
+                    <div className="mt-2 grid grid-cols-2 gap-1.5">
+                      {highlights(m.content).map((h) => <div key={h} className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm font-semibold tabular-nums text-primary">{h}</div>)}
+                    </div>
+                  )}
                   {m.action && m.action.prev && (
                     <div className="mt-2 flex items-center gap-2 rounded-lg border border-primary/20 bg-primary-soft/50 px-3 py-2 text-xs">
                       <Filter className="size-3.5 text-primary" /><span className="flex-1 font-medium">{m.action.label}</span>
                       <button onClick={() => { sfx.revert(); onRestore(m.action!.prev!); setMsgs((ms) => ms.map((x, j) => j === i ? { ...x, action: undefined } : x)); }} className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-medium text-primary hover:bg-card"><Undo2 className="size-3" />Desfazer</button>
                     </div>
                   )}
-                  <div className="mt-1.5 flex gap-1 opacity-0 transition group-hover:opacity-100">
+                  <div className={cn("mt-1.5 flex gap-1 transition group-hover:opacity-100", m.rating ? "opacity-100" : "opacity-0")}>
                     <button onClick={() => { void navigator.clipboard.writeText(m.content); setCopied(i); setTimeout(() => setCopied(null), 1500); }} aria-label="Copiar" className="grid size-6 place-items-center rounded text-subtle-foreground hover:bg-muted hover:text-foreground">{copied === i ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}</button>
-                    <button onClick={() => { const u = lastUser(i); if (u) void send(u.content, u.topic ?? null); }} aria-label="Refazer" className="grid size-6 place-items-center rounded text-subtle-foreground hover:bg-muted hover:text-foreground"><RotateCw className="size-3.5" /></button>
+                    <button onClick={() => { const u = lastUser(i); if (u) void send(u.content, u.topic ?? null); }} aria-label="Refazer" title="Gerar outra resposta" className="grid size-6 place-items-center rounded text-subtle-foreground hover:bg-muted hover:text-foreground"><RotateCw className="size-3.5" /></button>
+                    <button onClick={() => rate(i, "up")} aria-label="Resposta útil" title="Útil" className={cn("grid size-6 place-items-center rounded hover:bg-muted", m.rating === "up" ? "text-success" : "text-subtle-foreground hover:text-foreground")}><ThumbsUp className="size-3.5" /></button>
+                    <button onClick={() => rate(i, "down")} aria-label="Resposta não útil" title="Não útil" className={cn("grid size-6 place-items-center rounded hover:bg-muted", m.rating === "down" ? "text-danger" : "text-subtle-foreground hover:text-foreground")}><ThumbsDown className="size-3.5" /></button>
                   </div>
                 </div>
               </div>
             ))}
+            {!busy && msgs[msgs.length - 1]?.role === "assistant" && (
+              <div className="atlas-in flex flex-wrap gap-1.5 pl-8">
+                {followUps(msgs[msgs.length - 1]!.content).map((q) => <button key={q} onClick={() => send(q, null)} className="rounded-full border border-border px-3 py-1 text-[12px] text-muted-foreground transition hover:border-primary/40 hover:text-foreground">{q}</button>)}
+              </div>
+            )}
             {busy && (
               <div className="atlas-in flex items-center gap-2.5 text-sm text-muted-foreground">
                 <span className="grid size-6 place-items-center rounded-full bg-primary-soft text-primary atlas-pulse"><AtlasIcon className="size-3.5" /></span>
@@ -329,7 +358,7 @@ export function AiPanel({ open, onClose, onToggle, f, onAction, request, onResto
             <button disabled={busy || !input.trim()} aria-label="Enviar" className="grid size-7 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground transition disabled:bg-muted disabled:text-subtle-foreground"><ArrowUp className="size-4" /></button>
           </div>
         </form>
-        <p className="mt-1.5 text-center text-[10px] text-subtle-foreground">Enter envia · Shift+Enter quebra linha</p>
+        <p className="mt-1.5 text-center text-[10px] text-subtle-foreground">Enter envia · Shift+Enter quebra linha · Ctrl+K abre/fecha · Esc fecha</p>
       </div>
     </aside>
   );
