@@ -40,7 +40,7 @@ import { titleFrom } from "@/lib/conversations";
 import { History } from "lucide-react";
 import { AudioLines, Volume2, VolumeX } from "lucide-react";
 
-type Msg = { role: "user" | "assistant"; content: string; topic?: string | undefined; action?: { label: string; prev?: Filters | undefined } | undefined };
+type Msg = { role: "user" | "assistant"; content: string; rating?: "up" | "down" | undefined; topic?: string | undefined; action?: { label: string; prev?: Filters | undefined } | undefined };
 
 function buildContext(f: Filters) {
   const k = kpis(f);
@@ -95,19 +95,38 @@ function greeting() {
   return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
 }
 
-export function AiPanel({ open, onClose, f, onAction, request, onRestore, userName, companyId }: {
-  companyId: string; open: boolean; onClose: () => void; f: Filters; onAction: (a: AiAction) => void; request: AtlasRequest | null; onRestore: (f: Filters) => void; userName: string;
+export function AiPanel({ open, onClose, onToggle, f, onAction, request, onRestore, userName, companyId }: {
+  companyId: string; open: boolean; onClose: () => void; onToggle: () => void; f: Filters; onAction: (a: AiAction) => void; request: AtlasRequest | null; onRestore: (f: Filters) => void; userName: string;
 }) {
   const ask = useServerFn(askAssistant);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [topic, setTopic] = useState<string | null>(null);
+  const [editIdx, setEditIdx] = useState<number | null>(null);
+  const [editText, setEditText] = useState("");
+  const rate = (i: number, v: "up" | "down") => { dirty.current = true; setMsgs((ms) => ms.map((x, j) => j === i ? { ...x, rating: x.rating === v ? undefined : v } : x)); };
+  const transcript = () => msgs.map((m) => `${m.role === "user" ? "Você" : "Atlas"}: ${m.content}`).join("\n\n");
+  function exportPdf() {
+    const w = window.open("", "_blank");
+    if (!w) return;
+    const esc = (t: string) => t.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]!));
+    w.document.write(`<html><head><title>Conversa com o Atlas</title><style>body{font-family:system-ui,sans-serif;max-width:720px;margin:40px auto;color:#111;line-height:1.5}h1{font-size:20px}.m{margin:16px 0;white-space:pre-wrap}.r{font-size:12px;font-weight:600;color:#6d28d9;text-transform:uppercase}</style></head><body><h1>Spacedash · Conversa com o Atlas</h1><p style="color:#666;font-size:12px">${new Date().toLocaleString("pt-BR")}</p>${msgs.map((m) => `<div class="m"><div class="r">${m.role === "user" ? "Você" : "Atlas"}</div>${esc(m.content)}</div>`).join("")}</body></html>`);
+    w.document.close(); w.focus(); w.print();
+  }
   const [copied, setCopied] = useState<number | null>(null);
   const [hello, setHello] = useState("Olá");
   const end = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [voiceOpen, setVoiceOpen] = useState(false);
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); onToggle(); }
+      else if (e.key === "Escape" && open && !voiceOpen && !historyOpen) onClose();
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  });
   const [convId, setConvId] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const dirty = useRef(false);
@@ -125,7 +144,7 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
     try {
       const c = await getFn({ data: { id } });
       dirty.current = false; voiceUsed.current = false;
-      setMsgs(c.messages.map((m) => ({ role: m.role, content: m.content, topic: m.topic, action: m.action ? { label: m.action.label } : undefined })));
+      setMsgs(c.messages.map((m) => ({ role: m.role, content: m.content, topic: m.topic, action: m.action ? { label: m.action.label } : undefined, rating: m.rating })));
       setConvId(c.id); setTopic(null); setHistoryOpen(false);
       localStorage.setItem(lastKey, c.id);
     } catch { localStorage.removeItem(lastKey); }
@@ -140,7 +159,7 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
   useEffect(() => {
     if (busy || !dirty.current || !msgs.length || !companyId) return;
     dirty.current = false;
-    const payload = msgs.map((m) => ({ role: m.role, content: m.content, ...(m.topic ? { topic: m.topic } : {}), ...(m.action ? { action: { label: m.action.label } } : {}) }));
+    const payload = msgs.map((m) => ({ role: m.role, content: m.content, ...(m.topic ? { topic: m.topic } : {}), ...(m.action ? { action: { label: m.action.label } } : {}), ...(m.rating ? { rating: m.rating } : {}) }));
     const first = msgs.find((m) => m.role === "user");
     const mode = voiceUsed.current ? "voice" as const : "chat" as const;
     void saveFn({ data: { companyId, messages: payload, mode, ...(convId ? { id: convId } : { title: titleFrom(first?.content ?? "") }) } })
@@ -159,11 +178,13 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
     end.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs, busy]);
 
-  async function send(text: string, t: string | null = topic) {
+  async function send(text: string, t: string | null = topic, cutAt?: number) {
     if (!text.trim() || busy) return;
     const content = t ? `Sobre o card "${t}": ${text}` : text;
-    const history = [...msgs, { role: "user" as const, content }];
-    setMsgs((m) => [...m, { role: "user", content: text, topic: t ?? undefined }]);
+    const base = cutAt === undefined ? msgs : msgs.slice(0, cutAt);
+    const history = [...base, { role: "user" as const, content }];
+    setMsgs([...base, { role: "user", content: text, topic: t ?? undefined }]);
+    setEditIdx(null);
     setInput(""); setTopic(null); setBusy(true); sfx.transmit(); dirty.current = true;
     const prev = f;
     try {
