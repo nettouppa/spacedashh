@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { NO_KEY_REPLY, openAiErrorMessage, DEFAULT_OPENAI_MODEL } from "@/lib/ai-policy";
+import { NO_KEY_REPLY, openAiErrorMessage, DEFAULT_OPENAI_MODEL, reasoningEffort } from "@/lib/ai-policy";
 
 const Input = z.object({
   companyId: z.string().uuid(),
@@ -37,6 +37,7 @@ export const askAssistant = createServerFn({ method: "POST" })
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: cfg.model || DEFAULT_OPENAI_MODEL,
+        ...(reasoningEffort(cfg.model || DEFAULT_OPENAI_MODEL, !!data.voice) ? { reasoning_effort: reasoningEffort(cfg.model || DEFAULT_OPENAI_MODEL, !!data.voice) } : {}),
         messages: [{ role: "system", content: system }, ...data.messages],
         tools: [{
           type: "function",
