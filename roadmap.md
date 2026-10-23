@@ -24,4 +24,4 @@
 - [ ] Atlas ponta a ponta (erro 403 da IA)
 - [ ] Modo TV com link próprio
 - [ ] Relatórios PDF/Excel
-- [ ] Metas por pessoa/mês
+- [x] Metas por pessoa/mês

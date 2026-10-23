@@ -28,3 +28,14 @@ describe("toDataset", () => {
     expect(d.COMPANIES).toEqual(["Vendas"]);
   });
 });
+
+import { goalFor as _goalFor, setGoals as _setGoals, SELLERS as _S, suggestedGoal as _sg, monthKey as _mk, NOW as _NOW } from "./crm-data";
+describe("metas comerciais", () => {
+  it("usa a meta cadastrada no mês e a sugestão para quem não tem meta", () => {
+    const m = _mk(_NOW);
+    _setGoals([{ month: `${m}-01`, seller_ref: _S[0]!.id, amount: 50000 }]);
+    expect(_goalFor({ period: "month", sellerId: _S[0]!.id })).toBe(50000);
+    expect(_goalFor({ period: "month", sellerId: _S[1]!.id })).toBe(_sg(_S[1]!));
+    _setGoals([]);
+  });
+});

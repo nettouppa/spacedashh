@@ -386,6 +386,41 @@ export type Database = {
         }
         Relationships: []
       }
+      sales_goals: {
+        Row: {
+          amount: number
+          company_id: string
+          month: string
+          seller_ref: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount?: number
+          company_id: string
+          month: string
+          seller_ref: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount?: number
+          company_id?: string
+          month?: string
+          seller_ref?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_goals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_layouts: {
         Row: {
           company_id: string

@@ -113,11 +113,34 @@ export function filterDeals(f: Filters, skip: (keyof Filters)[] = []) {
   });
 }
 
+/** Goals set by managers: "YYYY-MM" → sellerId → monthly revenue goal. */
+export let GOALS: Record<string, Record<string, number>> = {};
+export function setGoals(rows: { month: string; seller_ref: string; amount: number }[]) {
+  const g: Record<string, Record<string, number>> = {};
+  rows.forEach((r) => { const k = r.month.slice(0, 7); (g[k] ??= {})[r.seller_ref] = Number(r.amount) || 0; });
+  GOALS = g;
+}
+export const monthKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+/** Suggested monthly goal when none was set (historical projection). */
+export const suggestedGoal = (s: Seller) => Math.round(s.goal * 0.35);
+export const hasCustomGoal = (sellerId: string, month: string) => GOALS[month]?.[sellerId] !== undefined;
+export function monthlyGoal(s: Seller, month: string) {
+  return GOALS[month]?.[s.id] ?? suggestedGoal(s);
+}
+/** Months covered by the period (whole month/quarter/year). */
+export function periodMonths(p: Period) {
+  const start = periodStart(p);
+  const n = p === "month" ? 1 : p === "quarter" ? 3 : 12;
+  return Array.from({ length: n }, (_, i) => monthKey(new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + i, 1))));
+}
+export function sellerGoal(s: Seller, p: Period) {
+  return periodMonths(p).reduce((a, m) => a + monthlyGoal(s, m), 0);
+}
+
 export function goalFor(f: Filters) {
-  const mult = f.period === "month" ? 1 : f.period === "quarter" ? 3 : 12;
   const sellers = SELLERS.filter((s) => (!f.team || s.team === f.team) && (!f.sellerId || s.id === f.sellerId));
   const companyFactor = f.company ? 1 / COMPANIES.length : 1;
-  return sellers.reduce((a, s) => a + s.goal, 0) * mult * companyFactor * 0.35;
+  return sellers.reduce((a, s) => a + sellerGoal(s, f.period), 0) * companyFactor;
 }
 
 export function kpis(f: Filters) {

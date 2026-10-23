@@ -11,7 +11,10 @@ import { SortableContext, arrayMove, rectSortingStrategy, useSortable, sortableK
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, LayoutGrid, Monitor, X, Save, RotateCcw, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { COMPANIES, SELLERS, TEAMS, sellerName, setDataset, type Filters, type Period, type Stage } from "@/lib/crm-data";
+import { COMPANIES, SELLERS, TEAMS, sellerName, setDataset, setGoals, type Filters, type Period, type Stage } from "@/lib/crm-data";
+import { getGoals, saveGoals as saveGoalsFn } from "@/lib/goals.functions";
+import { GoalsDialog } from "@/components/dash/goals-dialog";
+import { Target } from "lucide-react";
 import { DEFAULT_ORDER, KpiStrip, WIDGETS, type WidgetId } from "@/components/dash/widgets";
 import { AiPanel } from "@/components/dash/ai-panel";
 import { AtlasContext, AtlasIcon, type AtlasRequest } from "@/components/dash/atlas";
@@ -143,8 +146,13 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
   const loadData = useServerFn(getDashboardData);
   const dataQ = useQuery({ queryKey: ["dash-data", companyId], queryFn: () => loadData({ data: { companyId } }), staleTime: 5 * 60_000 });
   const real = dataQ.data ?? null;
+  const loadGoals = useServerFn(getGoals);
+  const persistGoals = useServerFn(saveGoalsFn);
+  const goalsQ = useQuery({ queryKey: ["goals", companyId], queryFn: () => loadGoals({ data: { companyId } }) });
+  const [goalsOpen, setGoalsOpen] = useState(false);
   // Widgets read the module-level dataset; swap it before children render.
   useMemo(() => setDataset(real), [real]);
+  useMemo(() => setGoals(goalsQ.data ?? []), [goalsQ.data]);
   const ME = membership.sellerRef && SELLERS.some((s) => s.id === membership.sellerRef) ? membership.sellerRef : (SELLERS[0]?.id ?? "s1");
   const [f, setF] = useState<Filters>({ period: "month" });
   const [order, setOrder] = useState<WidgetId[]>(DEFAULT_ORDER);
@@ -216,6 +224,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
             {account.memberships.map((m) => <option key={m.companyId} value={m.companyId}>{m.companyName}</option>)}
           </select>
         )}
+        {(profile === "manager" || account.isAdmin) && <button onClick={() => setGoalsOpen(true)} className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted"><Target className="size-3.5" />Metas</button>}
         <button onClick={() => setTv(true)} className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted"><Monitor className="size-3.5" />Modo TV</button>
         <button onClick={() => setAi((v) => !v)} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[13px] font-medium text-primary-foreground hover:bg-primary/90"><AtlasIcon className="size-4" />Atlas</button>
       </>}>
@@ -278,6 +287,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
 
       <AiPanel open={ai} onClose={() => setAi(false)} f={eff} onAction={onAi} request={atlasReq} onRestore={setF} userName={account.name.split(" ")[0]!} />
       {tv && <TvMode f={eff} set={setEff} onClose={() => setTv(false)} />}
+      {goalsOpen && <GoalsDialog onClose={() => setGoalsOpen(false)} onSave={async (month, goals) => { await persistGoals({ data: { companyId, month, goals } }); await goalsQ.refetch(); }} />}
     </AppShell>
   );
 }
