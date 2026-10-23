@@ -33,7 +33,7 @@ import { atRisk, brl, funnel, kpis, lossReasons, pct, ranking, sellerName, COMPA
 import { cn } from "@/lib/utils";
 import { AtlasIcon, type AtlasRequest } from "./atlas";
 import { VoiceMode } from "./voice-mode";
-import { AudioLines } from "lucide-react";
+import { AudioLines, Volume2, VolumeX } from "lucide-react";
 
 type Msg = { role: "user" | "assistant"; content: string; topic?: string | undefined; action?: { label: string; prev: Filters } | undefined };
 
