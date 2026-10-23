@@ -433,6 +433,53 @@ export type Database = {
           },
         ]
       }
+      tv_links: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string
+          id: string
+          interval_sec: number
+          last_seen_at: string | null
+          name: string
+          revoked_at: string | null
+          token_hash: string
+          views: Json
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          interval_sec?: number
+          last_seen_at?: string | null
+          name: string
+          revoked_at?: string | null
+          token_hash: string
+          views?: Json
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          interval_sec?: number
+          last_seen_at?: string | null
+          name?: string
+          revoked_at?: string | null
+          token_hash?: string
+          views?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tv_links_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_layouts: {
         Row: {
           company_id: string
