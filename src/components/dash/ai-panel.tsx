@@ -28,7 +28,7 @@ function useVoice(onPartial: (t: string) => void, onFinal: (t: string) => void) 
   return { supported, listening, toggle };
 }
 import { askAssistant, type AiAction } from "@/lib/ai.functions";
-import { atRisk, brl, funnel, kpis, lossReasons, pct, ranking, sellerName, COMPANIES, TEAMS, STAGES, LOSS_REASONS, type Filters } from "@/lib/crm-data";
+import { atRisk, brl, funnel, kpis, lossReasons, pct, ranking, sellerName, COMPANIES, TEAMS, STAGES, LOSS_REASONS, PRESET_LABELS, periodLabel, NOW, type Filters } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
 import { AtlasIcon, type AtlasRequest } from "./atlas";
 import { VoiceMode } from "./voice-mode";
