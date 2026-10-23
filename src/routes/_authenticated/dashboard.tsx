@@ -3,13 +3,15 @@ import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMe, getLayout, saveLayout as saveLayoutFn } from "@/lib/account.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getDashboardData } from "@/lib/dashboard-data.functions";
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, rectSortingStrategy, useSortable, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, LayoutGrid, Monitor, X, Save, RotateCcw, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { COMPANIES, SELLERS, TEAMS, sellerName, type Filters, type Period, type Stage } from "@/lib/crm-data";
+import { COMPANIES, SELLERS, TEAMS, sellerName, setDataset, type Filters, type Period, type Stage } from "@/lib/crm-data";
 import { DEFAULT_ORDER, KpiStrip, WIDGETS, type WidgetId } from "@/components/dash/widgets";
 import { AiPanel } from "@/components/dash/ai-panel";
 import { AtlasContext, AtlasIcon, type AtlasRequest } from "@/components/dash/atlas";
@@ -138,7 +140,12 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
   const [companyId, setCompanyId] = useState(account.memberships[0]!.companyId);
   const membership = account.memberships.find((m) => m.companyId === companyId) ?? account.memberships[0]!;
   const profile: "manager" | "seller" = membership.role === "gestor" ? "manager" : "seller";
-  const ME = membership.sellerRef && SELLERS.some((s) => s.id === membership.sellerRef) ? membership.sellerRef : "s1";
+  const loadData = useServerFn(getDashboardData);
+  const dataQ = useQuery({ queryKey: ["dash-data", companyId], queryFn: () => loadData({ data: { companyId } }), staleTime: 5 * 60_000 });
+  const real = dataQ.data ?? null;
+  // Widgets read the module-level dataset; swap it before children render.
+  useMemo(() => setDataset(real), [real]);
+  const ME = membership.sellerRef && SELLERS.some((s) => s.id === membership.sellerRef) ? membership.sellerRef : (SELLERS[0]?.id ?? "s1");
   const [f, setF] = useState<Filters>({ period: "month" });
   const [order, setOrder] = useState<WidgetId[]>(DEFAULT_ORDER);
   const [sizes, setSizes] = useState<Partial<Record<WidgetId, Size>>>({});
@@ -190,13 +197,13 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
   };
 
   const chips: { k: keyof Filters; label: string }[] = [];
-  if (f.company) chips.push({ k: "company", label: `Empresa: ${f.company}` });
+  if (f.company) chips.push({ k: "company", label: `${real ? "Funil" : "Empresa"}: ${f.company}` });
   if (f.team && profile === "manager") chips.push({ k: "team", label: `Equipe: ${f.team}` });
   if (f.sellerId && profile === "manager") chips.push({ k: "sellerId", label: `Vendedor: ${sellerName(f.sellerId)}` });
   if (f.stage) chips.push({ k: "stage", label: `Etapa: ${f.stage}` });
   if (f.lossReason) chips.push({ k: "lossReason", label: `Perda: ${f.lossReason}` });
 
-  const me = SELLERS.find((s) => s.id === ME)!;
+  const me = SELLERS.find((s) => s.id === ME) ?? { id: ME, name: account.name, team: "", photo: "https://i.pravatar.cc/80?img=68", goal: 0 };
 
   return (
     <AppShell compact={ai} userName={account.name} userPhoto={profile === "manager" ? "https://i.pravatar.cc/80?img=68" : me.photo}
@@ -214,11 +221,13 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{profile === "manager" ? "Visão geral comercial" : `Meu desempenho · ${me.name}`}</h1>
-          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground"><span className="size-1.5 rounded-full bg-warning" />Dados de demonstração · Bitrix24 não conectado <Link to="/integrations" className="ml-1 text-primary hover:underline">Configurar integração</Link></p>
+          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">{real ? <><span className="size-1.5 rounded-full bg-success" />Bitrix24 · {real.domain} · {real.deals.length} negócios{real.lastSyncAt ? ` · sincronizado em ${new Date(real.lastSyncAt).toLocaleString("pt-BR")}` : ""} <Link to="/integrations" className="ml-1 text-primary hover:underline">Sincronizar</Link></>
+            : dataQ.isLoading ? <><span className="size-1.5 animate-pulse rounded-full bg-primary" />Carregando dados do Bitrix24…</>
+            : <><span className="size-1.5 rounded-full bg-warning" />Dados de demonstração · Bitrix24 não conectado <Link to="/integrations" className="ml-1 text-primary hover:underline">Configurar integração</Link></>}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Segmented value={f.period} onChange={(p: Period) => set({ period: p })} options={[{ v: "month", l: "Mês" }, { v: "quarter", l: "Trimestre" }, { v: "year", l: "Ano" }]} />
-          <Select label="Todas empresas" value={f.company} onChange={(v) => set({ company: v })} options={COMPANIES.map((c) => ({ v: c, l: c }))} />
+          <Select label={real ? "Todos funis" : "Todas empresas"} value={f.company} onChange={(v) => set({ company: v })} options={COMPANIES.map((c) => ({ v: c, l: c }))} />
           {profile === "manager" && <>
             <Select label="Todas equipes" value={f.team} onChange={(v) => set({ team: v, sellerId: undefined })} options={TEAMS.map((t) => ({ v: t, l: t }))} />
             <Select label="Todos vendedores" value={f.sellerId} onChange={(v) => set({ sellerId: v })} options={SELLERS.filter((s) => !f.team || s.team === f.team).map((s) => ({ v: s.id, l: s.name }))} />
