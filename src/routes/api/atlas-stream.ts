@@ -21,7 +21,7 @@ export const Route = createFileRoute("/api/atlas-stream")({
         const parsed = Input.safeParse(await request.json().catch(() => null));
         if (!parsed.success) return new Response("Bad request", { status: 400 });
         const data = parsed.data;
-        const url = process.env.SUPABASE_URL!, pk = process.env.SUPABASE_PUBLISHABLE_KEY!;
+        const url = process.env['SUPABASE_URL']!, pk = process.env['SUPABASE_PUBLISHABLE_KEY']!;
         const sb = createClient(url, pk, { global: { headers: { Authorization: `Bearer ${token}`, apikey: pk } }, auth: { persistSession: false, autoRefreshToken: false } });
         const { data: u } = await sb.auth.getUser(token);
         if (!u?.user) return new Response("Unauthorized", { status: 401 });
