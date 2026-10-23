@@ -57,6 +57,35 @@ export let DEALS: Deal[] = (() => {
   return out;
 })();
 
+// ---------- Activities & tasks (crm.activity.list / tasks.task.list) ----------
+export type ActivityType = "call" | "meeting" | "email" | "chat" | "task";
+export const ACTIVITY_LABELS: Record<ActivityType, string> = { call: "Ligações", meeting: "Reuniões", email: "E-mails", chat: "Conversas", task: "Outras" };
+export type Activity = { sellerId: string; team: string; type: ActivityType; completed: boolean; createdAt: Date; deadline?: Date | undefined };
+export type Task = { sellerId: string; team: string; done: boolean; createdAt: Date; deadline?: Date | undefined; closedAt?: Date | undefined };
+
+export let ACTIVITIES: Activity[] = (() => {
+  const r = rng(7); const out: Activity[] = []; const types: ActivityType[] = ["call", "call", "call", "meeting", "email", "email", "chat", "task"];
+  for (let i = 0; i < 1600; i++) {
+    const s = SELLERS[Math.floor(r() * SELLERS.length)]!;
+    const createdAt = new Date(NOW.getTime() - Math.floor(r() * 365) * 864e5);
+    const deadline = new Date(createdAt.getTime() + Math.floor(r() * 10) * 864e5);
+    out.push({ sellerId: s.id, team: s.team, type: types[Math.floor(r() * types.length)]!, completed: deadline < NOW ? r() < 0.85 : r() < 0.3, createdAt, deadline });
+  }
+  return out;
+})();
+
+export let TASKS: Task[] = (() => {
+  const r = rng(99); const out: Task[] = [];
+  for (let i = 0; i < 500; i++) {
+    const s = SELLERS[Math.floor(r() * SELLERS.length)]!;
+    const createdAt = new Date(NOW.getTime() - Math.floor(r() * 365) * 864e5);
+    const deadline = new Date(createdAt.getTime() + Math.floor(3 + r() * 20) * 864e5);
+    const done = deadline < NOW ? r() < 0.8 : r() < 0.25;
+    out.push({ sellerId: s.id, team: s.team, done, createdAt, deadline, closedAt: done ? new Date(Math.min(NOW.getTime(), createdAt.getTime() + Math.floor(r() * 25) * 864e5)) : undefined });
+  }
+  return out;
+})();
+
 export type Period = "month" | "quarter" | "year";
 export type Filters = {
   period: Period; company?: string | undefined; team?: string | undefined; sellerId?: string | undefined; stage?: Stage | undefined; lossReason?: string | undefined;
@@ -212,9 +241,11 @@ export type RawDataset = {
   deals: { deal_id: string; title: string | null; stage_id: string | null; category_id: string | null; opportunity: number; assigned_by_id: string | null; closed: boolean; date_create: string | null; close_date: string | null; date_modify: string | null }[];
   users: { user_id: string; name: string; photo: string | null; department: string | null }[];
   stages: { stage_id: string; category_id: string | null; category_name: string | null; name: string; sort: number; semantics: string | null }[];
+  activities?: { type: string; responsible_id: string | null; completed: boolean; created_at: string | null; deadline: string | null }[];
+  tasks?: { responsible_id: string | null; status: string | null; created_at: string | null; deadline: string | null; closed_at: string | null }[];
 };
 
-const MOCK = { PIPELINES: {} as Record<string, string[]>, NOW, DEALS, SELLERS, COMPANIES, TEAMS, LOSS_REASONS };
+const MOCK = { PIPELINES: {} as Record<string, string[]>, NOW, DEALS, SELLERS, COMPANIES, TEAMS, LOSS_REASONS, ACTIVITIES, TASKS };
 const avatar = (name: string) => `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(name)}&backgroundColor=ede9fe&textColor=5b21b6`;
 
 /** Maps Bitrix24 rows onto the dashboard model: open stages are spread across the 4 open funnel steps by their order in each pipeline; S = won, F = lost (stage name becomes the loss reason). */
@@ -262,11 +293,63 @@ export function toDataset(raw: RawDataset, now = new Date()) {
   const uniq = (xs: string[]) => [...new Set(xs)].sort((a, b) => a.localeCompare(b, "pt-BR"));
   const pipeByName: Record<string, string[]> = {};
   pipelines.forEach((p, cat) => { if (deals.some((d) => d.company === (catName.get(cat) ?? ""))) pipeByName[catName.get(cat)!] = [...p.open, p.won]; });
-  return { PIPELINES: pipeByName, NOW: now, DEALS: deals, SELLERS: sellers, COMPANIES: uniq(deals.map((d) => d.company)), TEAMS: uniq(sellers.map((s) => s.team)), LOSS_REASONS: uniq(deals.filter((d) => d.lossReason).map((d) => d.lossReason!)) };
+  const sellerSet = new Set(sellers.map((x) => x.id));
+  const teamOf = (id: string) => users.get(id)?.department ?? "Sem equipe";
+  const activities: Activity[] = (raw.activities ?? []).map((a) => {
+    const sid = a.responsible_id ?? "0";
+    return { sellerId: sid, team: teamOf(sid), type: (["call", "meeting", "email", "chat"].includes(a.type) ? a.type : "task") as ActivityType, completed: a.completed, createdAt: new Date(a.created_at ?? now), deadline: a.deadline ? new Date(a.deadline) : undefined };
+  });
+  const tasks: Task[] = (raw.tasks ?? []).map((t) => {
+    const sid = t.responsible_id ?? "0";
+    return { sellerId: sid, team: teamOf(sid), done: t.status === "5" || t.status === "4", createdAt: new Date(t.created_at ?? now), deadline: t.deadline ? new Date(t.deadline) : undefined, closedAt: t.closed_at ? new Date(t.closed_at) : undefined };
+  });
+  void sellerSet;
+  return { ACTIVITIES: activities, TASKS: tasks, PIPELINES: pipeByName, NOW: now, DEALS: deals, SELLERS: sellers, COMPANIES: uniq(deals.map((d) => d.company)), TEAMS: uniq(sellers.map((s) => s.team)), LOSS_REASONS: uniq(deals.filter((d) => d.lossReason).map((d) => d.lossReason!)) };
 }
 
 /** Swaps the module-level dataset every widget reads; pass null to go back to the demo data. */
 export function setDataset(raw: RawDataset | null) {
   const d = raw ? toDataset(raw) : MOCK;
-  PIPELINES = d.PIPELINES; NOW = d.NOW; DEALS = d.DEALS; SELLERS = d.SELLERS; COMPANIES = d.COMPANIES; TEAMS = d.TEAMS; LOSS_REASONS = d.LOSS_REASONS;
+  PIPELINES = d.PIPELINES; NOW = d.NOW; DEALS = d.DEALS; SELLERS = d.SELLERS; COMPANIES = d.COMPANIES; TEAMS = d.TEAMS; LOSS_REASONS = d.LOSS_REASONS; ACTIVITIES = d.ACTIVITIES; TASKS = d.TASKS;
+}
+
+const workMatch = (f: Filters, x: { sellerId: string; team: string }, skip: (keyof Filters)[] = []) =>
+  (skip.includes("team") || !f.team || x.team === f.team) && (skip.includes("sellerId") || !f.sellerId || x.sellerId === f.sellerId);
+
+/** Activities created in the period, per seller and type (the seller filter is skipped so the table keeps everyone visible). */
+export function productivity(f: Filters) {
+  const start = periodStart(f.period);
+  const acts = ACTIVITIES.filter((a) => a.createdAt >= start && workMatch(f, a, ["sellerId"]));
+  const won = filterDeals(f, ["sellerId"]).filter((d) => d.status === "won");
+  const rows = SELLERS.filter((s) => !f.team || s.team === f.team).map((s) => {
+    const mine = acts.filter((a) => a.sellerId === s.id);
+    const by = { call: 0, meeting: 0, email: 0, chat: 0, task: 0 } as Record<ActivityType, number>;
+    mine.forEach((a) => { by[a.type]++; });
+    const wins = won.filter((d) => d.sellerId === s.id).length;
+    return { id: s.id, name: s.name, photo: s.photo, total: mine.length, done: mine.filter((a) => a.completed).length, by, wins, perWin: wins ? mine.length / wins : 0 };
+  }).filter((r) => r.total > 0).sort((a, b) => b.total - a.total);
+  const by = { call: 0, meeting: 0, email: 0, chat: 0, task: 0 } as Record<ActivityType, number>;
+  rows.forEach((r) => (Object.keys(by) as ActivityType[]).forEach((k) => { by[k] += r.by[k]; }));
+  return { rows, by, total: rows.reduce((a, r) => a + r.total, 0) };
+}
+
+/** Open tasks (any creation date) and tasks/activities overdue right now, per seller. */
+export function taskHealth(f: Filters) {
+  const now = NOW.getTime();
+  const tasks = TASKS.filter((t) => workMatch(f, t, ["sellerId"]));
+  const acts = ACTIVITIES.filter((a) => !a.completed && workMatch(f, a, ["sellerId"]));
+  const rows = SELLERS.filter((s) => !f.team || s.team === f.team).map((s) => {
+    const open = tasks.filter((t) => t.sellerId === s.id && !t.done);
+    const overdue = open.filter((t) => t.deadline && t.deadline.getTime() < now).length;
+    const lateActs = acts.filter((a) => a.sellerId === s.id && a.deadline && a.deadline.getTime() < now).length;
+    return { id: s.id, name: s.name, photo: s.photo, open: open.length, overdue, lateActs };
+  }).filter((r) => r.open + r.lateActs > 0).sort((a, b) => b.overdue + b.lateActs - (a.overdue + a.lateActs));
+  const start = periodStart(f.period);
+  const closed = tasks.filter((t) => t.done && t.closedAt && t.closedAt >= start && (!f.sellerId || t.sellerId === f.sellerId));
+  const onTime = closed.filter((t) => !t.deadline || t.closedAt! <= t.deadline).length;
+  const mine = (r: { id: string }) => !f.sellerId || r.id === f.sellerId;
+  return {
+    rows, open: rows.filter(mine).reduce((a, r) => a + r.open, 0), overdue: rows.filter(mine).reduce((a, r) => a + r.overdue, 0),
+    lateActs: rows.filter(mine).reduce((a, r) => a + r.lateActs, 0), closed: closed.length, onTimeRate: closed.length ? onTime / closed.length : 0,
+  };
 }
