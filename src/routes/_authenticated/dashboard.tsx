@@ -163,7 +163,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
   useMemo(() => setDataset(real), [real]);
   useMemo(() => setGoals(goalsQ.data ?? []), [goalsQ.data]);
   const ME = membership.sellerRef && SELLERS.some((s) => s.id === membership.sellerRef) ? membership.sellerRef : (SELLERS[0]?.id ?? "s1");
-  const [f, setF] = useState<Filters>({ period: "month" });
+  const [f, setF] = useState<Filters>(() => (search.seller ? { period: "month", sellerId: search.seller } : { period: "month" }));
   const [views, setViews] = useState<View[]>(() => PRESET_VIEWS(DEFAULT_ORDER));
   const [active, setActive] = useState("geral");
   const current = views.find((v) => v.id === active) ?? views[0];
@@ -359,7 +359,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
 
       <AiPanel open={ai} onClose={() => setAi(false)} onToggle={() => setAi((v) => !v)} f={eff} onAction={onAi} request={atlasReq} onRestore={setF} userName={account.name.split(" ")[0]!} companyId={companyId} />
       {tv && <TvMode f={eff} set={setEff} views={views} onClose={closeTv} onRefresh={refreshTv} share={profile === "manager" || account.isAdmin ? { companyId } : undefined} />}
-      {goalsOpen && <GoalsDialog onClose={() => setGoalsOpen(false)} onSave={async (month, goals) => { try { await persistGoals({ data: { companyId, month, goals } }); toast.success("Metas salvas."); } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível salvar as metas."); throw e; } await goalsQ.refetch(); }} />}
+      {goalsOpen && <GoalsDialog onClose={() => setGoalsOpen(false)} onSave={async (month, goals) => { await persistGoals({ data: { companyId, month, goals } }); toast.success("Metas salvas."); await goalsQ.refetch(); }} />}
     </AppShell>
   );
 }
