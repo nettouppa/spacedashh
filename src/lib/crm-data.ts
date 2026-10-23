@@ -293,7 +293,6 @@ export function toDataset(raw: RawDataset, now = new Date()) {
   const uniq = (xs: string[]) => [...new Set(xs)].sort((a, b) => a.localeCompare(b, "pt-BR"));
   const pipeByName: Record<string, string[]> = {};
   pipelines.forEach((p, cat) => { if (deals.some((d) => d.company === (catName.get(cat) ?? ""))) pipeByName[catName.get(cat)!] = [...p.open, p.won]; });
-  const sellerSet = new Set(sellers.map((x) => x.id));
   const teamOf = (id: string) => users.get(id)?.department ?? "Sem equipe";
   const activities: Activity[] = (raw.activities ?? []).map((a) => {
     const sid = a.responsible_id ?? "0";
@@ -303,7 +302,6 @@ export function toDataset(raw: RawDataset, now = new Date()) {
     const sid = t.responsible_id ?? "0";
     return { sellerId: sid, team: teamOf(sid), done: t.status === "5" || t.status === "4", createdAt: new Date(t.created_at ?? now), deadline: t.deadline ? new Date(t.deadline) : undefined, closedAt: t.closed_at ? new Date(t.closed_at) : undefined };
   });
-  void sellerSet;
   return { ACTIVITIES: activities, TASKS: tasks, PIPELINES: pipeByName, NOW: now, DEALS: deals, SELLERS: sellers, COMPANIES: uniq(deals.map((d) => d.company)), TEAMS: uniq(sellers.map((s) => s.team)), LOSS_REASONS: uniq(deals.filter((d) => d.lossReason).map((d) => d.lossReason!)) };
 }
 
