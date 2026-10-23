@@ -1,4 +1,5 @@
 // Server-only Bitrix24 OAuth + REST helpers. Never import from client code.
+import { channelOf } from "@/lib/crm-data";
 type Tokens = { access_token: string; refresh_token: string; expires_in: number; member_id: string; domain?: string; client_endpoint?: string };
 
 function creds() {
