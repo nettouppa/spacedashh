@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { KeyRound, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAiStatus, saveAiKey, removeAiKey } from "@/lib/ai-settings.functions";
-import { OPENAI_MODELS, DEFAULT_OPENAI_MODEL, type OpenAiModel } from "@/lib/ai-policy";
+import { OPENAI_MODELS, DEFAULT_OPENAI_MODEL, MODEL_INFO, isLegacyModel, type OpenAiModel } from "@/lib/ai-policy";
 import { AtlasIcon } from "./atlas";
 
 export function AiSettingsCard({ companyId, canManage }: { companyId: string; canManage: boolean }) {
@@ -19,7 +19,8 @@ export function AiSettingsCard({ companyId, canManage }: { companyId: string; ca
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const s = q.data;
-  const current = (model ?? (s?.model as OpenAiModel | null) ?? DEFAULT_OPENAI_MODEL);
+  const saved = s?.model && (OPENAI_MODELS as readonly string[]).includes(s.model) ? (s.model as OpenAiModel) : DEFAULT_OPENAI_MODEL;
+  const current = model ?? saved;
   const showForm = canManage && (!s?.connected || editing);
 
   async function submit(withKey: boolean) {
@@ -47,7 +48,7 @@ export function AiSettingsCard({ companyId, canManage }: { companyId: string; ca
         <h2 className="font-semibold">Inteligência artificial (OpenAI)</h2>
         <p className="mt-1 text-sm text-muted-foreground">O Atlas usa a conta OpenAI desta empresa no chat, no microfone e no modo conversa por voz.</p>
         <p className="mt-3 text-sm">{q.isLoading ? "Verificando…" : s?.connected
-          ? <><span className="font-medium text-success">Conectada</span> · chave terminada em ••••{s.last4} · modelo {s.model}</>
+          ? <><span className="font-medium text-success">Conectada</span> · chave terminada em ••••{s.last4} · modelo {MODEL_INFO[s.model as OpenAiModel]?.label ?? s.model}{isLegacyModel(s.model) && s.model !== "gpt-4.1-mini" && <span className="text-warning"> · modelo antigo, recomendamos trocar</span>}</>
           : <span className="text-muted-foreground">Não conectada</span>}</p>
       </div>
     </div>
@@ -58,7 +59,7 @@ export function AiSettingsCard({ companyId, canManage }: { companyId: string; ca
     {showForm && <form className="mt-4 grid max-w-xl gap-3" onSubmit={(e) => { e.preventDefault(); void submit(true); }}>
       <input aria-label="Chave da OpenAI" type="password" autoComplete="off" placeholder="sk-..." value={key} onChange={(e) => setKey(e.target.value)} className="h-10 rounded-md border border-border bg-card px-3 font-mono text-sm" />
       <select aria-label="Modelo" value={current} onChange={(e) => setModel(e.target.value as OpenAiModel)} className="h-10 rounded-md border border-border bg-card px-3 text-sm">
-        {OPENAI_MODELS.map((m) => <option key={m} value={m}>{m}{m === DEFAULT_OPENAI_MODEL ? " (recomendado)" : ""}</option>)}
+        {OPENAI_MODELS.map((m) => <option key={m} value={m}>{MODEL_INFO[m].label}{m === DEFAULT_OPENAI_MODEL ? " (recomendado)" : ""} — {MODEL_INFO[m].hint}</option>)}
       </select>
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={busy || key.trim().length < 20}>{busy ? "Testando…" : "Testar e salvar"}</Button>
