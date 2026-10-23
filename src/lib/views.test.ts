@@ -12,7 +12,7 @@ describe("loadViews", () => {
   it("keeps an old saved layout as the general view", () => {
     const r = loadViews({ order: ["risk", "funnel"], sizes: { risk: 4 } }, ALL);
     expect(r.views[0]!.order.slice(0, 2)).toEqual(["risk", "funnel"]);
-    expect(r.views[0]!.sizes.risk).toBe(4);
+    expect(r.views[0]!.sizes["risk"]).toBe(4);
   });
   it("restores the last opened view", () => {
     const r = loadViews({ views: [{ id: "a", name: "A", order: ["tasks"], sizes: {} }, { id: "b", name: "B", order: [], sizes: {} }], active: "b" }, ALL);
