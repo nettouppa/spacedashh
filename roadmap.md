@@ -1,32 +1,28 @@
-# Spacedash roadmap
+# Roadmap — Spacedash: o básico bem feito
 
-## Pedido atual — Personalidade do Atlas
-- [x] Aplicar Comandante de Missão no chat e na voz, com diretrizes por empresa
-- [x] Distinguir pedidos de filtro por funil de vendedores homônimos nas instruções do Atlas
-- [x] Verificar configuração salva e regras do Atlas (10 testes; salvamento confirmado após recarregar)
+## Etapa 1 — nada quebrado nem enganoso
+- [ ] Avisos (toasts) montados no app; falhas de salvar avisam
+- [ ] Painel: carregando / erro / demonstração só sem Bitrix24
+- [ ] Integrações: status real por módulo
+- [ ] Páginas de erro/404 em português
+- [ ] Topo sem sino e busca falsos
 
-## Fase 1 — Base real
-- [x] Ativar Lovable Cloud
-- [x] Login por convite + multi-empresa (seletor de empresa)
-- [x] Perfis: admin / gestor / colaborador (RLS)
-- [x] Layout dos cards salvo por usuário
+## Etapa 2 — menus que funcionam
+- [ ] Pipeline abre a aba Comercial & Funil
+- [ ] Página Equipe
+- [ ] Página Relatórios (CSV/PDF)
+- [ ] Página Configurações (Atlas + Minha conta)
+- [ ] Menu no celular + marcar página ativa
 
-## Fase 2 — Bitrix24 (aplicativo pelo portal)
-- [x] Definir aplicativo distribuível para instalação por várias empresas
-- [x] Preparar página Integrações, endereços reservados e identificação de dados de demonstração
-- [ ] Configurar credenciais do aplicativo com armazenamento seguro — aguarda criação do aplicativo Bitrix24
-- [ ] Instalação/OAuth do app Bitrix24
-- [ ] Sync: negócios, atividades, tarefas, atendimento, usuários/departamentos
-- [ ] Sync automático + "Sincronizar agora"
+## Etapa 3 — contas e administração
+- [ ] Esqueci minha senha + nova senha
+- [ ] Minha conta (nome, senha, empresa padrão)
+- [ ] Admin: trocar papel, reenviar convite, vincular vendedor real
+- [ ] Histórico de ações administrativas
+- [ ] Busca ⌘K
 
-## Fase 3 — Módulos e painéis
-- [ ] Biblioteca de cards (Vendas, Atividades, Tarefas, Atendimento)
-- [ ] Meus painéis (criar/duplicar/compartilhar)
-- [ ] Cards de atividades, tarefas, atendimento, evolução mensal
-- [ ] Filtros completos (datas livres, responsável, departamento)
-
-## Fase 4 — Acabamento
-- [ ] Atlas ponta a ponta (erro 403 da IA)
-- [ ] Modo TV com link próprio
-- [ ] Relatórios PDF/Excel
-- [x] Metas por pessoa/mês
+## Etapa 4 — dados sempre atualizados
+- [ ] Sincronização automática de hora em hora
+- [ ] Próxima sincronização e últimas execuções
+- [ ] Aviso de dados desatualizados / falha
+- [ ] Aviso quando o limite de registros é atingido
