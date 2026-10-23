@@ -14,6 +14,153 @@ export type Database = {
   }
   public: {
     Tables: {
+      bitrix_connections: {
+        Row: {
+          access_token: string
+          client_endpoint: string
+          company_id: string
+          connected_at: string
+          connected_by: string
+          deals_count: number
+          domain: string
+          expires_at: string
+          last_sync_at: string | null
+          last_sync_error: string | null
+          last_sync_status: string | null
+          member_id: string
+          refresh_token: string
+        }
+        Insert: {
+          access_token: string
+          client_endpoint: string
+          company_id: string
+          connected_at?: string
+          connected_by: string
+          deals_count?: number
+          domain: string
+          expires_at: string
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          member_id: string
+          refresh_token: string
+        }
+        Update: {
+          access_token?: string
+          client_endpoint?: string
+          company_id?: string
+          connected_at?: string
+          connected_by?: string
+          deals_count?: number
+          domain?: string
+          expires_at?: string
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          member_id?: string
+          refresh_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bitrix_connections_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bitrix_deals: {
+        Row: {
+          assigned_by_id: string | null
+          category_id: string | null
+          close_date: string | null
+          closed: boolean
+          company_id: string
+          currency: string | null
+          date_create: string | null
+          date_modify: string | null
+          deal_id: string
+          opportunity: number
+          stage_id: string | null
+          synced_at: string
+          title: string | null
+        }
+        Insert: {
+          assigned_by_id?: string | null
+          category_id?: string | null
+          close_date?: string | null
+          closed?: boolean
+          company_id: string
+          currency?: string | null
+          date_create?: string | null
+          date_modify?: string | null
+          deal_id: string
+          opportunity?: number
+          stage_id?: string | null
+          synced_at?: string
+          title?: string | null
+        }
+        Update: {
+          assigned_by_id?: string | null
+          category_id?: string | null
+          close_date?: string | null
+          closed?: boolean
+          company_id?: string
+          currency?: string | null
+          date_create?: string | null
+          date_modify?: string | null
+          deal_id?: string
+          opportunity?: number
+          stage_id?: string | null
+          synced_at?: string
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bitrix_deals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bitrix_oauth_states: {
+        Row: {
+          company_id: string
+          created_at: string
+          domain: string
+          nonce: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          domain: string
+          nonce: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          domain?: string
+          nonce?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bitrix_oauth_states_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           created_at: string
@@ -140,6 +287,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bitrix_status: {
+        Args: { _company_id: string }
+        Returns: {
+          connected_at: string
+          deals_count: number
+          domain: string
+          last_sync_at: string
+          last_sync_error: string
+          last_sync_status: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
