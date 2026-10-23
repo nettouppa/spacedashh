@@ -400,7 +400,7 @@ const MOCK_CONVERSATIONS: Conversation[] = (() => {
     out.push({ sellerId: s.id, team: s.team, channel: ch[Math.floor(r() * ch.length)]!, createdAt, firstResponseMin: Math.round(1 + r() * r() * 40),
       closedAt: open ? undefined : new Date(createdAt.getTime() + Math.round(10 + r() * r() * 600) * 6e4) });
   }
-  const start = periodStart(f.period), end = periodEnd(f.period);
+  return out;
 })();
 export let CONVERSATIONS: Conversation[] = MOCK_CONVERSATIONS;
 
@@ -416,8 +416,8 @@ export function toConversations(acts: NonNullable<RawDataset["activities"]>, sel
 
 /** Conversation volume, resolution and handling time in the period (agent filter skipped in the ranking). */
 export function support(f: Filters) {
-  const start = periodStart(f.period);
-  const all = CONVERSATIONS.filter((c) => c.createdAt >= start && workMatch(f, c, ["sellerId"]));
+  const start = periodStart(f.period), end = periodEnd(f.period);
+  const all = CONVERSATIONS.filter((c) => c.createdAt >= start && c.createdAt <= end && workMatch(f, c, ["sellerId"]));
   const mine = all.filter((c) => !f.sellerId || c.sellerId === f.sellerId);
   const closed = mine.filter((c) => c.closedAt);
   const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
@@ -463,7 +463,7 @@ export function evolution(f: Filters) {
   const daysInMonth = new Date(Date.UTC(NOW.getUTCFullYear(), NOW.getUTCMonth() + 1, 0)).getUTCDate();
   const today = NOW.getUTCDate();
   let acc = 0;
-  const start = periodStart(f.period), end = periodEnd(f.period);
+  const days = Array.from({ length: daysInMonth }, (_, i) => {
     const day = i + 1;
     if (day <= today) acc += won.filter((x) => monthKey(x.closedAt!) === cur.key && x.closedAt!.getUTCDate() === day).reduce((a, x) => a + x.value, 0);
     return { day, actual: day <= today ? acc : null, ideal: (cur.goal * day) / daysInMonth };
@@ -479,8 +479,8 @@ const workMatch = (f: Filters, x: { sellerId: string; team: string }, skip: (key
 
 /** Activities created in the period, per seller and type (the seller filter is skipped so the table keeps everyone visible). */
 export function productivity(f: Filters) {
-  const start = periodStart(f.period);
-  const acts = ACTIVITIES.filter((a) => a.createdAt >= start && workMatch(f, a, ["sellerId"]));
+  const start = periodStart(f.period), end = periodEnd(f.period);
+  const acts = ACTIVITIES.filter((a) => a.createdAt >= start && a.createdAt <= end && workMatch(f, a, ["sellerId"]));
   const won = filterDeals(f, ["sellerId"]).filter((d) => d.status === "won");
   const rows = SELLERS.filter((s) => !f.team || s.team === f.team).map((s) => {
     const mine = acts.filter((a) => a.sellerId === s.id);
@@ -489,7 +489,7 @@ export function productivity(f: Filters) {
     const wins = won.filter((d) => d.sellerId === s.id).length;
     return { id: s.id, name: s.name, photo: s.photo, total: mine.length, done: mine.filter((a) => a.completed).length, by, wins, perWin: wins ? mine.length / wins : 0 };
   }).filter((r) => r.total > 0).sort((a, b) => b.total - a.total);
-  const start = periodStart(f.period), end = periodEnd(f.period);
+  const by = { call: 0, meeting: 0, email: 0, chat: 0, task: 0 } as Record<ActivityType, number>;
   rows.forEach((r) => (Object.keys(by) as ActivityType[]).forEach((k) => { by[k] += r.by[k]; }));
   return { rows, by, total: rows.reduce((a, r) => a + r.total, 0) };
 }
@@ -505,8 +505,8 @@ export function taskHealth(f: Filters) {
     const lateActs = acts.filter((a) => a.sellerId === s.id && a.deadline && a.deadline.getTime() < now).length;
     return { id: s.id, name: s.name, photo: s.photo, open: open.length, overdue, lateActs };
   }).filter((r) => r.open + r.lateActs > 0).sort((a, b) => b.overdue + b.lateActs - (a.overdue + a.lateActs));
-  const start = periodStart(f.period);
-  const closed = tasks.filter((t) => t.done && t.closedAt && t.closedAt >= start && (!f.sellerId || t.sellerId === f.sellerId));
+  const start = periodStart(f.period), end = periodEnd(f.period);
+  const closed = tasks.filter((t) => t.done && t.closedAt && t.closedAt >= start && t.closedAt <= end && (!f.sellerId || t.sellerId === f.sellerId));
   const onTime = closed.filter((t) => !t.deadline || t.closedAt! <= t.deadline).length;
   const mine = (r: { id: string }) => !f.sellerId || r.id === f.sellerId;
   return {
