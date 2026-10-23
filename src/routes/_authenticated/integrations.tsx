@@ -1,14 +1,24 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { ArrowLeft, ArrowUpRight, Check, Copy, Plug, ShieldCheck, Clock3, Building2 } from "lucide-react";
+import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { ArrowLeft, ArrowUpRight, Check, Copy, Plug, ShieldCheck, Clock3, Building2, RefreshCw, Unplug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AppShell } from "@/components/dash/app-shell";
-import { getBitrixSetup } from "@/lib/bitrix.functions";
+import { getBitrixSetup, startBitrixConnect, syncBitrixNow, disconnectBitrix } from "@/lib/bitrix.functions";
 import { BITRIX_SETUP_URLS } from "@/lib/bitrix-policy";
 import { supabase } from "@/integrations/supabase/client";
 
 const setupQuery = queryOptions({ queryKey: ["bitrix-setup"], queryFn: () => getBitrixSetup() });
+
+const FLASH: Record<string, { ok: boolean; text: string }> = {
+  connected: { ok: true, text: "Portal Bitrix24 conectado. Clique em “Sincronizar agora” para importar os negócios." },
+  expired: { ok: false, text: "O pedido de conexão expirou ou já foi usado. Tente conectar novamente." },
+  mismatch: { ok: false, text: "O portal autorizado é diferente do informado. Tente novamente." },
+  taken: { ok: false, text: "Este portal já está vinculado a outra empresa no Spacedash." },
+  denied: { ok: false, text: "O Bitrix24 não confirmou a autorização." },
+  invalid: { ok: false, text: "Retorno do Bitrix24 inválido." },
+  error: { ok: false, text: "Não foi possível salvar a conexão." },
+};
 
 export const Route = createFileRoute("/_authenticated/integrations")({
   loader: ({ context }) => context.queryClient.ensureQueryData(setupQuery),
@@ -25,11 +35,39 @@ export const Route = createFileRoute("/_authenticated/integrations")({
 
 function Integrations() {
   const { data } = useSuspenseQuery(setupQuery);
+  const qc = useQueryClient();
   const nav = useNavigate();
   const [selected, setSelected] = useState("");
   const company = data.companies.find((c) => c.id === selected) ?? data.companies[0];
+  const conn = company?.connection ?? null;
   const [copied, setCopied] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [domain, setDomain] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [flash, setFlash] = useState<{ ok: boolean; text: string } | null>(null);
+  useEffect(() => {
+    const k = new URLSearchParams(window.location.search).get("bitrix");
+    if (k && FLASH[k]) { setFlash(FLASH[k]); window.history.replaceState(null, "", "/integrations"); }
+  }, []);
+  async function run(fn: () => Promise<void>) {
+    setBusy(true); setFlash(null);
+    try { await fn(); } catch (e) { setFlash({ ok: false, text: e instanceof Error ? e.message : "Erro inesperado." }); }
+    finally { setBusy(false); void qc.invalidateQueries({ queryKey: ["bitrix-setup"] }); }
+  }
+  const connect = () => run(async () => {
+    if (!company) return;
+    const { url } = await startBitrixConnect({ data: { companyId: company.id, domain } });
+    window.top ? (window.top.location.href = url) : (window.location.href = url);
+  });
+  const sync = () => run(async () => {
+    if (!company) return;
+    const r = await syncBitrixNow({ data: { companyId: company.id } });
+    setFlash({ ok: true, text: `${r.imported} negócios importados${r.partial ? " (parcial — sincronize novamente para continuar)" : ""}.` });
+  });
+  const disconnect = () => run(async () => {
+    if (!company || !confirm("Desconectar este portal? Os acessos guardados serão apagados.")) return;
+    await disconnectBitrix({ data: { companyId: company.id } });
+  });
   async function copy(label: string, value: string) {
     try { await navigator.clipboard.writeText(value); setCopied(label); setError(""); }
     catch { setError("Não foi possível copiar. Selecione o endereço e copie manualmente."); }

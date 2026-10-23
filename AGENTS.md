@@ -16,5 +16,5 @@
 - Tenancy: `companies` + `company_members` (role gestor|colaborador, `seller_ref` maps a member to a CRM seller); RLS via security-definer `is_member`/`member_role_of`; global admin lives in `user_roles` (`has_role`). Keeps tenant isolation in the database.
 - Access is invite-only: users without a membership see "Aguardando convite"; the first user ever becomes admin (trigger `handle_new_user`). Admin invites from `/admin` via server functions in `src/lib/account.functions.ts`.
 - Per-user, per-company card layout is stored in `user_layouts.layout` ({order, sizes}), not localStorage, so it follows the account.
-- Bitrix installation and OAuth callback routes remain fail-closed until application credentials and verified one-time tenant binding exist; preparation must never accept tokens or imply a working sync.
+- Bitrix tenant binding happens only via OAuth started by a manager (single-use 15-min state in `bitrix_oauth_states`); the portal install event stores no tokens. Tokens live in `bitrix_connections` (service_role only), status exposed via `bitrix_status()`.
 - Integration setup reads company access through authenticated RLS queries and exposes no credentials; manager/admin controls are derived from a shared policy to keep UI and future operations consistent.
