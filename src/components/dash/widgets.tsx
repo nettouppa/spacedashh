@@ -3,7 +3,7 @@ import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { AtlasTrigger } from "./atlas";
 import { cn } from "@/lib/utils";
 import {
-  ACTIVITY_LABELS, atRisk, brl, productivity, taskHealth, type ActivityType, funnel, funnelPipeline, goalFor, kpis, lossReasons, pace, pct, previousKpis, ranking, sellerName, type Filters, type Stage,
+  ACTIVITY_LABELS, atRisk, brl, duration, evolution, productivity, support, taskHealth, type ActivityType, funnel, funnelPipeline, goalFor, kpis, lossReasons, pace, pct, previousKpis, ranking, sellerName, type Filters, type Stage,
 } from "@/lib/crm-data";
 
 export type SetFilter = (patch: Partial<Filters>) => void;
@@ -358,14 +358,115 @@ export function TasksWidget({ f, set, big }: P) {
   );
 }
 
+export function SupportWidget({ f, set, big }: P) {
+  const s = support(f);
+  const stat = (label: string, v: string, hint?: string) => (
+    <div className="rounded-lg border border-border px-3 py-2.5"><div className="text-xs text-muted-foreground">{label}</div><div className={cn("mt-0.5 text-lg font-semibold tabular-nums", big && "text-2xl")}>{v}</div>{hint && <div className="text-[11px] text-subtle-foreground">{hint}</div>}</div>
+  );
+  return (
+    <Card title="Atendimento" subtitle="Conversas dos Canais Abertos no período"
+      right={<span className="text-sm font-semibold tabular-nums">{s.total.toLocaleString("pt-BR")}</span>}>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {stat("Conversas", s.total.toLocaleString("pt-BR"), `${s.open} em aberto`)}
+        {stat("1ª resposta média", duration(s.avgFirstMin), s.avgFirstMin === null ? "não informado pelo Bitrix24" : undefined)}
+        {stat("Tempo de atendimento", duration(s.avgHandleMin))}
+        {stat("Taxa de resolução", s.total ? pct(s.resolutionRate) : "—")}
+      </div>
+      <div className="mt-5 grid gap-5 md:grid-cols-2">
+        <div>
+          <div className="mb-2 text-xs font-medium text-muted-foreground">Volume por canal</div>
+          <div className="space-y-2">
+            {s.byChannel.map((c) => (
+              <div key={c.channel}>
+                <div className="flex justify-between text-sm"><span className="font-medium">{c.channel}</span><span className="tabular-nums"><span className="font-semibold">{pct(c.share)}</span><span className="ml-2 text-xs text-muted-foreground">{c.count}</span></span></div>
+                <div className="mt-1 h-1.5 rounded-full bg-muted"><div className="h-1.5 rounded-full bg-primary/70" style={{ width: `${c.share * 100}%` }} /></div>
+              </div>
+            ))}
+            {!s.byChannel.length && <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma conversa no período</p>}
+          </div>
+        </div>
+        <div>
+          <div className="mb-2 text-xs font-medium text-muted-foreground">Atendentes</div>
+          <div className="-mx-2 max-h-[16rem] space-y-0.5 overflow-auto">
+            {s.rows.slice(0, big ? 6 : 15).map((r) => {
+              const active = f.sellerId === r.id;
+              return (
+                <button key={r.id} onClick={() => set({ sellerId: active ? undefined : r.id })}
+                  className={cn("flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-muted/60", active && "bg-primary-soft", f.sellerId && !active && "opacity-40")}>
+                  <img src={r.photo} alt="" className="size-6 rounded-full object-cover" />
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">{r.name}</span>
+                  <span className="text-xs tabular-nums"><span className="font-semibold">{r.count}</span><span className="ml-2 text-muted-foreground">{duration(r.avgHandle)}</span></span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+export function EvolutionWidget({ f, big }: P) {
+  const e = evolution(f);
+  const W = 300, H = 140;
+  const max = Math.max(e.goal, e.projection, ...e.days.map((d) => d.actual ?? 0), 1) * 1.08;
+  const x = (day: number) => ((day - 1) / Math.max(e.daysInMonth - 1, 1)) * W;
+  const y = (v: number) => H - (v / max) * H;
+  const actual = e.days.filter((d) => d.actual !== null).map((d, i) => `${i ? "L" : "M"}${x(d.day).toFixed(1)},${y(d.actual!).toFixed(1)}`).join(" ");
+  const ideal = `M${x(1)},${y(e.days[0]?.ideal ?? 0)} L${W},${y(e.goal)}`;
+  const proj = `M${x(e.today)},${y(e.current)} L${W},${y(e.projection)}`;
+  const mMax = Math.max(...e.months.map((m) => Math.max(m.revenue, m.goal)), 1);
+  const tone = e.projectionPct >= 1 ? "text-success" : e.projectionPct >= 0.8 ? "text-warning" : "text-danger";
+  return (
+    <Card title="Evolução e ritmo da meta" subtitle="Mês atual acumulado e últimos 6 meses">
+      <div className="grid grid-cols-3 divide-x divide-border rounded-lg border border-border">
+        <div className="p-3"><div className="text-xs text-muted-foreground">Realizado no mês</div><div className={cn("mt-0.5 font-semibold tabular-nums", big ? "text-3xl" : "text-lg")}>{brl(e.current)}</div><div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground"><Delta cur={e.current} prev={e.prevSameDay} />vs. mesmo dia do mês anterior</div></div>
+        <div className="p-3"><div className="text-xs text-muted-foreground">Projeção de fechamento</div><div className={cn("mt-0.5 font-semibold tabular-nums", big ? "text-3xl" : "text-lg", tone)}>{brl(e.projection)}</div><div className="mt-1 text-[11px] text-muted-foreground">{pct(e.projectionPct)} da meta no ritmo atual</div></div>
+        <div className="p-3"><div className="text-xs text-muted-foreground">Meta do mês</div><div className={cn("mt-0.5 font-semibold tabular-nums", big ? "text-3xl" : "text-lg")}>{brl(e.goal)}</div><div className="mt-1 text-[11px] text-muted-foreground">faltam {brl(Math.max(e.goal - e.current, 0))} em {e.daysInMonth - e.today} dias</div></div>
+      </div>
+      <div className="mt-4 grid gap-5 md:grid-cols-[3fr_2fr]">
+        <div>
+          <div className={cn("relative", big ? "h-64" : "h-40")}>
+            <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="h-full w-full overflow-visible text-primary">
+              {[0.25, 0.5, 0.75].map((t) => <line key={t} x1="0" x2={W} y1={H * t} y2={H * t} className="stroke-border" strokeWidth="1" vectorEffect="non-scaling-stroke" />)}
+              <path d={ideal} fill="none" className="stroke-muted-foreground" strokeDasharray="4 4" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+              <path d={`${actual} L${x(e.today)},${H} L0,${H} Z`} fill="currentColor" opacity="0.1" />
+              <path d={actual} fill="none" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+              <path d={proj} fill="none" stroke="currentColor" strokeDasharray="2 3" strokeWidth="1.5" opacity="0.6" vectorEffect="non-scaling-stroke" />
+            </svg>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-x-4 text-[11px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5"><span className="h-0.5 w-3 bg-primary" />Realizado</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-0 w-3 border-t border-dashed border-primary" />Projeção</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-0 w-3 border-t border-dashed border-muted-foreground" />Ritmo ideal</span>
+          </div>
+        </div>
+        <div>
+          <div className={cn("flex items-end gap-2", big ? "h-64" : "h-40")}>
+            {e.months.map((m, i) => (
+              <div key={m.key} className="relative flex h-full flex-1 flex-col justify-end" title={`${m.label}: ${brl(m.revenue)} de ${brl(m.goal)}`}>
+                <div className="absolute inset-x-0 border-t border-dashed border-muted-foreground/60" style={{ bottom: `${(m.goal / mMax) * 100}%` }} />
+                <div className={cn("rounded-t-sm", i === 5 ? "bg-primary" : "bg-primary/35")} style={{ height: `${(m.revenue / mMax) * 100}%` }} />
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 flex gap-2 text-[11px] text-muted-foreground">{e.months.map((m) => <span key={m.key} className="flex-1 text-center">{m.label}</span>)}</div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 export const WIDGETS = {
   funnel: { title: "Funil", C: FunnelWidget, span: "lg:col-span-3" },
+  evolution: { title: "Evolução", C: EvolutionWidget, span: "lg:col-span-3" },
   ranking: { title: "Ranking", C: RankingWidget, span: "" },
   pace: { title: "Ritmo", C: PaceWidget, span: "lg:col-span-2" },
   loss: { title: "Perdas", C: LossWidget, span: "" },
   risk: { title: "Risco", C: RiskWidget, span: "lg:col-span-3" },
   activity: { title: "Produtividade", C: ActivityWidget, span: "lg:col-span-2" },
   tasks: { title: "Tarefas", C: TasksWidget, span: "" },
+  support: { title: "Atendimento", C: SupportWidget, span: "lg:col-span-3" },
 } as const;
 export type WidgetId = keyof typeof WIDGETS;
-export const DEFAULT_ORDER: WidgetId[] = ["funnel", "ranking", "pace", "loss", "activity", "tasks", "risk"];
+export const DEFAULT_ORDER: WidgetId[] = ["funnel", "evolution", "ranking", "pace", "loss", "activity", "tasks", "support", "risk"];

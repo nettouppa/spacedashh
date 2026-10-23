@@ -36,7 +36,7 @@ export const getDashboardData = createServerFn({ method: "POST" })
       return out;
     };
     const [activities, tasks] = await Promise.all([
-      page<NonNullable<RawDataset["activities"]>[number]>("bitrix_activities", "type, responsible_id, completed, created_at, deadline", "activity_id"),
+      page<NonNullable<RawDataset["activities"]>[number]>("bitrix_activities", "type, responsible_id, completed, created_at, deadline, provider, channel, start_time, end_time", "activity_id"),
       page<NonNullable<RawDataset["tasks"]>[number]>("bitrix_tasks", "responsible_id, status, created_at, deadline, closed_at", "task_id"),
     ]);
     return {

@@ -264,7 +264,7 @@ export type RawDataset = {
   deals: { deal_id: string; title: string | null; stage_id: string | null; category_id: string | null; opportunity: number; assigned_by_id: string | null; closed: boolean; date_create: string | null; close_date: string | null; date_modify: string | null }[];
   users: { user_id: string; name: string; photo: string | null; department: string | null }[];
   stages: { stage_id: string; category_id: string | null; category_name: string | null; name: string; sort: number; semantics: string | null }[];
-  activities?: { type: string; responsible_id: string | null; completed: boolean; created_at: string | null; deadline: string | null }[];
+  activities?: { type: string; responsible_id: string | null; completed: boolean; created_at: string | null; deadline: string | null; provider?: string | null; channel?: string | null; start_time?: string | null; end_time?: string | null }[];
   tasks?: { responsible_id: string | null; status: string | null; created_at: string | null; deadline: string | null; closed_at: string | null }[];
 };
 
@@ -332,6 +332,106 @@ export function toDataset(raw: RawDataset, now = new Date()) {
 export function setDataset(raw: RawDataset | null) {
   const d = raw ? toDataset(raw) : MOCK;
   PIPELINES = d.PIPELINES; NOW = d.NOW; DEALS = d.DEALS; SELLERS = d.SELLERS; COMPANIES = d.COMPANIES; TEAMS = d.TEAMS; LOSS_REASONS = d.LOSS_REASONS; ACTIVITIES = d.ACTIVITIES; TASKS = d.TASKS;
+  CONVERSATIONS = raw ? toConversations(raw.activities ?? [], d.SELLERS, d.NOW) : MOCK_CONVERSATIONS;
+}
+
+// ---------- Atendimento (Canais Abertos: sessões IMOPENLINES registradas no CRM) ----------
+export type Conversation = { sellerId: string; team: string; channel: string; createdAt: Date; closedAt?: Date | undefined; firstResponseMin?: number | undefined };
+
+/** Channel name from an open-line activity subject / provider type. */
+export function channelOf(text: string | null | undefined): string {
+  const t = (text ?? "").toLowerCase();
+  if (t.includes("whatsapp") || t.includes("wz_")) return "WhatsApp";
+  if (t.includes("instagram")) return "Instagram";
+  if (t.includes("telegram")) return "Telegram";
+  if (t.includes("facebook") || t.includes("messenger")) return "Facebook";
+  if (t.includes("livechat") || t.includes("chat do site") || t.includes("site") || t.includes("widget")) return "Chat do site";
+  if (t.includes("e-mail") || t.includes("email")) return "E-mail";
+  return "Outros";
+}
+
+const MOCK_CONVERSATIONS: Conversation[] = (() => {
+  const r = rng(23); const out: Conversation[] = [];
+  const ch = ["WhatsApp", "WhatsApp", "WhatsApp", "WhatsApp", "Instagram", "Instagram", "Chat do site", "Chat do site", "Telegram", "Facebook"];
+  for (let i = 0; i < 1400; i++) {
+    const s = SELLERS[Math.floor(r() * SELLERS.length)]!;
+    const createdAt = new Date(NOW.getTime() - Math.floor(r() * 365 * 24) * 36e5);
+    const open = NOW.getTime() - createdAt.getTime() < 2 * 864e5 && r() < 0.5;
+    out.push({ sellerId: s.id, team: s.team, channel: ch[Math.floor(r() * ch.length)]!, createdAt, firstResponseMin: Math.round(1 + r() * r() * 40),
+      closedAt: open ? undefined : new Date(createdAt.getTime() + Math.round(10 + r() * r() * 600) * 6e4) });
+  }
+  return out;
+})();
+export let CONVERSATIONS: Conversation[] = MOCK_CONVERSATIONS;
+
+export function toConversations(acts: NonNullable<RawDataset["activities"]>, sellers: Seller[], now: Date): Conversation[] {
+  const team = new Map(sellers.map((s) => [s.id, s.team]));
+  return acts.filter((a) => (a.provider ?? "").toUpperCase().includes("IMOPENLINES")).map((a) => {
+    const sid = a.responsible_id ?? "0";
+    const createdAt = new Date(a.start_time ?? a.created_at ?? now);
+    return { sellerId: sid, team: team.get(sid) ?? "Sem equipe", channel: a.channel ?? "Outros", createdAt,
+      closedAt: a.completed ? new Date(a.end_time ?? a.deadline ?? a.created_at ?? now) : undefined };
+  });
+}
+
+/** Conversation volume, resolution and handling time in the period (agent filter skipped in the ranking). */
+export function support(f: Filters) {
+  const start = periodStart(f.period);
+  const all = CONVERSATIONS.filter((c) => c.createdAt >= start && workMatch(f, c, ["sellerId"]));
+  const mine = all.filter((c) => !f.sellerId || c.sellerId === f.sellerId);
+  const closed = mine.filter((c) => c.closedAt);
+  const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+  const handle = (cs: Conversation[]) => avg(cs.filter((c) => c.closedAt).map((c) => Math.max(0, (c.closedAt!.getTime() - c.createdAt.getTime()) / 6e4)));
+  const counts = new Map<string, number>();
+  mine.forEach((c) => counts.set(c.channel, (counts.get(c.channel) ?? 0) + 1));
+  const byChannel = [...counts.entries()].map(([channel, count]) => ({ channel, count, share: mine.length ? count / mine.length : 0 })).sort((a, b) => b.count - a.count);
+  const rows = SELLERS.map((s) => {
+    const cs = all.filter((c) => c.sellerId === s.id);
+    return { id: s.id, name: s.name, photo: s.photo, count: cs.length, open: cs.filter((c) => !c.closedAt).length, avgHandle: handle(cs) };
+  }).filter((r) => r.count > 0).sort((a, b) => b.count - a.count);
+  return {
+    total: mine.length, open: mine.length - closed.length, resolutionRate: mine.length ? closed.length / mine.length : 0,
+    avgHandleMin: handle(mine), avgFirstMin: avg(mine.filter((c) => c.firstResponseMin !== undefined).map((c) => c.firstResponseMin!)), byChannel, rows,
+  };
+}
+
+export const duration = (min: number | null) => {
+  if (min === null) return "—";
+  if (min < 60) return `${Math.round(min)} min`;
+  if (min < 1440) return `${(Math.round((min / 60) * 10) / 10).toString().replace(".", ",")} h`;
+  return `${(Math.round((min / 1440) * 10) / 10).toString().replace(".", ",")} d`;
+};
+
+// ---------- Evolução ----------
+const MONTHS_PT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const dealMatch = (f: Filters, d: Deal) => (!f.company || d.company === f.company) && (!f.team || d.team === f.team) && (!f.sellerId || d.sellerId === f.sellerId);
+function goalForMonth(f: Filters, month: string) {
+  const sellers = SELLERS.filter((s) => (!f.team || s.team === f.team) && (!f.sellerId || s.id === f.sellerId));
+  return sellers.reduce((a, s) => a + monthlyGoal(s, month), 0) * (f.company ? 1 / COMPANIES.length : 1);
+}
+
+/** Last 6 months won revenue vs goal, plus the current month's cumulative daily curve, ideal pace and run-rate projection. */
+export function evolution(f: Filters) {
+  const won = DEALS.filter((d) => d.status === "won" && d.closedAt && dealMatch(f, d));
+  const months = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(Date.UTC(NOW.getUTCFullYear(), NOW.getUTCMonth() - 5 + i, 1));
+    const key = monthKey(d);
+    const revenue = won.filter((x) => monthKey(x.closedAt!) === key).reduce((a, x) => a + x.value, 0);
+    return { key, label: MONTHS_PT[d.getUTCMonth()]!, revenue, goal: goalForMonth(f, key) };
+  });
+  const cur = months[5]!, prev = months[4]!;
+  const daysInMonth = new Date(Date.UTC(NOW.getUTCFullYear(), NOW.getUTCMonth() + 1, 0)).getUTCDate();
+  const today = NOW.getUTCDate();
+  let acc = 0;
+  const days = Array.from({ length: daysInMonth }, (_, i) => {
+    const day = i + 1;
+    if (day <= today) acc += won.filter((x) => monthKey(x.closedAt!) === cur.key && x.closedAt!.getUTCDate() === day).reduce((a, x) => a + x.value, 0);
+    return { day, actual: day <= today ? acc : null, ideal: (cur.goal * day) / daysInMonth };
+  });
+  // previous month, same elapsed days
+  const prevSameDay = won.filter((x) => monthKey(x.closedAt!) === prev.key && x.closedAt!.getUTCDate() <= today).reduce((a, x) => a + x.value, 0);
+  const projection = today ? (cur.revenue / today) * daysInMonth : 0;
+  return { months, days, today, daysInMonth, current: cur.revenue, goal: cur.goal, projection, prevSameDay, projectionPct: cur.goal ? projection / cur.goal : 0 };
 }
 
 const workMatch = (f: Filters, x: { sellerId: string; team: string }, skip: (keyof Filters)[] = []) =>

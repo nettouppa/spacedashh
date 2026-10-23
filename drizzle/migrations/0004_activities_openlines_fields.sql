@@ -1,0 +1,1 @@
+ALTER TABLE public.bitrix_activities ADD COLUMN IF NOT EXISTS provider text, ADD COLUMN IF NOT EXISTS channel text, ADD COLUMN IF NOT EXISTS start_time timestamptz, ADD COLUMN IF NOT EXISTS end_time timestamptz;

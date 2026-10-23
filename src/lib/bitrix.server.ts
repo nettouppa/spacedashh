@@ -1,4 +1,5 @@
 // Server-only Bitrix24 OAuth + REST helpers. Never import from client code.
+import { channelOf } from "@/lib/crm-data";
 type Tokens = { access_token: string; refresh_token: string; expires_in: number; member_id: string; domain?: string; client_endpoint?: string };
 
 function creds() {
@@ -99,7 +100,7 @@ async function syncMeta(db: Awaited<ReturnType<typeof admin>>, conn: Conn, compa
   } catch (e) { console.error("bitrix stage sync", e); }
 }
 
-type BxActivity = { ID: string; TYPE_ID?: string; PROVIDER_ID?: string; SUBJECT?: string; RESPONSIBLE_ID?: string; OWNER_TYPE_ID?: string; OWNER_ID?: string; COMPLETED?: string; CREATED?: string; DEADLINE?: string };
+type BxActivity = { ID: string; TYPE_ID?: string; PROVIDER_ID?: string; PROVIDER_TYPE_ID?: string; SUBJECT?: string; RESPONSIBLE_ID?: string; OWNER_TYPE_ID?: string; OWNER_ID?: string; COMPLETED?: string; CREATED?: string; DEADLINE?: string; START_TIME?: string; END_TIME?: string };
 type BxTask = { id: string; title?: string; responsibleId?: string; status?: string; createdDate?: string; deadline?: string | null; closedDate?: string | null };
 
 export function activityType(a: { TYPE_ID?: string | undefined; PROVIDER_ID?: string | undefined }): string {
@@ -122,12 +123,14 @@ async function syncWork(db: Awaited<ReturnType<typeof admin>>, conn: Conn, compa
     do {
       const { result, next } = await call<BxActivity[]>(conn, "crm.activity.list", {
         order: { ID: "DESC" }, filter: { ">=CREATED": since },
-        select: ["ID", "TYPE_ID", "PROVIDER_ID", "SUBJECT", "RESPONSIBLE_ID", "OWNER_TYPE_ID", "OWNER_ID", "COMPLETED", "CREATED", "DEADLINE"], start,
+        select: ["ID", "TYPE_ID", "PROVIDER_ID", "PROVIDER_TYPE_ID", "SUBJECT", "RESPONSIBLE_ID", "OWNER_TYPE_ID", "OWNER_ID", "COMPLETED", "CREATED", "DEADLINE", "START_TIME", "END_TIME"], start,
       });
       const rows = (result ?? []).map((a) => ({
         company_id: companyId, activity_id: String(a.ID), type: activityType(a), subject: a.SUBJECT ?? null,
         responsible_id: a.RESPONSIBLE_ID ?? null, owner_type_id: a.OWNER_TYPE_ID ?? null, owner_id: a.OWNER_ID ?? null,
         completed: a.COMPLETED === "Y", created_at: a.CREATED || null, deadline: a.DEADLINE || null, synced_at: new Date().toISOString(),
+        provider: a.PROVIDER_ID ?? null, start_time: a.START_TIME || null, end_time: a.END_TIME || null,
+        channel: (a.PROVIDER_ID ?? "").toUpperCase().includes("IMOPENLINES") ? channelOf(`${a.SUBJECT ?? ""} ${a.PROVIDER_TYPE_ID ?? ""}`) : null,
       }));
       if (rows.length) await db.from("bitrix_activities").upsert(rows, { onConflict: "company_id,activity_id" });
       start = next ?? -1; pages++;
