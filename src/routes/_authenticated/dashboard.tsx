@@ -14,7 +14,8 @@ import { cn } from "@/lib/utils";
 import { COMPANIES, SELLERS, TEAMS, sellerName, setDataset, setGoals, type Filters, type Period, type Stage } from "@/lib/crm-data";
 import { getGoals, saveGoals as saveGoalsFn } from "@/lib/goals.functions";
 import { GoalsDialog } from "@/components/dash/goals-dialog";
-import { Target } from "lucide-react";
+import { Target, Plus, Copy, Pencil, Trash2 } from "lucide-react";
+import { loadViews, newViewId, PRESET_VIEWS, type View } from "@/lib/views";
 import { DEFAULT_ORDER, KpiStrip, WIDGETS, type WidgetId } from "@/components/dash/widgets";
 import { AiPanel } from "@/components/dash/ai-panel";
 import { AtlasContext, AtlasIcon, type AtlasRequest } from "@/components/dash/atlas";
@@ -56,7 +57,7 @@ const PRESETS: { v: Size; l: string }[] = [{ v: 4, l: "1/3" }, { v: 8, l: "2/3" 
 const defaultSize = (span: string): Size => (span.includes("3") ? 12 : span.includes("2") ? 8 : 4);
 const clampSize = (n: number) => Math.min(COLS, Math.max(3, Math.round(n)));
 
-function SortableItem({ id, edit, children, size, onSize }: { id: string; edit: boolean; children: React.ReactNode; size: Size; onSize: (s: Size) => void }) {
+function SortableItem({ id, edit, children, size, onSize, onHide }: { id: string; edit: boolean; children: React.ReactNode; size: Size; onSize: (s: Size) => void; onHide: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const [resizing, setResizing] = useState(false);
   const startResize = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -86,6 +87,7 @@ function SortableItem({ id, edit, children, size, onSize }: { id: string; edit: 
             </button>
           ))}
           <span className="px-1.5 text-xs tabular-nums text-subtle-foreground">{size}/{COLS}</span>
+          <button onClick={onHide} aria-label="Remover do painel" title="Remover do painel" className="rounded-md px-1.5 py-1 text-muted-foreground hover:bg-muted hover:text-destructive"><X className="size-3.5" /></button>
         </div>
       )}
       {edit && (
@@ -155,8 +157,15 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
   useMemo(() => setGoals(goalsQ.data ?? []), [goalsQ.data]);
   const ME = membership.sellerRef && SELLERS.some((s) => s.id === membership.sellerRef) ? membership.sellerRef : (SELLERS[0]?.id ?? "s1");
   const [f, setF] = useState<Filters>({ period: "month" });
-  const [order, setOrder] = useState<WidgetId[]>(DEFAULT_ORDER);
-  const [sizes, setSizes] = useState<Partial<Record<WidgetId, Size>>>({});
+  const [views, setViews] = useState<View[]>(() => PRESET_VIEWS(DEFAULT_ORDER));
+  const [active, setActive] = useState("geral");
+  const current = views.find((v) => v.id === active) ?? views[0];
+  const order = (current?.order ?? []) as WidgetId[];
+  const sizes = (current?.sizes ?? {}) as Partial<Record<WidgetId, Size>>;
+  const hidden = DEFAULT_ORDER.filter((id) => !order.includes(id));
+  const patchView = (fn: (v: View) => View) => setViews((vs) => vs.map((v) => (v.id === (current?.id ?? active) ? fn(v) : v)));
+  const setOrder = (u: WidgetId[] | ((o: WidgetId[]) => WidgetId[])) => patchView((v) => ({ ...v, order: typeof u === "function" ? u(v.order as WidgetId[]) : u }));
+  const setSizes = (u: (p: Partial<Record<WidgetId, Size>>) => Partial<Record<WidgetId, Size>> | Record<string, never>) => patchView((v) => ({ ...v, sizes: u(v.sizes as Partial<Record<WidgetId, Size>>) as Record<string, number> }));
   const [edit, setEdit] = useState(false);
   const [saved, setSaved] = useState(false);
   const [ai, setAi] = useState(false);
@@ -173,10 +182,8 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
     let live = true;
     void loadLayout({ data: { companyId } }).then((l) => {
       if (!live) return;
-      // Keep the saved order and append cards added after it was saved.
-      const kept = (l?.order ?? []).filter((x): x is WidgetId => DEFAULT_ORDER.includes(x as WidgetId));
-      setOrder(kept.length ? [...new Set([...kept, ...DEFAULT_ORDER])] : DEFAULT_ORDER);
-      setSizes((l?.sizes ?? {}) as Partial<Record<WidgetId, Size>>);
+      const r = loadViews(l, DEFAULT_ORDER);
+      setViews(r.views); setActive(r.active);
     }).catch(() => { /* keep defaults */ });
     return () => { live = false; };
   }, [companyId, loadLayout]);
@@ -192,7 +199,24 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
     if (e.over && e.active.id !== e.over.id)
       setOrder((o) => arrayMove(o, o.indexOf(e.active.id as WidgetId), o.indexOf(e.over!.id as WidgetId)));
   };
-  const saveLayout = async () => { await persistLayout({ data: { companyId, layout: { order, sizes: sizes as Record<string, number> } } }); setSaved(true); setEdit(false); setTimeout(() => setSaved(false), 2000); };
+  const persist = (vs: View[], a: string) => persistLayout({ data: { companyId, layout: { views: vs, active: a } } }).catch(() => { /* ignore */ });
+  const saveLayout = async () => { await persist(views, active); setSaved(true); setEdit(false); setTimeout(() => setSaved(false), 2000); };
+  const switchView = (id: string) => { setActive(id); setEdit(false); void persist(views, id); };
+  const addView = (dup: boolean) => {
+    const name = window.prompt("Nome do novo painel", dup ? `${current?.name ?? "Painel"} (cópia)` : "Meu painel")?.trim().slice(0, 60);
+    if (!name) return;
+    const v: View = { id: newViewId(), name, order: dup ? [...order] : [], sizes: dup ? { ...sizes } as Record<string, number> : {} };
+    const vs = [...views, v]; setViews(vs); setActive(v.id); setEdit(!dup || edit); void persist(vs, v.id);
+  };
+  const renameView = (id: string) => {
+    const v = views.find((x) => x.id === id); if (!v) return;
+    const name = window.prompt("Renomear painel", v.name)?.trim().slice(0, 60); if (!name) return;
+    const vs = views.map((x) => (x.id === id ? { ...x, name } : x)); setViews(vs); void persist(vs, active);
+  };
+  const deleteView = () => {
+    if (views.length < 2 || !window.confirm(`Excluir o painel "${current?.name}"?`)) return;
+    const vs = views.filter((x) => x.id !== active); setViews(vs); setActive(vs[0]!.id); setEdit(false); void persist(vs, vs[0]!.id);
+  };
 
   const onAi = (a: AiAction) => {
     if (a.tvMode) setTv(true);
@@ -243,13 +267,28 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
             <Select label="Todos vendedores" value={f.sellerId} onChange={(v) => set({ sellerId: v })} options={SELLERS.filter((s) => !f.team || s.team === f.team).map((s) => ({ v: s.id, l: s.name }))} />
           </>}
           {edit ? <>
-            <button onClick={() => { setOrder(DEFAULT_ORDER); setSizes({}); }} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted"><RotateCcw className="size-3.5" />Padrão</button>
+            <button onClick={() => { setOrder(PRESET_VIEWS(DEFAULT_ORDER).find((p) => p.id === active)?.order as WidgetId[] ?? DEFAULT_ORDER); setSizes(() => ({})); }} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted"><RotateCcw className="size-3.5" />Padrão</button>
             <button onClick={saveLayout} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[13px] font-medium text-primary-foreground"><Save className="size-3.5" />Salvar layout</button>
           </> : (
             <button onClick={() => setEdit(true)} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted">
               {saved ? <><Check className="size-3.5 text-success" />Salvo</> : <><LayoutGrid className="size-3.5" />Personalizar</>}
             </button>
           )}
+        </div>
+      </div>
+
+      <div className="mt-5 flex flex-wrap items-center gap-1 border-b border-border">
+        {views.map((v) => (
+          <button key={v.id} onClick={() => switchView(v.id)} onDoubleClick={() => renameView(v.id)}
+            className={cn("-mb-px border-b-2 px-3 py-2 text-[13px] font-medium transition-colors", v.id === active ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground")}>
+            {v.name}
+          </button>
+        ))}
+        <button onClick={() => addView(false)} className="inline-flex items-center gap-1 px-2 py-2 text-[13px] font-medium text-muted-foreground hover:text-primary"><Plus className="size-3.5" />Novo painel</button>
+        <div className="ml-auto flex items-center gap-1 pb-1">
+          <button onClick={() => addView(true)} title="Duplicar painel" className="grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-muted"><Copy className="size-3.5" /></button>
+          <button onClick={() => renameView(active)} title="Renomear painel" className="grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-muted"><Pencil className="size-3.5" /></button>
+          {views.length > 1 && <button onClick={deleteView} title="Excluir painel" className="grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-destructive"><Trash2 className="size-3.5" /></button>}
         </div>
       </div>
 
@@ -269,13 +308,26 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
       <AtlasContext.Provider value={atlasCtx}>
       <div className="mt-5"><KpiStrip f={eff} set={setEff} /></div>
 
+      {edit && hidden.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-border bg-card px-3 py-2">
+          <span className="text-xs font-medium text-muted-foreground">Adicionar card a este painel</span>
+          {hidden.map((id) => (
+            <button key={id} onClick={() => setOrder((o) => [...o, id])} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-xs font-medium hover:bg-muted"><Plus className="size-3" />{WIDGETS[id].title}</button>
+          ))}
+        </div>
+      )}
+      {order.length === 0 && !edit && (
+        <div className="mt-4 rounded-xl border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
+          Este painel ainda não tem cards. <button onClick={() => setEdit(true)} className="font-medium text-primary hover:underline">Personalizar</button>
+        </div>
+      )}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={order} strategy={rectSortingStrategy}>
           <div className="mt-4 grid grid-cols-1 gap-4 dash-grid">
             {order.map((id) => {
               const W = WIDGETS[id];
               return (
-                <SortableItem key={id} id={id} edit={edit} size={sizes[id] ?? defaultSize(W.span)} onSize={(z) => setSizes((p) => ({ ...p, [id]: z }))}>
+                <SortableItem key={id} id={id} edit={edit} size={sizes[id] ?? defaultSize(W.span)} onSize={(z) => setSizes((p) => ({ ...p, [id]: z }))} onHide={() => setOrder((o) => o.filter((x) => x !== id))}>
                   <W.C f={eff} set={setEff} />
                 </SortableItem>
               );
