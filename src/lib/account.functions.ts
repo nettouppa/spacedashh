@@ -26,14 +26,20 @@ export const getMe = createServerFn({ method: "GET" })
     };
   });
 
-const LayoutSchema = z.object({ companyId: z.string().uuid(), layout: z.object({ order: z.array(z.string().max(40)).max(40), sizes: z.record(z.string().max(40), z.number().int().min(1).max(12)) }) });
+const Order = z.array(z.string().max(40)).max(40);
+const Sizes = z.record(z.string().max(40), z.number().int().min(1).max(12));
+const LayoutSchema = z.object({ companyId: z.string().uuid(), layout: z.object({
+  order: Order.optional(), sizes: Sizes.optional(),
+  views: z.array(z.object({ id: z.string().min(1).max(40), name: z.string().trim().min(1).max(60), order: Order, sizes: Sizes })).max(30).optional(),
+  active: z.string().max(40).optional(),
+}) });
 
 export const getLayout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ companyId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: row } = await context.supabase.from("user_layouts").select("layout").eq("user_id", context.userId).eq("company_id", data.companyId).maybeSingle();
-    return (row?.layout ?? null) as { order: string[]; sizes: Record<string, number> } | null;
+    return (row?.layout ?? null) as import("./views").StoredLayout | null;
   });
 
 export const saveLayout = createServerFn({ method: "POST" })
