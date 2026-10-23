@@ -37,7 +37,8 @@ import { ConversationList } from "./conversation-list";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { listConversations, getConversation, saveConversation, updateConversation, deleteConversation } from "@/lib/conversations.functions";
 import { titleFrom, highlights, followUps } from "@/lib/conversations";
-import { History, ThumbsUp, ThumbsDown, Pencil, FileDown, ClipboardCopy } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, History, ThumbsUp, ThumbsDown, Pencil, FileDown, ClipboardCopy } from "lucide-react";
 import { AudioLines, Volume2, VolumeX } from "lucide-react";
 
 type Msg = { role: "user" | "assistant"; content: string; rating?: "up" | "down" | undefined; topic?: string | undefined; action?: { label: string; prev?: Filters | undefined } | undefined };
@@ -224,19 +225,30 @@ export function AiPanel({ open, onClose, onToggle, f, onAction, request, onResto
           onDelete={(id) => void delFn({ data: { id } }).then(() => { if (id === convId) newConv(); return refreshList(); })} />
       )}
       <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-        <span className={cn("grid size-10 place-items-center rounded-xl bg-primary-soft text-primary", busy && "atlas-pulse")}><AtlasIcon className="size-6" /></span>
+        <span className={cn("grid size-9 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary", busy && "atlas-pulse")}><AtlasIcon className="size-5" /></span>
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold">Atlas</div>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><span className="size-1.5 rounded-full bg-success" />{busy ? "Analisando seus dados…" : "Online · lendo seus dados do Bitrix24"}</div>
+          <div className="text-sm font-semibold leading-tight">Atlas</div>
+          <div className="flex items-center gap-1.5 truncate text-xs text-muted-foreground"><span className="size-1.5 shrink-0 rounded-full bg-success" /><span className="truncate">{busy ? "Analisando seus dados…" : "Online · dados do Bitrix24"}</span></div>
         </div>
-        <button onClick={() => { const n = !sound; setSoundEnabled(n); setSound(n); if (n) sfx.micOpen(); }} title={sound ? "Silenciar sons" : "Ativar sons"} aria-label={sound ? "Silenciar sons" : "Ativar sons"} className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">{sound ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}</button>
-        {msgs.length > 0 && <>
-          <button onClick={() => { void navigator.clipboard.writeText(transcript()); setCopied(-1); setTimeout(() => setCopied(null), 1500); }} title="Copiar conversa" aria-label="Copiar conversa" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">{copied === -1 ? <Check className="size-4 text-success" /> : <ClipboardCopy className="size-4" />}</button>
-          <button onClick={exportPdf} title="Exportar PDF" aria-label="Exportar PDF" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><FileDown className="size-4" /></button>
-        </>}
-        <button onClick={() => setHistoryOpen(true)} title="Conversas" aria-label="Conversas" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><History className="size-4" /></button>
-        <button onClick={newConv} title="Nova conversa" aria-label="Nova conversa" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><SquarePen className="size-4" /></button>
-        <button onClick={onClose} aria-label="Fechar" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><X className="size-4" /></button>
+        <div className="flex items-center gap-0.5">
+          <button onClick={newConv} title="Nova conversa" aria-label="Nova conversa" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><SquarePen className="size-4" /></button>
+          <button onClick={() => setHistoryOpen(true)} title="Conversas" aria-label="Conversas" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><History className="size-4" /></button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button title="Mais opções" aria-label="Mais opções" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><MoreHorizontal className="size-4" /></button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem disabled={!msgs.length} onSelect={() => { void navigator.clipboard.writeText(transcript()); }}><ClipboardCopy className="size-4" />Copiar conversa</DropdownMenuItem>
+              <DropdownMenuItem disabled={!msgs.length} onSelect={exportPdf}><FileDown className="size-4" />Exportar PDF</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => { const n = !sound; setSoundEnabled(n); setSound(n); if (n) sfx.micOpen(); }}>
+                {sound ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}{sound ? "Silenciar sons" : "Ativar sons"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <span className="mx-1 h-5 w-px bg-border" />
+          <button onClick={onClose} aria-label="Fechar" title="Fechar (Esc)" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><X className="size-4" /></button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto px-4 py-5">
