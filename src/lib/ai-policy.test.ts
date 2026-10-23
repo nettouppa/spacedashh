@@ -33,6 +33,6 @@ describe("voice settings", () => {
     expect(v.rate).toBe(DEFAULT_VOICE.rate);
     expect(v.pitch).toBe(1.2);
     expect(v.length).toBe("tiny");
-    expect(v.silenceMs).toBe(700);
+    expect(v.silenceMs).toBe(1000);
   });
 });

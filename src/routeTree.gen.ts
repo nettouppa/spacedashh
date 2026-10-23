@@ -15,7 +15,6 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedIntegrationsRouteImport } from './routes/_authenticated/integrations'
-import { Route as ApiAtlasStreamRouteImport } from './routes/api/atlas-stream'
 import { Route as TvTokenRouteImport } from './routes/tv.$token'
 import { Route as ApiPublicBitrixCallbackRouteImport } from './routes/api/public/bitrix/callback'
 import { Route as ApiPublicBitrixInstallRouteImport } from './routes/api/public/bitrix/install'
@@ -50,11 +49,6 @@ const AuthenticatedIntegrationsRoute =
     path: '/integrations',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const ApiAtlasStreamRoute = ApiAtlasStreamRouteImport.update({
-  id: '/api/atlas-stream',
-  path: '/api/atlas-stream',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TvTokenRoute = TvTokenRouteImport.update({
   id: '/tv/$token',
   path: '/tv/$token',
@@ -77,7 +71,6 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
-  '/api/atlas-stream': typeof ApiAtlasStreamRoute
   '/tv/$token': typeof TvTokenRoute
   '/api/public/bitrix/callback': typeof ApiPublicBitrixCallbackRoute
   '/api/public/bitrix/install': typeof ApiPublicBitrixInstallRoute
@@ -88,7 +81,6 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
-  '/api/atlas-stream': typeof ApiAtlasStreamRoute
   '/tv/$token': typeof TvTokenRoute
   '/api/public/bitrix/callback': typeof ApiPublicBitrixCallbackRoute
   '/api/public/bitrix/install': typeof ApiPublicBitrixInstallRoute
@@ -101,7 +93,6 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/integrations': typeof AuthenticatedIntegrationsRoute
-  '/api/atlas-stream': typeof ApiAtlasStreamRoute
   '/tv/$token': typeof TvTokenRoute
   '/api/public/bitrix/callback': typeof ApiPublicBitrixCallbackRoute
   '/api/public/bitrix/install': typeof ApiPublicBitrixInstallRoute
@@ -114,7 +105,6 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/integrations'
-    | '/api/atlas-stream'
     | '/tv/$token'
     | '/api/public/bitrix/callback'
     | '/api/public/bitrix/install'
@@ -125,7 +115,6 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/integrations'
-    | '/api/atlas-stream'
     | '/tv/$token'
     | '/api/public/bitrix/callback'
     | '/api/public/bitrix/install'
@@ -137,7 +126,6 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
     | '/_authenticated/integrations'
-    | '/api/atlas-stream'
     | '/tv/$token'
     | '/api/public/bitrix/callback'
     | '/api/public/bitrix/install'
@@ -147,7 +135,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
-  ApiAtlasStreamRoute: typeof ApiAtlasStreamRoute
   TvTokenRoute: typeof TvTokenRoute
   ApiPublicBitrixCallbackRoute: typeof ApiPublicBitrixCallbackRoute
   ApiPublicBitrixInstallRoute: typeof ApiPublicBitrixInstallRoute
@@ -197,13 +184,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIntegrationsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/api/atlas-stream': {
-      id: '/api/atlas-stream'
-      path: '/api/atlas-stream'
-      fullPath: '/api/atlas-stream'
-      preLoaderRoute: typeof ApiAtlasStreamRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/tv/$token': {
       id: '/tv/$token'
       path: '/tv/$token'
@@ -247,7 +227,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
-  ApiAtlasStreamRoute: ApiAtlasStreamRoute,
   TvTokenRoute: TvTokenRoute,
   ApiPublicBitrixCallbackRoute: ApiPublicBitrixCallbackRoute,
   ApiPublicBitrixInstallRoute: ApiPublicBitrixInstallRoute,
