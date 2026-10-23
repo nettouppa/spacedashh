@@ -17,39 +17,51 @@ export type Database = {
       bitrix_activities: {
         Row: {
           activity_id: string
+          channel: string | null
           company_id: string
           completed: boolean
           created_at: string | null
           deadline: string | null
+          end_time: string | null
           owner_id: string | null
           owner_type_id: string | null
+          provider: string | null
           responsible_id: string | null
+          start_time: string | null
           subject: string | null
           synced_at: string
           type: string
         }
         Insert: {
           activity_id: string
+          channel?: string | null
           company_id: string
           completed?: boolean
           created_at?: string | null
           deadline?: string | null
+          end_time?: string | null
           owner_id?: string | null
           owner_type_id?: string | null
+          provider?: string | null
           responsible_id?: string | null
+          start_time?: string | null
           subject?: string | null
           synced_at?: string
           type?: string
         }
         Update: {
           activity_id?: string
+          channel?: string | null
           company_id?: string
           completed?: boolean
           created_at?: string | null
           deadline?: string | null
+          end_time?: string | null
           owner_id?: string | null
           owner_type_id?: string | null
+          provider?: string | null
           responsible_id?: string | null
+          start_time?: string | null
           subject?: string | null
           synced_at?: string
           type?: string
