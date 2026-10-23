@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      bitrix_activities: {
+        Row: {
+          activity_id: string
+          company_id: string
+          completed: boolean
+          created_at: string | null
+          deadline: string | null
+          owner_id: string | null
+          owner_type_id: string | null
+          responsible_id: string | null
+          subject: string | null
+          synced_at: string
+          type: string
+        }
+        Insert: {
+          activity_id: string
+          company_id: string
+          completed?: boolean
+          created_at?: string | null
+          deadline?: string | null
+          owner_id?: string | null
+          owner_type_id?: string | null
+          responsible_id?: string | null
+          subject?: string | null
+          synced_at?: string
+          type?: string
+        }
+        Update: {
+          activity_id?: string
+          company_id?: string
+          completed?: boolean
+          created_at?: string | null
+          deadline?: string | null
+          owner_id?: string | null
+          owner_type_id?: string | null
+          responsible_id?: string | null
+          subject?: string | null
+          synced_at?: string
+          type?: string
+        }
+        Relationships: []
+      }
       bitrix_connections: {
         Row: {
           access_token: string
@@ -198,6 +240,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      bitrix_tasks: {
+        Row: {
+          closed_at: string | null
+          company_id: string
+          created_at: string | null
+          deadline: string | null
+          responsible_id: string | null
+          status: string | null
+          synced_at: string
+          task_id: string
+          title: string | null
+        }
+        Insert: {
+          closed_at?: string | null
+          company_id: string
+          created_at?: string | null
+          deadline?: string | null
+          responsible_id?: string | null
+          status?: string | null
+          synced_at?: string
+          task_id: string
+          title?: string | null
+        }
+        Update: {
+          closed_at?: string | null
+          company_id?: string
+          created_at?: string | null
+          deadline?: string | null
+          responsible_id?: string | null
+          status?: string | null
+          synced_at?: string
+          task_id?: string
+          title?: string | null
+        }
+        Relationships: []
       }
       bitrix_users: {
         Row: {
