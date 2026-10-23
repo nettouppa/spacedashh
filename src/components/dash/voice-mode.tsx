@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useState } from "react";
+import { sfx } from "@/lib/atlas-sound";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { getVoiceSettings, speakWithOpenAi } from "@/lib/ai-settings.functions";
@@ -72,7 +73,7 @@ export function VoiceMode({ history, context, onAction, onClose, companyId }: {
   async function speak(text: string) {
     stopSpeech();
     const clean = text.replace(/[*_#`>|]/g, "");
-    setSaid(text); setP("speaking");
+    setSaid(text); setP("speaking"); sfx.speak();
     if (vs.current.tts === "openai") {
       try {
         const r = await tts({ data: { companyId, text: clean.slice(0, 2000) } });
@@ -91,7 +92,8 @@ export function VoiceMode({ history, context, onAction, onClose, companyId }: {
   }
 
   async function think(text: string) {
-    setP("thinking");
+    setP("thinking"); sfx.micClose();
+    const pulse = setInterval(() => { if (phaseRef.current === "thinking") sfx.thinking(); else clearInterval(pulse); }, 1200);
     turns.current.push({ role: "user", content: text });
     try {
       const msgs = [...history, ...turns.current].slice(-20);
@@ -118,7 +120,7 @@ export function VoiceMode({ history, context, onAction, onClose, companyId }: {
       text = Array.from(e.results).map((x: any) => x[0].transcript).join("");
       if (phaseRef.current === "speaking") {
         if (text.trim().length < 4) return;
-        stopSpeech(); setP("listening");
+        stopSpeech(); sfx.bargeIn(); setP("listening");
       }
       setHeard(text);
       if (silence.current) clearTimeout(silence.current);
@@ -133,7 +135,8 @@ export function VoiceMode({ history, context, onAction, onClose, companyId }: {
     r.onerror = (e: any) => { if (e.error === "not-allowed") setP("muted"); };
     rec.current = r;
     window.speechSynthesis.getVoices();
-    listen();
+    sfx.connect();
+    setTimeout(listen, 350);
     return () => { alive.current = false; r.abort(); stopSpeech(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -142,8 +145,8 @@ export function VoiceMode({ history, context, onAction, onClose, companyId }: {
     if (phase === "muted") listen();
     else { setP("muted"); rec.current?.abort(); }
   };
-  const interrupt = () => { stopSpeech(); rec.current?.abort(); setP("listening"); setTimeout(listen, 150); };
-  const close = () => { alive.current = false; rec.current?.abort(); stopSpeech(); onClose(turns.current); };
+  const interrupt = () => { sfx.bargeIn(); stopSpeech(); rec.current?.abort(); setP("listening"); setTimeout(listen, 150); };
+  const close = () => { sfx.disconnect(); alive.current = false; rec.current?.abort(); stopSpeech(); onClose(turns.current); };
 
   const label = { listening: "Ouvindo…", thinking: "Pensando…", speaking: "Atlas falando", muted: "Microfone silenciado", idle: "Iniciando…" }[phase];
 

@@ -17,9 +17,9 @@ function useVoice(onPartial: (t: string) => void, onFinal: (t: string) => void) 
     const r = new SR();
     r.lang = "pt-BR"; r.interimResults = true; r.continuous = false;
     let text = "";
-    r.onstart = () => { text = ""; setListening(true); };
+    r.onstart = () => { text = ""; setListening(true); sfx.micOpen(); };
     r.onresult = (e: any) => { text = Array.from(e.results).map((x: any) => x[0].transcript).join(""); cbs.current.onPartial(text); };
-    r.onend = () => { setListening(false); cbs.current.onFinal(text); };
+    r.onend = () => { setListening(false); if (text.trim()) sfx.micClose(); else sfx.abort(); cbs.current.onFinal(text); };
     r.onerror = () => setListening(false);
     rec.current = r;
     return () => { r.abort(); };
@@ -28,6 +28,7 @@ function useVoice(onPartial: (t: string) => void, onFinal: (t: string) => void) 
   return { supported, listening, toggle };
 }
 import { askAssistant, type AiAction } from "@/lib/ai.functions";
+import { sfx, soundEnabled, setSoundEnabled } from "@/lib/atlas-sound";
 import { atRisk, brl, funnel, kpis, lossReasons, pct, ranking, sellerName, COMPANIES, TEAMS, STAGES, LOSS_REASONS, PRESET_LABELS, periodLabel, NOW, type Filters } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
 import { AtlasIcon, type AtlasRequest } from "./atlas";
@@ -102,6 +103,9 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
   const end = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [voiceOpen, setVoiceOpen] = useState(false);
+  const [sound, setSound] = useState(true);
+  useEffect(() => { setSound(soundEnabled()); }, []);
+  useEffect(() => { if (open) sfx.dockIn(); }, [open]);
   const fRef = useRef(f);
   fRef.current = f;
   useEffect(() => { setHello(greeting()); }, []);
@@ -114,11 +118,11 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
     const content = t ? `Sobre o card "${t}": ${text}` : text;
     const history = [...msgs, { role: "user" as const, content }];
     setMsgs((m) => [...m, { role: "user", content: text, topic: t ?? undefined }]);
-    setInput(""); setTopic(null); setBusy(true);
+    setInput(""); setTopic(null); setBusy(true); sfx.transmit();
     const prev = f;
     try {
       const r = await ask({ data: { messages: history.map(({ role, content }) => ({ role, content })).slice(-20), context: buildContext(f), companyId } });
-      if (r.action) onAction(r.action);
+      if (r.action) { onAction(r.action); sfx.action(); }
       setMsgs((m) => [...m, { role: "assistant", content: r.reply, action: r.action ? { label: describe(r.action), prev } : undefined }]);
     } catch {
       setMsgs((m) => [...m, { role: "assistant", content: "Não consegui responder agora. Tente novamente em instantes." }]);
@@ -152,6 +156,7 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
           <div className="text-sm font-semibold">Atlas</div>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><span className="size-1.5 rounded-full bg-success" />{busy ? "Analisando seus dados…" : "Online · lendo seus dados do Bitrix24"}</div>
         </div>
+        <button onClick={() => { const n = !sound; setSoundEnabled(n); setSound(n); if (n) sfx.micOpen(); }} title={sound ? "Silenciar sons" : "Ativar sons"} aria-label={sound ? "Silenciar sons" : "Ativar sons"} className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">{sound ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}</button>
         <button onClick={() => { setMsgs([]); setTopic(null); }} title="Nova conversa" aria-label="Nova conversa" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><SquarePen className="size-4" /></button>
         <button onClick={onClose} aria-label="Fechar" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><X className="size-4" /></button>
       </div>
@@ -196,7 +201,7 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
                   {m.action && (
                     <div className="mt-2 flex items-center gap-2 rounded-lg border border-primary/20 bg-primary-soft/50 px-3 py-2 text-xs">
                       <Filter className="size-3.5 text-primary" /><span className="flex-1 font-medium">{m.action.label}</span>
-                      <button onClick={() => { onRestore(m.action!.prev); setMsgs((ms) => ms.map((x, j) => j === i ? { ...x, action: undefined } : x)); }} className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-medium text-primary hover:bg-card"><Undo2 className="size-3" />Desfazer</button>
+                      <button onClick={() => { sfx.revert(); onRestore(m.action!.prev); setMsgs((ms) => ms.map((x, j) => j === i ? { ...x, action: undefined } : x)); }} className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-medium text-primary hover:bg-card"><Undo2 className="size-3" />Desfazer</button>
                     </div>
                   )}
                   <div className="mt-1.5 flex gap-1 opacity-0 transition group-hover:opacity-100">
