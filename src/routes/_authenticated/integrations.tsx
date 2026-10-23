@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AtlasIcon } from "@/components/dash/atlas";
 import { useQuery } from "@tanstack/react-query";
 import { getAiStatus } from "@/lib/ai-settings.functions";
+import { AtlasPersonalitySettings } from "@/components/dash/atlas-personality-settings";
 
 const setupQuery = queryOptions({ queryKey: ["bitrix-setup"], queryFn: () => getBitrixSetup() });
 
@@ -78,7 +79,10 @@ function Integrations() {
     await disconnectBitrix({ data: { companyId: company.id } });
   });
   const aiStatus = useServerFn(getAiStatus);
-  const aiQ = useQuery({ queryKey: ["ai-status", company?.id], queryFn: () => aiStatus({ data: { companyId: company!.id } }), enabled: !!company });
+  const aiQ = useQuery({ queryKey: ["ai-status", company?.id], queryFn: () => {
+    if (!company) throw new Error("Nenhuma empresa disponível.");
+    return aiStatus({ data: { companyId: company.id } });
+  }, enabled: !!company });
   async function copy(label: string, value: string) {
     try { await navigator.clipboard.writeText(value); setCopied(label); setError(""); }
     catch { setError("Não foi possível copiar. Selecione o endereço e copie manualmente."); }
@@ -103,6 +107,7 @@ function Integrations() {
       </TabsList>
       <TabsContent value="atlas">
         {company ? <><AiSettingsCard companyId={company.id} canManage={company.canManage} />
+          <AtlasPersonalitySettings key={company.id} companyId={company.id} canManage={company.canManage} connected={!!aiQ.data?.connected} />
           <VoiceSettingsCard companyId={company.id} canManage={company.canManage} connected={!!aiQ.data?.connected} /></>
           : <p className="py-8 text-sm text-muted-foreground">Nenhuma empresa disponível.</p>}
       </TabsContent>

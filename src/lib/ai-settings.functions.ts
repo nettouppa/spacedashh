@@ -5,6 +5,7 @@ import { canManageAi, OPENAI_MODELS } from "@/lib/ai-policy";
 import { VoiceSettingsSchema, parseVoiceSettings, OPENAI_VOICES } from "@/lib/voice-settings";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { PersonalitySchema, atlasPersonalityPrompt } from "@/lib/atlas-personality";
 
 async function assertManager(supabase: SupabaseClient<Database>, userId: string, companyId: string) {
   const [admin, role] = await Promise.all([
@@ -70,8 +71,10 @@ export const saveVoiceSettings = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertManager(context.supabase, context.userId, data.companyId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: current, error: currentError } = await supabaseAdmin.from("ai_settings").select("voice_settings").eq("company_id", data.companyId).maybeSingle();
+    if (currentError || !current) return { ok: false as const, error: "Conecte a OpenAI antes de salvar as preferências de voz." };
     const { data: rows, error } = await supabaseAdmin.from("ai_settings")
-      .update({ voice_settings: data.settings, updated_by: context.userId, updated_at: new Date().toISOString() })
+      .update({ voice_settings: { ...data.settings, personality: parseVoiceSettings(current.voice_settings).personality }, updated_by: context.userId, updated_at: new Date().toISOString() })
       .eq("company_id", data.companyId).select("company_id");
     if (error) return { ok: false as const, error: "Não foi possível salvar." };
     if (!rows?.length) return { ok: false as const, error: "Conecte a OpenAI antes de salvar as preferências de voz." };
@@ -79,6 +82,19 @@ export const saveVoiceSettings = createServerFn({ method: "POST" })
   });
 
 /** Realistic OpenAI voice: returns base64 MP3 for the company's configured voice. */
+export const saveAtlasPersonality = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ companyId: z.string().uuid(), personality: PersonalitySchema }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertManager(context.supabase, context.userId, data.companyId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: cfg, error: readError } = await supabaseAdmin.from("ai_settings").select("voice_settings").eq("company_id", data.companyId).maybeSingle();
+    if (readError || !cfg) return { ok: false as const, error: "Conecte a OpenAI antes de salvar a personalidade." };
+    const settings = { ...parseVoiceSettings(cfg.voice_settings), personality: data.personality };
+    const { error } = await supabaseAdmin.from("ai_settings").update({ voice_settings: settings, updated_by: context.userId, updated_at: new Date().toISOString() }).eq("company_id", data.companyId);
+    return error ? { ok: false as const, error: "Não foi possível salvar a personalidade." } : { ok: true as const };
+  });
+
 export const speakWithOpenAi = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ companyId: z.string().uuid(), text: z.string().min(1).max(2000), voice: z.enum(OPENAI_VOICES).optional() }).parse(d))
@@ -95,7 +111,7 @@ export const speakWithOpenAi = createServerFn({ method: "POST" })
     const res = await fetch("https://api.openai.com/v1/audio/speech", {
       method: "POST",
       headers: { Authorization: `Bearer ${cfg.api_key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "gpt-4o-mini-tts", voice: data.voice ?? vs.openaiVoice, input: data.text, response_format: "mp3", instructions: "Fale em português do Brasil, com tom natural e cordial." }),
+      body: JSON.stringify({ model: "gpt-4o-mini-tts", voice: data.voice ?? vs.openaiVoice, input: data.text, response_format: "mp3", instructions: `Fale em português do Brasil, com tom natural, calmo e confiante. ${atlasPersonalityPrompt(vs.personality)}` }),
     });
     if (!res.ok) { console.error("openai tts", res.status); return { audio: null }; }
     const buf = new Uint8Array(await res.arrayBuffer());
