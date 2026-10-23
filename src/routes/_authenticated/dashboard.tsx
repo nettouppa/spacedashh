@@ -342,7 +342,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
       </DndContext>
       </AtlasContext.Provider>
 
-      <AiPanel open={ai} onClose={() => setAi(false)} f={eff} onAction={onAi} request={atlasReq} onRestore={setF} userName={account.name.split(" ")[0]!} />
+      <AiPanel open={ai} onClose={() => setAi(false)} f={eff} onAction={onAi} request={atlasReq} onRestore={setF} userName={account.name.split(" ")[0]!} companyId={companyId} />
       {tv && <TvMode f={eff} set={setEff} views={views} onClose={closeTv} onRefresh={refreshTv} share={profile === "manager" || account.isAdmin ? { companyId } : undefined} />}
       {goalsOpen && <GoalsDialog onClose={() => setGoalsOpen(false)} onSave={async (month, goals) => { await persistGoals({ data: { companyId, month, goals } }); await goalsQ.refetch(); }} />}
     </AppShell>

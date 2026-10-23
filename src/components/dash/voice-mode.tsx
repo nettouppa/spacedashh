@@ -15,8 +15,8 @@ export function voiceSupported() {
   return !!(w.SpeechRecognition || w.webkitSpeechRecognition) && "speechSynthesis" in window;
 }
 
-export function VoiceMode({ history, context, onAction, onClose }: {
-  history: Turn[]; context: () => string; onAction: (a: AiAction) => void; onClose: (turns: Turn[]) => void;
+export function VoiceMode({ history, context, onAction, onClose, companyId }: {
+  companyId: string; history: Turn[]; context: () => string; onAction: (a: AiAction) => void; onClose: (turns: Turn[]) => void;
 }) {
   const ask = useServerFn(askAssistant);
   const [phase, setPhase] = useState<Phase>("idle");
@@ -52,7 +52,7 @@ export function VoiceMode({ history, context, onAction, onClose }: {
     turns.current.push({ role: "user", content: text });
     try {
       const msgs = [...history, ...turns.current].slice(-20);
-      const r = await ask({ data: { messages: msgs, context: context(), voice: true } });
+      const r = await ask({ data: { messages: msgs, context: context(), voice: true, companyId } });
       if (!alive.current) return;
       if (r.action) onAction(r.action);
       turns.current.push({ role: "assistant", content: r.reply });
