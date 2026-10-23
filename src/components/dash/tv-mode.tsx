@@ -12,7 +12,7 @@ const INTERVALS = [15, 30, 60, 120];
 
 export function TvMode({ f, set, views, interval: initial = 30, onClose, onRefresh, title, share }: {
   f: Filters; set: SetFilter; views: View[]; interval?: number; onClose?: () => void; onRefresh?: () => void; title?: string;
-  share?: { companyId: string };
+  share?: { companyId: string } | undefined;
 }) {
   const list = views.filter((v) => v.order.length > 0);
   const [view, setView] = useState(0);
