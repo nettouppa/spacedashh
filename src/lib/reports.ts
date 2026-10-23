@@ -64,5 +64,5 @@ export function buildReport(id: ReportId, f: Filters): Table {
   if (id === "team") return { columns: ["Vendedor", "Equipe", "Receita", "Meta", "Atingimento", "Ganhos", "Em aberto", "Conversão", "Atividades", "Pendências atrasadas"], rows: teamRows(f).map((r) => [r.name, r.team, brl(r.revenue, false), brl(r.goal, false), pct(r.goalPct), r.won, r.open, pct(r.conversion), r.activities, r.overdue]) };
   if (id === "losses") return { columns: ["Motivo", "Negócios", "Valor perdido"], rows: lossReasons(f).filter((l) => l.count).map((l) => [l.reason, l.count, brl(l.value, false)]) };
   const s = support(f);
-  return { columns: ["Canal", "Conversas"], rows: s.byChannel.map((c: { channel?: string; label?: string; count: number }) => [c.label ?? c.channel ?? "-", c.count]) };
+  return { columns: ["Canal", "Conversas", "Participação"], rows: s.byChannel.map((c) => [String(c.channel), c.count, pct(c.share)]) };
 }
