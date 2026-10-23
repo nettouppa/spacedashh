@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { parseVoiceSettings, voiceStyle } from "@/lib/voice-settings";
 import { NO_KEY_REPLY, openAiErrorMessage, DEFAULT_OPENAI_MODEL, reasoningEffort } from "@/lib/ai-policy";
 
 const Input = z.object({
@@ -25,19 +26,19 @@ export const askAssistant = createServerFn({ method: "POST" })
     ]);
     if (member.data !== true && admin.data !== true) return { reply: "Você não tem acesso a esta empresa.", action: null as AiAction | null, noKey: false };
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: cfg } = await supabaseAdmin.from("ai_settings").select("api_key, model").eq("company_id", data.companyId).maybeSingle();
+    const { data: cfg } = await supabaseAdmin.from("ai_settings").select("api_key, model, voice_settings").eq("company_id", data.companyId).maybeSingle();
     if (!cfg?.api_key) return { reply: NO_KEY_REPLY, action: null as AiAction | null, noKey: true };
     const key = cfg.api_key;
-    const style = data.voice
-      ? "Você está numa conversa por VOZ: responda em 1 a 3 frases curtas e naturais, sem markdown, sem listas, sem tabelas, sem emojis. Escreva valores por extenso de forma falável (ex: 230 mil reais)."
-      : "Responda de forma objetiva, usando markdown curto.";
+    const vs = parseVoiceSettings(cfg.voice_settings);
+    const model = (data.voice && vs.voiceModel) || cfg.model || DEFAULT_OPENAI_MODEL;
+    const style = data.voice ? voiceStyle(vs.length) : "Responda de forma objetiva, usando markdown curto.";
     const system = `Você é Atlas, o copiloto de vendas do painel Spacedash (dados do CRM Bitrix24). Responda em português. ${style} Use APENAS os dados do contexto abaixo. Quando o usuário pedir para filtrar, mostrar, focar, limpar ou abrir modo TV, chame a ferramenta apply_dashboard_action e inclua em reply uma confirmação curta. Para remover um filtro específico envie null.\n\nCONTEXTO:\n${data.context}`;
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: cfg.model || DEFAULT_OPENAI_MODEL,
-        ...(reasoningEffort(cfg.model || DEFAULT_OPENAI_MODEL, !!data.voice) ? { reasoning_effort: reasoningEffort(cfg.model || DEFAULT_OPENAI_MODEL, !!data.voice) } : {}),
+        model,
+        ...(reasoningEffort(model, !!data.voice) ? { reasoning_effort: reasoningEffort(model, !!data.voice) } : {}),
         messages: [{ role: "system", content: system }, ...data.messages],
         tools: [{
           type: "function",

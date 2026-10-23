@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { canManageAi, OPENAI_MODELS } from "@/lib/ai-policy";
+import { VoiceSettingsSchema, parseVoiceSettings, OPENAI_VOICES } from "@/lib/voice-settings";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -53,4 +54,51 @@ export const removeAiKey = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin.from("ai_settings").delete().eq("company_id", data.companyId);
     return { ok: true };
+  });
+
+export const getVoiceSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ companyId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: raw } = await context.supabase.rpc("ai_voice_settings", { _company_id: data.companyId });
+    return parseVoiceSettings(raw);
+  });
+
+export const saveVoiceSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ companyId: z.string().uuid(), settings: VoiceSettingsSchema }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertManager(context.supabase, context.userId, data.companyId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin.from("ai_settings")
+      .update({ voice_settings: data.settings, updated_by: context.userId, updated_at: new Date().toISOString() })
+      .eq("company_id", data.companyId).select("company_id");
+    if (error) return { ok: false as const, error: "Não foi possível salvar." };
+    if (!rows?.length) return { ok: false as const, error: "Conecte a OpenAI antes de salvar as preferências de voz." };
+    return { ok: true as const };
+  });
+
+/** Realistic OpenAI voice: returns base64 MP3 for the company's configured voice. */
+export const speakWithOpenAi = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ companyId: z.string().uuid(), text: z.string().min(1).max(2000), voice: z.enum(OPENAI_VOICES).optional() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const [member, admin] = await Promise.all([
+      context.supabase.rpc("is_member", { _user_id: context.userId, _company_id: data.companyId }),
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" }),
+    ]);
+    if (member.data !== true && admin.data !== true) return { audio: null };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: cfg } = await supabaseAdmin.from("ai_settings").select("api_key, voice_settings").eq("company_id", data.companyId).maybeSingle();
+    if (!cfg?.api_key) return { audio: null };
+    const vs = parseVoiceSettings(cfg.voice_settings);
+    const res = await fetch("https://api.openai.com/v1/audio/speech", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${cfg.api_key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "gpt-4o-mini-tts", voice: data.voice ?? vs.openaiVoice, input: data.text, response_format: "mp3", instructions: "Fale em português do Brasil, com tom natural e cordial." }),
+    });
+    if (!res.ok) { console.error("openai tts", res.status); return { audio: null }; }
+    const buf = new Uint8Array(await res.arrayBuffer());
+    let bin = ""; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+    return { audio: btoa(bin) };
   });

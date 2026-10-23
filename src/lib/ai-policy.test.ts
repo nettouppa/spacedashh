@@ -25,3 +25,14 @@ describe("Atlas OpenAI key", () => {
     expect(reasoningEffort("gpt-4.1-mini", true)).toBeNull();
   });
 });
+
+import { parseVoiceSettings, DEFAULT_VOICE } from "./voice-settings";
+describe("voice settings", () => {
+  it("invalid values fall back to defaults, valid ones are kept", () => {
+    const v = parseVoiceSettings({ rate: 9, pitch: 1.2, length: "tiny", silenceMs: 100 });
+    expect(v.rate).toBe(DEFAULT_VOICE.rate);
+    expect(v.pitch).toBe(1.2);
+    expect(v.length).toBe("tiny");
+    expect(v.silenceMs).toBe(1000);
+  });
+});
