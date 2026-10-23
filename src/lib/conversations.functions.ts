@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Json } from "@/integrations/supabase/types";
 
-const Msg = z.object({ role: z.enum(["user", "assistant"]), content: z.string().max(20000), topic: z.string().max(200).optional(), action: z.object({ label: z.string().max(300) }).optional() });
+const Msg = z.object({ role: z.enum(["user", "assistant"]), content: z.string().max(20000), topic: z.string().max(200).optional(), action: z.object({ label: z.string().max(300) }).optional(), rating: z.enum(["up", "down"]).optional() });
 
 /** Own conversations in a company (RLS: owner + member). */
 export const listConversations = createServerFn({ method: "POST" })

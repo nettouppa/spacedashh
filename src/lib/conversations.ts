@@ -32,3 +32,27 @@ export function groupConversations<T extends { pinned: boolean; updated_at: stri
   }
   return GROUP_ORDER.filter((g) => out.has(g)).map((g) => ({ group: g, items: out.get(g)! }));
 }
+
+/** Bold numeric highlights in an Atlas reply (e.g. **R$ 120 mil**, **38%**), max 4. */
+export function highlights(text: string): string[] {
+  const out: string[] = [];
+  for (const m of text.matchAll(/\*\*([^*]{1,40})\*\*/g)) {
+    const v = m[1]!.trim();
+    if (/\d/.test(v) && !out.includes(v)) out.push(v);
+    if (out.length === 4) break;
+  }
+  return out;
+}
+
+/** Follow-up questions based on what the reply talks about. */
+export function followUps(reply: string): string[] {
+  const t = reply.toLowerCase();
+  const s: string[] = [];
+  if (/meta|atingi/.test(t)) s.push("O que preciso para bater a meta?");
+  if (/risco|parad|sem atividade/.test(t)) s.push("Quais negócios em risco priorizo hoje?");
+  if (/funil|etapa|convers|passagem/.test(t)) s.push("Onde o funil está perdendo mais?");
+  if (/vendedor|ranking|equipe/.test(t)) s.push("Quem precisa de ajuda na equipe?");
+  if (/perd|motivo/.test(t)) s.push("Como reduzir as perdas?");
+  for (const d of ["Compare com o período anterior", "Resuma em 3 pontos", "Qual a projeção de fechamento?"]) if (s.length < 3 && !s.includes(d)) s.push(d);
+  return s.slice(0, 3);
+}

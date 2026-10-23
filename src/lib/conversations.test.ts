@@ -20,3 +20,14 @@ describe("conversations", () => {
     expect(g.map((x) => x.group)).toEqual(["Fixadas", "Hoje", "Ontem", "Últimos 7 dias", "Mais antigas"]);
   });
 });
+
+import { highlights, followUps } from "./conversations";
+describe("reply helpers", () => {
+  it("extracts numeric bold highlights only", () => {
+    expect(highlights("Receita **R$ 120 mil** e **38%** da meta, **atenção**")).toEqual(["R$ 120 mil", "38%"]);
+  });
+  it("suggests up to 3 follow-ups", () => {
+    expect(followUps("A meta está em 38%")[0]).toBe("O que preciso para bater a meta?");
+    expect(followUps("ok").length).toBe(3);
+  });
+});
