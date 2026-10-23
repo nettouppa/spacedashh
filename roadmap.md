@@ -1,5 +1,10 @@
 # Spacedash roadmap
 
+## Pedido atual — Personalidade do Atlas
+- [ ] Aplicar Comandante de Missão no chat e na voz, com diretrizes por empresa
+- [ ] Distinguir pedidos de filtro por funil de vendedores homônimos
+- [ ] Verificar configuração salva e regras do Atlas
+
 ## Fase 1 — Base real
 - [x] Ativar Lovable Cloud
 - [x] Login por convite + multi-empresa (seletor de empresa)
