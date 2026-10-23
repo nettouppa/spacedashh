@@ -1,3 +1,4 @@
+import { useServerFn } from "@tanstack/react-start";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -8,6 +9,11 @@ import { getBitrixSetup, startBitrixConnect, syncBitrixNow, disconnectBitrix } f
 import { BITRIX_SETUP_URLS } from "@/lib/bitrix-policy";
 import { supabase } from "@/integrations/supabase/client";
 import { AiSettingsCard } from "@/components/dash/ai-settings-card";
+import { VoiceSettingsCard } from "@/components/dash/voice-settings-card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AtlasIcon } from "@/components/dash/atlas";
+import { useQuery } from "@tanstack/react-query";
+import { getAiStatus } from "@/lib/ai-settings.functions";
 
 const setupQuery = queryOptions({ queryKey: ["bitrix-setup"], queryFn: () => getBitrixSetup() });
 
@@ -46,6 +52,7 @@ function Integrations() {
   const [domain, setDomain] = useState("");
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<{ ok: boolean; text: string } | null>(null);
+  const initialTab = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "atlas" ? "atlas" : "bitrix";
   useEffect(() => {
     const k = new URLSearchParams(window.location.search).get("bitrix");
     if (k && FLASH[k]) { setFlash(FLASH[k]); window.history.replaceState(null, "", "/integrations"); }
@@ -69,6 +76,8 @@ function Integrations() {
     if (!company || !confirm("Desconectar este portal? Os acessos guardados serão apagados.")) return;
     await disconnectBitrix({ data: { companyId: company.id } });
   });
+  const aiStatus = useServerFn(getAiStatus);
+  const aiQ = useQuery({ queryKey: ["ai-status", company?.id], queryFn: () => aiStatus({ data: { companyId: company!.id } }), enabled: !!company });
   async function copy(label: string, value: string) {
     try { await navigator.clipboard.writeText(value); setCopied(label); setError(""); }
     catch { setError("Não foi possível copiar. Selecione o endereço e copie manualmente."); }
@@ -86,6 +95,17 @@ function Integrations() {
       </label>}
     </div>
     {flash && <p role="status" className={`mt-5 rounded-md px-3 py-2 text-sm ${flash.ok ? "bg-success-soft text-success" : "bg-danger-soft text-danger"}`}>{flash.text}</p>}
+    <Tabs defaultValue={initialTab} className="mt-6">
+      <TabsList>
+        <TabsTrigger value="bitrix"><Plug className="size-4" />Bitrix24</TabsTrigger>
+        <TabsTrigger value="atlas"><AtlasIcon className="size-4" />Atlas</TabsTrigger>
+      </TabsList>
+      <TabsContent value="atlas">
+        {company ? <><AiSettingsCard companyId={company.id} canManage={company.canManage} />
+          <VoiceSettingsCard companyId={company.id} canManage={company.canManage} connected={!!aiQ.data?.connected} /></>
+          : <p className="py-8 text-sm text-muted-foreground">Nenhuma empresa disponível.</p>}
+      </TabsContent>
+      <TabsContent value="bitrix">
     <section className="mt-7 border-y border-border py-6">
       <div className="flex flex-wrap items-center gap-4">
         <div className="grid size-12 place-items-center rounded-lg border border-primary/20 bg-primary-soft text-primary"><Plug className="size-6" /></div>
@@ -103,7 +123,6 @@ function Integrations() {
       {conn?.last_sync_status === "error" && conn.last_sync_error && <p className="mt-4 text-xs text-danger">{conn.last_sync_error}</p>}
     </section>
     {!company && <div className="py-8"><h2 className="font-semibold">{data.isAdmin ? "Cadastre a primeira empresa" : "Aguardando convite"}</h2><p className="mt-2 text-sm text-muted-foreground">{data.isAdmin ? "A conexão será vinculada a uma empresa cadastrada no Spacedash." : "Sua conta precisa estar vinculada a uma empresa para acessar a integração."}</p>{data.isAdmin && <Button className="mt-4" asChild><Link to="/admin">Administração<ArrowUpRight /></Link></Button>}</div>}
-    {company && <AiSettingsCard companyId={company.id} canManage={company.canManage} />}
     {company && !company.canManage && <div className="flex items-start gap-3 py-8"><ShieldCheck className="size-5 text-muted-foreground" /><div><h2 className="font-semibold">Conexão administrada pelo gestor</h2><p className="mt-2 text-sm text-muted-foreground">Seu perfil não permite conectar portais ou iniciar sincronizações.</p></div></div>}
     {company?.canManage && <>
       <div className="py-7">
@@ -130,5 +149,7 @@ function Integrations() {
       <div className="border-t border-border py-6"><h3 className="font-semibold">Módulos previstos</h3><div className="mt-4 divide-y divide-border">{["CRM e vendas", "Atividades", "Tarefas", "Atendimento", "Pessoas e departamentos"].map((module) => <div key={module} className="flex items-center justify-between gap-4 py-3 text-sm"><span>{module}</span><span className="text-xs text-muted-foreground">Não sincronizado</span></div>)}</div></div>
       <div className="flex items-start gap-3 border-t border-border py-5 text-sm text-muted-foreground"><ShieldCheck className="mt-0.5 size-4 shrink-0" /><p>Credenciais serão solicitadas por formulário seguro. A instalação não concede acesso ao Spacedash sem convite.</p></div>
     </>}
+      </TabsContent>
+    </Tabs>
   </AppShell>;
 }
