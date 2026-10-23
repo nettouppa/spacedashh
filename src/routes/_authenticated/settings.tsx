@@ -67,8 +67,8 @@ function AccountTab({ ws }: { ws: ReturnType<typeof useWorkspace> }) {
     if (error) toast.error("Não foi possível salvar o nome."); else { toast.success("Nome atualizado."); void qc.invalidateQueries({ queryKey: ["me"] }); }
   };
   const savePw = async () => {
-    if (pw.length < 8) return toast.error("A senha precisa ter pelo menos 8 caracteres.");
-    if (pw !== pw2) return toast.error("As senhas não conferem.");
+    if (pw.length < 8) { toast.error("A senha precisa ter pelo menos 8 caracteres."); return; }
+    if (pw !== pw2) { toast.error("As senhas não conferem."); return; }
     setBusy("pw");
     const { error } = await supabase.auth.updateUser({ password: pw });
     setBusy(null);

@@ -36,8 +36,8 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
     }
   },
   validateSearch: (s: Record<string, unknown>): { view?: string; seller?: string } => ({
-    ...(typeof s.view === "string" ? { view: s.view.slice(0, 40) } : {}),
-    ...(typeof s.seller === "string" ? { seller: s.seller.slice(0, 64) } : {}),
+    ...(typeof s['view'] === "string" ? { view: s['view'].slice(0, 40) } : {}),
+    ...(typeof s['seller'] === "string" ? { seller: s['seller'].slice(0, 64) } : {}),
   }),
   loader: ({ context }) => context.queryClient.ensureQueryData(meQuery),
   head: () => ({
