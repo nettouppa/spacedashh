@@ -26,3 +26,18 @@ describe("tarefas e atividades", () => {
     expect(p.total).toBe(2);
   });
 });
+
+import { channelOf, evolution, setDataset as resetDemo } from "./crm-data";
+describe("atendimento e evolução", () => {
+  it("identifica o canal da conversa", () => {
+    expect(channelOf("WhatsApp - Maria")).toBe("WhatsApp");
+    expect(channelOf("Instagram Direct")).toBe("Instagram");
+    expect(channelOf("algo")).toBe("Outros");
+  });
+  it("projeção = realizado ÷ dias corridos × dias do mês", () => {
+    resetDemo(null);
+    const e = evolution({ period: "month" });
+    expect(e.months).toHaveLength(6);
+    expect(e.projection).toBeCloseTo((e.current / e.today) * e.daysInMonth, 6);
+  });
+});
