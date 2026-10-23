@@ -26,7 +26,7 @@ export function DateRangePicker({ value, onChange }: { value: Period; onChange: 
           <span className={cn(r.preset && "text-muted-foreground")}>{periodLabel(value)}</span>
         </button>
       </PopoverTrigger>
-      <PopoverContent className="flex w-auto p-0" align="end">
+      <PopoverContent className="flex w-auto p-0" align="start">
         <div className="flex w-36 flex-col gap-0.5 border-r border-border p-2">
           <p className="px-2 pb-1 pt-1 text-[11px] font-medium text-muted-foreground">Sugestões</p>
           {PRESETS.map((p) => (
