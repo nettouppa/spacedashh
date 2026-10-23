@@ -25,7 +25,22 @@ export const getDashboardData = createServerFn({ method: "POST" })
       sb.from("bitrix_users" as never).select("user_id, name, photo, department").eq("company_id", data.companyId),
       sb.from("bitrix_stages" as never).select("stage_id, category_id, category_name, name, sort, semantics").eq("company_id", data.companyId),
     ]);
+    const page = async <T,>(table: "bitrix_activities" | "bitrix_tasks", cols: string, key: string): Promise<T[]> => {
+      const out: T[] = [];
+      for (let from = 0; from < 15000; from += 1000) {
+        const { data: rows, error } = await sb.from(table).select(cols).eq("company_id", data.companyId).order(key).range(from, from + 999);
+        if (error || !rows) break;
+        out.push(...(rows as unknown as T[]));
+        if (rows.length < 1000) break;
+      }
+      return out;
+    };
+    const [activities, tasks] = await Promise.all([
+      page<NonNullable<RawDataset["activities"]>[number]>("bitrix_activities", "type, responsible_id, completed, created_at, deadline", "activity_id"),
+      page<NonNullable<RawDataset["tasks"]>[number]>("bitrix_tasks", "responsible_id, status, created_at, deadline, closed_at", "task_id"),
+    ]);
     return {
+      activities, tasks,
       domain: status.domain, lastSyncAt: status.last_sync_at ?? null, deals,
       users: (users.data ?? []) as RawDataset["users"], stages: (stages.data ?? []) as RawDataset["stages"],
     };
