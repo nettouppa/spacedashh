@@ -3,7 +3,7 @@ import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { AtlasTrigger } from "./atlas";
 import { cn } from "@/lib/utils";
 import {
-  ACTIVITY_LABELS, atRisk, brl, duration, evolution, productivity, support, taskHealth, type ActivityType, funnel, funnelPipeline, goalFor, kpis, lossReasons, pace, pct, previousKpis, ranking, sellerName, type Filters, type Stage,
+  ACTIVITY_LABELS, paceWeekly, atRisk, brl, duration, evolution, productivity, support, taskHealth, type ActivityType, funnel, funnelPipeline, goalFor, kpis, lossReasons, pace, pct, previousKpis, ranking, sellerName, type Filters, type Stage,
 } from "@/lib/crm-data";
 
 export type SetFilter = (patch: Partial<Filters>) => void;
