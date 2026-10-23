@@ -5,7 +5,9 @@ import { useQuery } from "@tanstack/react-query";
 import { getVoiceSettings, speakWithOpenAi } from "@/lib/ai-settings.functions";
 import { DEFAULT_VOICE, type VoiceSettings } from "@/lib/voice-settings";
 import { Mic, MicOff, Square, X } from "lucide-react";
-import { askAssistant, type AiAction } from "@/lib/ai.functions";
+import { type AiAction } from "@/lib/ai.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { takeSentences } from "@/lib/sentences";
 import { cn } from "@/lib/utils";
 import { AtlasIcon } from "./atlas";
 
@@ -21,7 +23,6 @@ export function voiceSupported() {
 export function VoiceMode({ history, context, onAction, onClose, companyId }: {
   companyId: string; history: Turn[]; context: () => string; onAction: (a: AiAction) => void; onClose: (turns: Turn[]) => void;
 }) {
-  const ask = useServerFn(askAssistant);
   const tts = useServerFn(speakWithOpenAi);
   const loadVs = useServerFn(getVoiceSettings);
   const vsQ = useQuery({ queryKey: ["voice-settings", companyId], queryFn: () => loadVs({ data: { companyId } }), staleTime: 60_000 });
@@ -44,7 +45,9 @@ export function VoiceMode({ history, context, onAction, onClose, companyId }: {
     try { rec.current.start(); } catch { /* já ativo */ }
   }
 
+  const gen = useRef(0);
   function stopSpeech() {
+    gen.current++;
     window.speechSynthesis.cancel();
     if (audio.current) { audio.current.pause(); audio.current = null; }
   }
@@ -56,52 +59,105 @@ export function VoiceMode({ history, context, onAction, onClose, companyId }: {
     try { rec.current.start(); } catch { /* já ativo */ }
   }
 
-  function speakBrowser(clean: string) {
-    const synth = window.speechSynthesis;
-    const u = new SpeechSynthesisUtterance(clean);
-    u.lang = "pt-BR"; u.rate = vs.current.rate; u.pitch = vs.current.pitch;
-    const voices = synth.getVoices();
-    const v = (vs.current.voiceName && voices.find((x) => x.name === vs.current.voiceName))
-      ?? voices.find((x) => x.lang.toLowerCase().startsWith("pt-br")) ?? voices.find((x) => x.lang.toLowerCase().startsWith("pt"));
-    if (v) u.voice = v;
-    u.onend = afterSpeech; u.onerror = afterSpeech;
-    synth.speak(u);
-    startBargeIn();
+  const cleanText = (t: string) => t.replace(/[*_#`>|]/g, "");
+
+  function playBrowser(text: string, g: number) {
+    return new Promise<void>((done) => {
+      if (g !== gen.current) return done();
+      const synth = window.speechSynthesis;
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "pt-BR"; u.rate = vs.current.rate; u.pitch = vs.current.pitch;
+      const voices = synth.getVoices();
+      const v = (vs.current.voiceName && voices.find((x) => x.name === vs.current.voiceName))
+        ?? voices.find((x) => x.lang.toLowerCase().startsWith("pt-br")) ?? voices.find((x) => x.lang.toLowerCase().startsWith("pt"));
+      if (v) u.voice = v;
+      u.onend = () => done(); u.onerror = () => done();
+      synth.speak(u);
+    });
+  }
+
+  function playAudio(b64: string, g: number) {
+    return new Promise<void>((done) => {
+      if (g !== gen.current) return done();
+      const a = new Audio(`data:audio/mpeg;base64,${b64}`);
+      a.playbackRate = vs.current.rate;
+      a.onended = () => done(); a.onerror = () => done();
+      audio.current = a;
+      a.play().catch(() => done());
+    });
+  }
+
+  /** Speaks sentences as they arrive: audio for the next sentence is fetched while the current one plays. */
+  function makeSpeaker(g: number) {
+    let chain = Promise.resolve();
+    let started = false;
+    const useOpenAi = vs.current.tts === "openai";
+    return {
+      push(sentence: string) {
+        const text = cleanText(sentence).trim();
+        if (!text) return;
+        const audioP = useOpenAi ? tts({ data: { companyId, text: text.slice(0, 2000) } }).then((r) => r.audio).catch(() => null) : Promise.resolve(null);
+        chain = chain.then(async () => {
+          if (g !== gen.current || !alive.current) return;
+          const b64 = await audioP;
+          if (g !== gen.current || !alive.current) return;
+          if (!started) { started = true; setP("speaking"); startBargeIn(); }
+          if (b64) await playAudio(b64, g); else await playBrowser(text, g);
+        });
+      },
+      finish() { chain = chain.then(() => { if (g === gen.current) afterSpeech(); }); },
+    };
   }
 
   async function speak(text: string) {
     stopSpeech();
-    const clean = text.replace(/[*_#`>|]/g, "");
-    setSaid(text); setP("speaking");
-    if (vs.current.tts === "openai") {
-      try {
-        const r = await tts({ data: { companyId, text: clean.slice(0, 2000) } });
-        if (r.audio && alive.current && phaseRef.current === "speaking") {
-          const a = new Audio(`data:audio/mpeg;base64,${r.audio}`);
-          a.playbackRate = vs.current.rate;
-          a.onended = afterSpeech; a.onerror = afterSpeech;
-          audio.current = a;
-          await a.play();
-          startBargeIn();
-          return;
-        }
-      } catch { /* cai para a voz do navegador */ }
-    }
-    if (alive.current && phaseRef.current === "speaking") speakBrowser(clean);
+    setSaid(text);
+    const sp = makeSpeaker(gen.current);
+    sp.push(text); sp.finish();
   }
 
   async function think(text: string) {
     setP("thinking");
+    stopSpeech();
+    const g = gen.current;
     turns.current.push({ role: "user", content: text });
+    const t0 = performance.now();
     try {
       const msgs = [...history, ...turns.current].slice(-20);
-      const r = await ask({ data: { messages: msgs, context: context(), voice: true, companyId } });
-      if (!alive.current) return;
-      if (r.action) onAction(r.action);
-      turns.current.push({ role: "assistant", content: r.reply });
-      void speak(r.reply);
+      const { data: s } = await supabase.auth.getSession();
+      const res = await fetch("/api/atlas-stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${s.session?.access_token ?? ""}` },
+        body: JSON.stringify({ messages: msgs, context: context(), companyId }),
+      });
+      if (!res.ok || !res.body) throw new Error(String(res.status));
+      const sp = makeSpeaker(g);
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let raw = "", full = "", pending = "", first = true;
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (g !== gen.current || !alive.current) { void reader.cancel(); return; }
+        raw += dec.decode(value, { stream: true });
+        const lines = raw.split("\n"); raw = lines.pop() ?? "";
+        for (const l of lines) {
+          if (!l.trim()) continue;
+          const ev = JSON.parse(l) as { t: string; v?: any };
+          if (ev.t === "text") {
+            full += ev.v; pending += ev.v; setSaid(full);
+            const { done: ready, rest } = takeSentences(pending);
+            pending = rest;
+            for (const r of ready) { if (first) { first = false; console.debug("[atlas] 1ª frase em", Math.round(performance.now() - t0), "ms"); } sp.push(r); }
+          } else if (ev.t === "action" && ev.v) onAction(ev.v as AiAction);
+        }
+      }
+      if (pending.trim()) sp.push(pending);
+      turns.current.push({ role: "assistant", content: full || "Pronto." });
+      if (!full) sp.push("Pronto.");
+      sp.finish();
     } catch {
-      if (alive.current) void speak("Não consegui responder agora. Tente novamente.");
+      if (alive.current && g === gen.current) void speak("Não consegui responder agora. Tente novamente.");
     }
   }
 
