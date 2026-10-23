@@ -55,6 +55,50 @@ export type Database = {
           },
         ]
       }
+      atlas_conversations: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          messages: Json
+          mode: string
+          pinned: boolean
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          messages?: Json
+          mode?: string
+          pinned?: boolean
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          messages?: Json
+          mode?: string
+          pinned?: boolean
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atlas_conversations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bitrix_activities: {
         Row: {
           activity_id: string

@@ -33,9 +33,14 @@ import { atRisk, brl, funnel, kpis, lossReasons, pct, ranking, sellerName, COMPA
 import { cn } from "@/lib/utils";
 import { AtlasIcon, type AtlasRequest } from "./atlas";
 import { VoiceMode } from "./voice-mode";
+import { ConversationList } from "./conversation-list";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { listConversations, getConversation, saveConversation, updateConversation, deleteConversation } from "@/lib/conversations.functions";
+import { titleFrom } from "@/lib/conversations";
+import { History } from "lucide-react";
 import { AudioLines, Volume2, VolumeX } from "lucide-react";
 
-type Msg = { role: "user" | "assistant"; content: string; topic?: string | undefined; action?: { label: string; prev: Filters } | undefined };
+type Msg = { role: "user" | "assistant"; content: string; topic?: string | undefined; action?: { label: string; prev?: Filters | undefined } | undefined };
 
 function buildContext(f: Filters) {
   const k = kpis(f);
@@ -103,6 +108,46 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
   const end = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [voiceOpen, setVoiceOpen] = useState(false);
+  const [convId, setConvId] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const dirty = useRef(false);
+  const voiceUsed = useRef(false);
+  const qc = useQueryClient();
+  const listFn = useServerFn(listConversations);
+  const getFn = useServerFn(getConversation);
+  const saveFn = useServerFn(saveConversation);
+  const updFn = useServerFn(updateConversation);
+  const delFn = useServerFn(deleteConversation);
+  const convQ = useQuery({ queryKey: ["atlas-convs", companyId], queryFn: () => listFn({ data: { companyId } }), enabled: !!companyId && open });
+  const lastKey = `sd-atlas-last-${companyId}`;
+  const refreshList = () => qc.invalidateQueries({ queryKey: ["atlas-convs", companyId] });
+  async function openConv(id: string) {
+    try {
+      const c = await getFn({ data: { id } });
+      dirty.current = false; voiceUsed.current = false;
+      setMsgs(c.messages.map((m) => ({ role: m.role, content: m.content, topic: m.topic, action: m.action ? { label: m.action.label } : undefined })));
+      setConvId(c.id); setTopic(null); setHistoryOpen(false);
+      localStorage.setItem(lastKey, c.id);
+    } catch { localStorage.removeItem(lastKey); }
+  }
+  function newConv() { dirty.current = false; voiceUsed.current = false; setMsgs([]); setTopic(null); setConvId(null); localStorage.removeItem(lastKey); }
+  useEffect(() => {
+    if (!companyId) return;
+    const last = localStorage.getItem(lastKey);
+    if (last) void openConv(last); else newConv();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyId]);
+  useEffect(() => {
+    if (busy || !dirty.current || !msgs.length || !companyId) return;
+    dirty.current = false;
+    const payload = msgs.map((m) => ({ role: m.role, content: m.content, ...(m.topic ? { topic: m.topic } : {}), ...(m.action ? { action: { label: m.action.label } } : {}) }));
+    const first = msgs.find((m) => m.role === "user");
+    const mode = voiceUsed.current ? "voice" as const : "chat" as const;
+    void saveFn({ data: { companyId, messages: payload, mode, ...(convId ? { id: convId } : { title: titleFrom(first?.content ?? "") }) } })
+      .then((r) => { if (!convId) { setConvId(r.id); localStorage.setItem(lastKey, r.id); } void refreshList(); })
+      .catch(() => { /* mantém a conversa na tela */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [msgs, busy]);
   const [sound, setSound] = useState(true);
   useEffect(() => { setSound(soundEnabled()); }, []);
   const wasOpen = useRef(false);
@@ -119,7 +164,7 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
     const content = t ? `Sobre o card "${t}": ${text}` : text;
     const history = [...msgs, { role: "user" as const, content }];
     setMsgs((m) => [...m, { role: "user", content: text, topic: t ?? undefined }]);
-    setInput(""); setTopic(null); setBusy(true); sfx.transmit();
+    setInput(""); setTopic(null); setBusy(true); sfx.transmit(); dirty.current = true;
     const prev = f;
     try {
       const r = await ask({ data: { messages: history.map(({ role, content }) => ({ role, content })).slice(-20), context: buildContext(f), companyId } });
@@ -149,7 +194,13 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
     <aside className={cn("fixed inset-y-0 right-0 z-40 flex w-[min(400px,100vw)] flex-col border-l border-border bg-card text-card-foreground shadow-soft transition-transform duration-300 ease-out", open ? "translate-x-0" : "translate-x-[110%]")}>
       {voiceOpen && open && (
         <VoiceMode history={msgs.map(({ role, content }) => ({ role, content }))} companyId={companyId} context={() => buildContext(fRef.current)} onAction={onAction}
-          onClose={(turns) => { setVoiceOpen(false); if (turns.length) setMsgs((m) => [...m, ...turns]); }} />
+          onClose={(turns) => { setVoiceOpen(false); if (turns.length) { dirty.current = true; voiceUsed.current = true; setMsgs((m) => [...m, ...turns]); } }} />
+      )}
+      {historyOpen && open && (
+        <ConversationList items={convQ.data ?? []} loading={convQ.isLoading} activeId={convId} onBack={() => setHistoryOpen(false)} onOpen={(id) => void openConv(id)}
+          onRename={(id, title) => void updFn({ data: { id, title } }).then(refreshList)}
+          onPin={(id, pinned) => void updFn({ data: { id, pinned } }).then(refreshList)}
+          onDelete={(id) => void delFn({ data: { id } }).then(() => { if (id === convId) newConv(); return refreshList(); })} />
       )}
       <div className="flex items-center gap-3 border-b border-border px-4 py-3">
         <span className={cn("grid size-10 place-items-center rounded-xl bg-primary-soft text-primary", busy && "atlas-pulse")}><AtlasIcon className="size-6" /></span>
@@ -158,7 +209,8 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><span className="size-1.5 rounded-full bg-success" />{busy ? "Analisando seus dados…" : "Online · lendo seus dados do Bitrix24"}</div>
         </div>
         <button onClick={() => { const n = !sound; setSoundEnabled(n); setSound(n); if (n) sfx.micOpen(); }} title={sound ? "Silenciar sons" : "Ativar sons"} aria-label={sound ? "Silenciar sons" : "Ativar sons"} className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">{sound ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}</button>
-        <button onClick={() => { setMsgs([]); setTopic(null); }} title="Nova conversa" aria-label="Nova conversa" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><SquarePen className="size-4" /></button>
+        <button onClick={() => setHistoryOpen(true)} title="Conversas" aria-label="Conversas" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><History className="size-4" /></button>
+        <button onClick={newConv} title="Nova conversa" aria-label="Nova conversa" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><SquarePen className="size-4" /></button>
         <button onClick={onClose} aria-label="Fechar" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><X className="size-4" /></button>
       </div>
 
@@ -199,10 +251,10 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
                 <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-primary-soft text-primary"><AtlasIcon className="size-3.5" /></span>
                 <div className="min-w-0 flex-1">
                   <div className="text-sm leading-relaxed tabular-nums [&_li]:my-0.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-1.5 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 first:[&_p]:mt-0"><ReactMarkdown>{m.content}</ReactMarkdown></div>
-                  {m.action && (
+                  {m.action && m.action.prev && (
                     <div className="mt-2 flex items-center gap-2 rounded-lg border border-primary/20 bg-primary-soft/50 px-3 py-2 text-xs">
                       <Filter className="size-3.5 text-primary" /><span className="flex-1 font-medium">{m.action.label}</span>
-                      <button onClick={() => { sfx.revert(); onRestore(m.action!.prev); setMsgs((ms) => ms.map((x, j) => j === i ? { ...x, action: undefined } : x)); }} className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-medium text-primary hover:bg-card"><Undo2 className="size-3" />Desfazer</button>
+                      <button onClick={() => { sfx.revert(); onRestore(m.action!.prev!); setMsgs((ms) => ms.map((x, j) => j === i ? { ...x, action: undefined } : x)); }} className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-medium text-primary hover:bg-card"><Undo2 className="size-3" />Desfazer</button>
                     </div>
                   )}
                   <div className="mt-1.5 flex gap-1 opacity-0 transition group-hover:opacity-100">

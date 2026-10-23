@@ -57,6 +57,13 @@
       "when": 1792723158170,
       "tag": "0007_ai_voice_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792726588532,
+      "tag": "0008_atlas_conversations",
+      "breakpoints": true
     }
   ]
 }
