@@ -11,7 +11,7 @@ export const VoiceSettingsSchema = z.object({
   rate: z.number().min(0.7).max(1.5).default(1.05),
   pitch: z.number().min(0.5).max(1.5).default(1),
   length: z.enum(["tiny", "short", "detailed"]).default("short"),
-  silenceMs: z.number().int().min(600).max(3000).default(1000),
+  silenceMs: z.number().int().min(600).max(3000).default(700),
   bargeIn: z.boolean().default(true),
   voiceModel: z.enum(OPENAI_MODELS).nullable().default(null),
   tts: z.enum(["browser", "openai"]).default("browser"),
