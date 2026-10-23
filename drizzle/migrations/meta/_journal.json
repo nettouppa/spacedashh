@@ -43,6 +43,13 @@
       "when": 1792721160795,
       "tag": "0005_tv_links",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792722391979,
+      "tag": "0006_ai_settings",
+      "breakpoints": true
     }
   ]
 }
