@@ -7,6 +7,7 @@ import { AppShell } from "@/components/dash/app-shell";
 import { getBitrixSetup, startBitrixConnect, syncBitrixNow, disconnectBitrix } from "@/lib/bitrix.functions";
 import { BITRIX_SETUP_URLS } from "@/lib/bitrix-policy";
 import { supabase } from "@/integrations/supabase/client";
+import { AiSettingsCard } from "@/components/dash/ai-settings-card";
 
 const setupQuery = queryOptions({ queryKey: ["bitrix-setup"], queryFn: () => getBitrixSetup() });
 
@@ -102,6 +103,7 @@ function Integrations() {
       {conn?.last_sync_status === "error" && conn.last_sync_error && <p className="mt-4 text-xs text-danger">{conn.last_sync_error}</p>}
     </section>
     {!company && <div className="py-8"><h2 className="font-semibold">{data.isAdmin ? "Cadastre a primeira empresa" : "Aguardando convite"}</h2><p className="mt-2 text-sm text-muted-foreground">{data.isAdmin ? "A conexão será vinculada a uma empresa cadastrada no Spacedash." : "Sua conta precisa estar vinculada a uma empresa para acessar a integração."}</p>{data.isAdmin && <Button className="mt-4" asChild><Link to="/admin">Administração<ArrowUpRight /></Link></Button>}</div>}
+    {company && <AiSettingsCard companyId={company.id} canManage={company.canManage} />}
     {company && !company.canManage && <div className="flex items-start gap-3 py-8"><ShieldCheck className="size-5 text-muted-foreground" /><div><h2 className="font-semibold">Conexão administrada pelo gestor</h2><p className="mt-2 text-sm text-muted-foreground">Seu perfil não permite conectar portais ou iniciar sincronizações.</p></div></div>}
     {company?.canManage && <>
       <div className="py-7">
