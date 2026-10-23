@@ -8,7 +8,7 @@ const Input = z.object({
 });
 
 export type AiAction = {
-  period?: "month" | "quarter" | "year" | undefined; company?: string | null | undefined; team?: string | null | undefined;
+  period?: "week" | "month" | "quarter" | "semester" | "year" | undefined; from?: string | undefined; to?: string | undefined; company?: string | null | undefined; team?: string | null | undefined;
   sellerId?: string | null | undefined; stage?: string | null | undefined; lossReason?: string | null | undefined; clear?: boolean | undefined; tvMode?: boolean | undefined;
 };
 
@@ -35,7 +35,9 @@ export const askAssistant = createServerFn({ method: "POST" })
             parameters: {
               type: "object",
               properties: {
-                period: { type: "string", enum: ["month", "quarter", "year"] },
+                period: { type: "string", enum: ["week", "month", "quarter", "semester", "year"], description: "Período atual (esta semana, este mês...)" },
+                from: { type: "string", description: "Início de um intervalo personalizado, AAAA-MM-DD (use junto com to)" },
+                to: { type: "string", description: "Fim do intervalo personalizado, AAAA-MM-DD" },
                 company: { type: ["string", "null"] }, team: { type: ["string", "null"] },
                 sellerId: { type: ["string", "null"], description: "id do vendedor, ex s1" },
                 stage: { type: ["string", "null"] }, lossReason: { type: ["string", "null"] },

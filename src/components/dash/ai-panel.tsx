@@ -28,7 +28,7 @@ function useVoice(onPartial: (t: string) => void, onFinal: (t: string) => void) 
   return { supported, listening, toggle };
 }
 import { askAssistant, type AiAction } from "@/lib/ai.functions";
-import { atRisk, brl, funnel, kpis, lossReasons, pct, ranking, sellerName, COMPANIES, TEAMS, STAGES, LOSS_REASONS, type Filters } from "@/lib/crm-data";
+import { atRisk, brl, funnel, kpis, lossReasons, pct, ranking, sellerName, COMPANIES, TEAMS, STAGES, LOSS_REASONS, PRESET_LABELS, periodLabel, NOW, type Filters } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
 import { AtlasIcon, type AtlasRequest } from "./atlas";
 import { VoiceMode } from "./voice-mode";
@@ -39,7 +39,8 @@ type Msg = { role: "user" | "assistant"; content: string; topic?: string | undef
 function buildContext(f: Filters) {
   const k = kpis(f);
   return JSON.stringify({
-    filtrosAtivos: f,
+    hoje: NOW.toISOString().slice(0, 10),
+    filtrosAtivos: { ...f, period: periodLabel(f.period) },
     opcoes: { empresas: COMPANIES, equipes: TEAMS, etapas: STAGES, motivosPerda: LOSS_REASONS, vendedores: ranking({ period: f.period }).map((s) => ({ id: s.id, nome: s.name, equipe: s.team })) },
     kpis: { faturado: brl(k.revenue, false), meta: brl(k.goal, false), atingimento: pct(k.goalPct), ticketMedio: brl(k.ticket, false), abertos: k.openCount, conversao: pct(k.conversion) },
     funil: funnel(f).map((s) => ({ etapa: s.stage, qtd: s.count, valor: brl(s.value, false), passagem: pct(s.pass) })),
@@ -53,7 +54,8 @@ function describe(a: AiAction): string {
   if (a.tvMode) return "Modo TV aberto";
   if (a.clear) return "Filtros limpos";
   const parts: string[] = [];
-  if (a.period) parts.push(`Período: ${{ month: "Mês", quarter: "Trimestre", year: "Ano" }[a.period]}`);
+  if (a.from && a.to) parts.push(`Período: ${a.from.split("-").reverse().join("/")} – ${a.to.split("-").reverse().join("/")}`);
+  else if (a.period) parts.push(`Período: ${PRESET_LABELS[a.period]}`);
   if (a.company) parts.push(`Empresa: ${a.company}`);
   if (a.team) parts.push(`Equipe: ${a.team}`);
   if (a.sellerId) parts.push(`Vendedor: ${sellerName(a.sellerId)}`);
@@ -158,7 +160,7 @@ export function AiPanel({ open, onClose, f, onAction, request, onRestore, userNa
         {msgs.length === 0 ? (
           <div className="atlas-in">
             <h2 className="text-xl font-semibold tracking-tight">{hello}, {userName}.</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Analisei seu {{ month: "mês", quarter: "trimestre", year: "ano" }[f.period]}. Veja o que chamou minha atenção:</p>
+            <p className="mt-1 text-sm text-muted-foreground">Analisei o período {periodLabel(f.period, true).toLowerCase()}. Veja o que chamou minha atenção:</p>
             <div className="mt-4 space-y-2">
               {insights(f).map((it, i) => (
                 <button key={it.title} onClick={() => send(it.q, null)} style={{ animationDelay: `${80 * (i + 1)}ms` }}

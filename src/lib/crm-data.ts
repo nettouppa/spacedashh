@@ -86,24 +86,48 @@ export let TASKS: Task[] = (() => {
   return out;
 })();
 
-export type Period = "month" | "quarter" | "year";
+export type Preset = "week" | "month" | "quarter" | "semester" | "year";
+export type DateRange = { preset?: Preset | undefined; from: Date; to: Date };
+/** A preset (current calendar week/month/…) or an explicit inclusive date range. */
+export type Period = Preset | DateRange;
 export type Filters = {
   period: Period; company?: string | undefined; team?: string | undefined; sellerId?: string | undefined; stage?: Stage | undefined; lossReason?: string | undefined;
 };
 
-export function periodStart(p: Period) {
-  const d = new Date(NOW);
-  if (p === "month") return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
-  if (p === "quarter") return new Date(Date.UTC(d.getUTCFullYear(), Math.floor(d.getUTCMonth() / 3) * 3, 1));
-  return new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+const DAY = 864e5;
+/** Full calendar range of the current week (Mon–Sun), month, quarter, semester or year, relative to NOW. */
+export function presetRange(p: Preset): DateRange {
+  const y = NOW.getUTCFullYear(), m = NOW.getUTCMonth();
+  if (p === "week") {
+    const from = new Date(Date.UTC(y, m, NOW.getUTCDate() - ((NOW.getUTCDay() + 6) % 7)));
+    return { preset: p, from, to: new Date(from.getTime() + 7 * DAY - 1) };
+  }
+  const len = p === "month" ? 1 : p === "quarter" ? 3 : p === "semester" ? 6 : 12;
+  const sm = Math.floor(m / len) * len;
+  return { preset: p, from: new Date(Date.UTC(y, sm, 1)), to: new Date(Date.UTC(y, sm + len, 1) - 1) };
 }
+export const range = (p: Period): DateRange => (typeof p === "string" ? presetRange(p) : p);
+export const presetOf = (p: Period) => range(p).preset;
+const fmt = (d: Date, year = true) => `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}${year ? `/${d.getUTCFullYear()}` : ""}`;
+export const PRESET_LABELS: Record<Preset, string> = { week: "Semana", month: "Mês", quarter: "Trimestre", semester: "Semestre", year: "Ano" };
+export function periodLabel(p: Period, short = false) {
+  const r = range(p);
+  if (short && r.preset) return PRESET_LABELS[r.preset];
+  const sameYear = r.from.getUTCFullYear() === r.to.getUTCFullYear();
+  return `${fmt(r.from, !short || !sameYear)} – ${fmt(r.to, !short || !sameYear)}`;
+}
+/** Whether the closing pace is shown per week (ranges up to ~2 months) instead of per month. */
+export const paceWeekly = (p: Period) => { const r = range(p); return r.to.getTime() - r.from.getTime() <= 62 * DAY; };
+
+export function periodStart(p: Period) { return range(p).from; }
+export function periodEnd(p: Period) { return range(p).to; }
 
 /** Apply all filters except the ones listed in `skip` (so a widget can keep showing its own siblings). */
 export function filterDeals(f: Filters, skip: (keyof Filters)[] = []) {
-  const start = periodStart(f.period);
+  const { from: start, to: end } = range(f.period);
   return DEALS.filter((d) => {
     const ref = d.closedAt ?? d.createdAt;
-    if (d.status !== "open" && ref < start) return false;
+    if (d.status !== "open" && (ref < start || ref > end)) return false;
     if (!skip.includes("company") && f.company && d.company !== f.company) return false;
     if (!skip.includes("team") && f.team && d.team !== f.team) return false;
     if (!skip.includes("sellerId") && f.sellerId && d.sellerId !== f.sellerId) return false;
@@ -128,13 +152,22 @@ export function monthlyGoal(s: Seller, month: string) {
   return GOALS[month]?.[s.id] ?? suggestedGoal(s);
 }
 /** Months covered by the period (whole month/quarter/year). */
-export function periodMonths(p: Period) {
-  const start = periodStart(p);
-  const n = p === "month" ? 1 : p === "quarter" ? 3 : 12;
-  return Array.from({ length: n }, (_, i) => monthKey(new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + i, 1))));
+/** Months touched by the period with the fraction of each month's days covered. */
+export function periodMonthShares(p: Period) {
+  const { from, to } = range(p);
+  const out: { month: string; share: number }[] = [];
+  for (let c = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), 1)); c <= to; c = new Date(Date.UTC(c.getUTCFullYear(), c.getUTCMonth() + 1, 1))) {
+    const next = Date.UTC(c.getUTCFullYear(), c.getUTCMonth() + 1, 1);
+    const days = (next - c.getTime()) / DAY;
+    const covered = (Math.min(next, to.getTime() + 1) - Math.max(c.getTime(), from.getTime())) / DAY;
+    out.push({ month: monthKey(c), share: Math.min(1, Math.max(0, Math.round(covered) / days)) });
+  }
+  return out;
 }
+export function periodMonths(p: Period) { return periodMonthShares(p).map((x) => x.month); }
+/** Goal for the period; partial months are prorated by days. */
 export function sellerGoal(s: Seller, p: Period) {
-  return periodMonths(p).reduce((a, m) => a + monthlyGoal(s, m), 0);
+  return periodMonthShares(p).reduce((a, x) => a + monthlyGoal(s, x.month) * x.share, 0);
 }
 
 export function goalFor(f: Filters) {
@@ -203,18 +236,24 @@ export function lossReasons(f: Filters) {
 }
 
 export function pace(f: Filters) {
-  const won = filterDeals({ ...f, period: "year" }).filter((d) => d.status === "won");
+  const r = range(f.period);
+  const won = filterDeals({ ...f, period: { from: new Date(0), to: NOW } }).filter((d) => d.status === "won");
+  const last = Math.min(r.to.getTime(), NOW.getTime());
   const buckets: { label: string; value: number }[] = [];
-  if (f.period === "month") {
+  if (paceWeekly(f.period)) {
     for (let w = 7; w >= 0; w--) {
-      const end = NOW.getTime() - w * 7 * 864e5, start = end - 7 * 864e5;
+      const end = last - w * 7 * DAY, start = end - 7 * DAY;
       buckets.push({ label: `S-${w}`, value: won.filter((d) => d.closedAt!.getTime() > start && d.closedAt!.getTime() <= end).reduce((a, d) => a + d.value, 0) });
     }
-    buckets[buckets.length - 1]!.label = "Atual";
+    buckets[buckets.length - 1]!.label = last >= NOW.getTime() - DAY ? "Atual" : "S-0";
   } else {
     const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-    for (let m = 0; m <= NOW.getUTCMonth(); m++)
-      buckets.push({ label: months[m]!, value: won.filter((d) => d.closedAt!.getUTCMonth() === m && d.closedAt!.getUTCFullYear() === NOW.getUTCFullYear()).reduce((a, d) => a + d.value, 0) });
+    const end = new Date(last);
+    const multiYear = r.from.getUTCFullYear() !== end.getUTCFullYear();
+    for (let c = new Date(Date.UTC(r.from.getUTCFullYear(), r.from.getUTCMonth(), 1)); c <= end; c = new Date(Date.UTC(c.getUTCFullYear(), c.getUTCMonth() + 1, 1))) {
+      const y = c.getUTCFullYear(), m = c.getUTCMonth();
+      buckets.push({ label: `${months[m]!}${multiYear ? `/${String(y).slice(2)}` : ""}`, value: won.filter((d) => d.closedAt!.getUTCMonth() === m && d.closedAt!.getUTCFullYear() === y).reduce((a, d) => a + d.value, 0) });
+    }
   }
   return buckets;
 }
@@ -230,13 +269,14 @@ export const pct = (n: number) => `${Math.round(n * 100)}%`;
 export const sellerName = (id?: string) => SELLERS.find((s) => s.id === id)?.name;
 
 export function periodPrevRange(p: Period) {
-  const start = periodStart(p);
-  const d = new Date(start);
-  if (p === "month") d.setUTCMonth(d.getUTCMonth() - 1);
-  else if (p === "quarter") d.setUTCMonth(d.getUTCMonth() - 3);
-  else d.setUTCFullYear(d.getUTCFullYear() - 1);
+  const r = range(p);
+  const d = new Date(r.from);
+  if (r.preset === "week") d.setUTCDate(d.getUTCDate() - 7);
+  else if (r.preset) d.setUTCMonth(d.getUTCMonth() - { month: 1, quarter: 3, semester: 6, year: 12 }[r.preset]);
+  else d.setTime(r.from.getTime() - (r.to.getTime() - r.from.getTime()) - 1);
   // same elapsed length as current period, for fair comparison
-  return { start: d, end: new Date(d.getTime() + (NOW.getTime() - start.getTime())) };
+  const elapsed = Math.min(r.to.getTime(), NOW.getTime()) - r.from.getTime();
+  return { start: d, end: new Date(d.getTime() + Math.max(elapsed, 0)) };
 }
 
 /** KPIs for the equivalent elapsed window of the previous period. */
@@ -376,8 +416,8 @@ export function toConversations(acts: NonNullable<RawDataset["activities"]>, sel
 
 /** Conversation volume, resolution and handling time in the period (agent filter skipped in the ranking). */
 export function support(f: Filters) {
-  const start = periodStart(f.period);
-  const all = CONVERSATIONS.filter((c) => c.createdAt >= start && workMatch(f, c, ["sellerId"]));
+  const start = periodStart(f.period), end = periodEnd(f.period);
+  const all = CONVERSATIONS.filter((c) => c.createdAt >= start && c.createdAt <= end && workMatch(f, c, ["sellerId"]));
   const mine = all.filter((c) => !f.sellerId || c.sellerId === f.sellerId);
   const closed = mine.filter((c) => c.closedAt);
   const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
@@ -439,8 +479,8 @@ const workMatch = (f: Filters, x: { sellerId: string; team: string }, skip: (key
 
 /** Activities created in the period, per seller and type (the seller filter is skipped so the table keeps everyone visible). */
 export function productivity(f: Filters) {
-  const start = periodStart(f.period);
-  const acts = ACTIVITIES.filter((a) => a.createdAt >= start && workMatch(f, a, ["sellerId"]));
+  const start = periodStart(f.period), end = periodEnd(f.period);
+  const acts = ACTIVITIES.filter((a) => a.createdAt >= start && a.createdAt <= end && workMatch(f, a, ["sellerId"]));
   const won = filterDeals(f, ["sellerId"]).filter((d) => d.status === "won");
   const rows = SELLERS.filter((s) => !f.team || s.team === f.team).map((s) => {
     const mine = acts.filter((a) => a.sellerId === s.id);
@@ -465,8 +505,8 @@ export function taskHealth(f: Filters) {
     const lateActs = acts.filter((a) => a.sellerId === s.id && a.deadline && a.deadline.getTime() < now).length;
     return { id: s.id, name: s.name, photo: s.photo, open: open.length, overdue, lateActs };
   }).filter((r) => r.open + r.lateActs > 0).sort((a, b) => b.overdue + b.lateActs - (a.overdue + a.lateActs));
-  const start = periodStart(f.period);
-  const closed = tasks.filter((t) => t.done && t.closedAt && t.closedAt >= start && (!f.sellerId || t.sellerId === f.sellerId));
+  const start = periodStart(f.period), end = periodEnd(f.period);
+  const closed = tasks.filter((t) => t.done && t.closedAt && t.closedAt >= start && t.closedAt <= end && (!f.sellerId || t.sellerId === f.sellerId));
   const onTime = closed.filter((t) => !t.deadline || t.closedAt! <= t.deadline).length;
   const mine = (r: { id: string }) => !f.sellerId || r.id === f.sellerId;
   return {
