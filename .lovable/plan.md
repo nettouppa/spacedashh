@@ -1,24 +1,33 @@
-# Atlas mais rápido no modo conversa
+# Painel do Atlas: gestão de conversas e melhorias
 
-Hoje cada fala passa por 3 etapas em sequência, cada uma esperando a anterior terminar inteira: (1) espera 1s de silêncio, (2) gera a resposta completa, (3) gera o áudio completo e só então começa a falar. Além disso, todo o contexto do painel vai junto em cada pergunta. Vamos fazer o Atlas começar a falar enquanto ainda pensa.
+Hoje a conversa só existe enquanto a página está aberta: ao recarregar ou clicar em "Nova conversa", tudo se perde. O plano transforma o painel num espaço de trabalho com histórico.
 
-## O que muda para você
-- O Atlas começa a falar em cerca de 1 segundo após você parar, em vez de vários segundos.
-- Respostas de voz mais curtas e naturais, como numa conversa.
-- Ele percebe mais rápido que você terminou de falar.
-- Você continua podendo interromper a qualquer momento.
+## 1. Gestão de conversas
+- **Histórico salvo na conta**: cada conversa fica salva por usuário e por empresa, e aparece em qualquer navegador.
+- **Lista de conversas**: um botão no topo do painel abre a lista, agrupada por Hoje, Ontem, Últimos 7 dias e Mais antigas.
+- **Título automático**: gerado a partir da primeira pergunta. Dá para renomear.
+- **Busca** por palavra dentro das conversas.
+- **Fixar** conversas importantes no topo.
+- **Excluir** uma conversa, com confirmação.
+- **Retomar**: ao reabrir o Atlas, volta na última conversa.
+- **Conversas por voz** também entram no histórico, com um ícone de voz.
 
-## Como
-1. **Resposta em fluxo**: o Atlas envia a resposta aos pedaços, conforme vai escrevendo, em vez de tudo de uma vez.
-2. **Fala frase a frase**: assim que a primeira frase chega, ela já é convertida em voz e tocada; as próximas são preparadas em paralelo e tocam em sequência, sem pausa.
-3. **Mesma qualidade de resposta**: o Atlas continua usando o mesmo modelo e todos os dados do painel. Nada que mude o conteúdo da resposta é alterado; o ganho vem só de começar a falar antes.
-5. **Silêncio menor**: padrão de detecção de fim de fala cai de 1s para 0,7s (ajustável nas configurações, como hoje).
-6. **Som de "pensando"**: um retorno sonoro discreto e a frase aparece na tela imediatamente, para a espera não parecer vazia.
+## 2. Melhorias na conversa
+- **Respostas com gráfico/números destacados**: quando o Atlas citar KPIs, eles aparecem em mini-cartões.
+- **Botões de avaliação** (útil / não útil) em cada resposta.
+- **Regenerar resposta** e **editar a última pergunta**.
+- **Sugestões de continuação**: 2 ou 3 próximas perguntas abaixo de cada resposta.
+- **Atalhos**: Ctrl+K abre o Atlas; Esc fecha.
+
+## 3. Compartilhar e exportar
+- **Copiar conversa** como texto e **exportar** em PDF.
+
+## Ordem sugerida
+Primeiro a parte 1 (gestão de conversas). As partes 2 e 3 ficam para uma segunda etapa, se você aprovar.
 
 ## Detalhes técnicos
-- Nova rota de streaming `src/routes/api/atlas-stream.ts` (auth via bearer + `is_member`), chamando OpenAI chat completions com `stream: true`, repassando SSE de texto; tool call de filtros acumulado e enviado como evento final.
-- `voice-mode.tsx`: ler o stream, cortar por fim de frase (`. ! ? \n`), fila de TTS com até 2 requisições em paralelo e reprodução encadeada; fallback para voz do navegador por frase.
-- Modelo, raciocínio e contexto permanecem como hoje (sem troca de modelo nem corte de contexto).
-- `voice-settings.ts`: default `silenceMs` 700.
-- Texto do chat continua usando `askAssistant` sem alteração.
-- Medir antes/depois (tempo até primeiro áudio) via log no console durante teste.
+- Tabelas `atlas_conversations` (id, company_id, user_id, title, pinned, mode chat|voice, updated_at) e `atlas_messages` (conversation_id, role, content, action jsonb, topic, created_at), com RLS: só o dono, e só se for membro da empresa (`is_member`).
+- Server functions em `src/lib/conversations.functions.ts`: listar, criar, renomear, fixar, excluir, adicionar mensagens.
+- `ai-panel.tsx`: nova visão "Histórico" dentro do painel (lista + busca), salvamento após cada troca de mensagens, última conversa lembrada.
+- Título: primeira pergunta cortada em ~60 caracteres (sem custo de IA).
+- Testes para título automático e agrupamento por data.
