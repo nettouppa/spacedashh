@@ -171,7 +171,8 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
   const [ai, setAi] = useState(false);
   const [tv, setTv] = useState(false);
   const closeTv = useCallback(() => setTv(false), []);
-  const refreshTv = useCallback(() => { void dataQ.refetch(); void goalsQ.refetch(); }, [dataQ, goalsQ]);
+  const { refetch: refetchData } = dataQ, { refetch: refetchGoals } = goalsQ;
+  const refreshTv = useCallback(() => { void refetchData(); void refetchGoals(); }, [refetchData, refetchGoals]);
   const [atlasReq, setAtlasReq] = useState<AtlasRequest | null>(null);
   const atlasCtx = { hidden: edit, request: (mode: "explain" | "ask", topic: string) => { setAi(true); setAtlasReq({ mode, topic, id: Date.now() }); } };
 

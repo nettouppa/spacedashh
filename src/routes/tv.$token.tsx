@@ -29,7 +29,8 @@ function TvPage() {
   const [f, setF] = useState<Filters>({ period: "month" });
   const set = useCallback((p: Partial<Filters>) => setF((x) => ({ ...x, ...p })), []);
   useMemo(() => { if (q.data) { setDataset(q.data.dataset); setGoals(q.data.goals); } }, [q.data]);
-  const refetch = useCallback(() => { void q.refetch(); }, [q]);
+  const { refetch: rq } = q;
+  const refetch = useCallback(() => { void rq(); }, [rq]);
   if (q.isLoading) return <div className="dark grid min-h-screen place-items-center bg-background text-2xl text-muted-foreground">Carregando painel…</div>;
   if (!q.data) return <div className="dark grid min-h-screen place-items-center bg-background p-8 text-center text-2xl text-foreground">Link de TV inválido ou revogado.<br /><span className="text-base text-muted-foreground">Peça um novo link ao gestor no Spacedash.</span></div>;
   return <TvMode f={f} set={set} views={q.data.views} interval={q.data.intervalSec} title={q.data.name} onRefresh={refetch} />;

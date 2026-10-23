@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedIntegrationsRouteImport } from './routes/_authenticated/integrations'
+import { Route as TvTokenRouteImport } from './routes/tv.$token'
 import { Route as ApiPublicBitrixCallbackRouteImport } from './routes/api/public/bitrix/callback'
 import { Route as ApiPublicBitrixInstallRouteImport } from './routes/api/public/bitrix/install'
 
@@ -48,6 +49,11 @@ const AuthenticatedIntegrationsRoute =
     path: '/integrations',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const TvTokenRoute = TvTokenRouteImport.update({
+  id: '/tv/$token',
+  path: '/tv/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicBitrixCallbackRoute = ApiPublicBitrixCallbackRouteImport.update({
   id: '/api/public/bitrix/callback',
   path: '/api/public/bitrix/callback',
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
+  '/tv/$token': typeof TvTokenRoute
   '/api/public/bitrix/callback': typeof ApiPublicBitrixCallbackRoute
   '/api/public/bitrix/install': typeof ApiPublicBitrixInstallRoute
 }
@@ -74,6 +81,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
+  '/tv/$token': typeof TvTokenRoute
   '/api/public/bitrix/callback': typeof ApiPublicBitrixCallbackRoute
   '/api/public/bitrix/install': typeof ApiPublicBitrixInstallRoute
 }
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/integrations': typeof AuthenticatedIntegrationsRoute
+  '/tv/$token': typeof TvTokenRoute
   '/api/public/bitrix/callback': typeof ApiPublicBitrixCallbackRoute
   '/api/public/bitrix/install': typeof ApiPublicBitrixInstallRoute
 }
@@ -96,6 +105,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/integrations'
+    | '/tv/$token'
     | '/api/public/bitrix/callback'
     | '/api/public/bitrix/install'
   fileRoutesByTo: FileRoutesByTo
@@ -105,6 +115,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/integrations'
+    | '/tv/$token'
     | '/api/public/bitrix/callback'
     | '/api/public/bitrix/install'
   id:
@@ -115,6 +126,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
     | '/_authenticated/integrations'
+    | '/tv/$token'
     | '/api/public/bitrix/callback'
     | '/api/public/bitrix/install'
   fileRoutesById: FileRoutesById
@@ -123,6 +135,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  TvTokenRoute: typeof TvTokenRoute
   ApiPublicBitrixCallbackRoute: typeof ApiPublicBitrixCallbackRoute
   ApiPublicBitrixInstallRoute: typeof ApiPublicBitrixInstallRoute
 }
@@ -171,6 +184,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIntegrationsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/tv/$token': {
+      id: '/tv/$token'
+      path: '/tv/$token'
+      fullPath: '/tv/$token'
+      preLoaderRoute: typeof TvTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/bitrix/callback': {
       id: '/api/public/bitrix/callback'
       path: '/api/public/bitrix/callback'
@@ -207,6 +227,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  TvTokenRoute: TvTokenRoute,
   ApiPublicBitrixCallbackRoute: ApiPublicBitrixCallbackRoute,
   ApiPublicBitrixInstallRoute: ApiPublicBitrixInstallRoute,
 }
