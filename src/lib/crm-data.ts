@@ -391,7 +391,7 @@ export function channelOf(text: string | null | undefined): string {
 }
 
 const MOCK_CONVERSATIONS: Conversation[] = (() => {
-  const r = range(23); const out: Conversation[] = [];
+  const r = rng(23); const out: Conversation[] = [];
   const ch = ["WhatsApp", "WhatsApp", "WhatsApp", "WhatsApp", "Instagram", "Instagram", "Chat do site", "Chat do site", "Telegram", "Facebook"];
   for (let i = 0; i < 1400; i++) {
     const s = SELLERS[Math.floor(r() * SELLERS.length)]!;
