@@ -1,14 +1,14 @@
 // Mock dataset simulating deals synced from Bitrix24 Cloud (crm.deal.list).
-export const NOW = new Date("2026-10-22T12:00:00Z");
+export let NOW = new Date("2026-10-22T12:00:00Z");
 
 export const STAGES = ["Prospecção", "Qualificação", "Proposta", "Negociação", "Ganho"] as const;
 export type Stage = (typeof STAGES)[number];
-export const LOSS_REASONS = ["Preço", "Concorrência", "Sem orçamento", "Timing", "Sem resposta"] as const;
-export const COMPANIES = ["Violeta Matriz", "Violeta Sul", "Violeta Digital"] as const;
-export const TEAMS = ["Enterprise", "SMB", "Inside Sales"] as const;
+export let LOSS_REASONS: string[] = ["Preço", "Concorrência", "Sem orçamento", "Timing", "Sem resposta"];
+export let COMPANIES: string[] = ["Violeta Matriz", "Violeta Sul", "Violeta Digital"];
+export let TEAMS: string[] = ["Enterprise", "SMB", "Inside Sales"];
 
 export type Seller = { id: string; name: string; team: string; photo: string; goal: number };
-export const SELLERS: Seller[] = [
+export let SELLERS: Seller[] = [
   { id: "s1", name: "Ana Ribeiro", team: "Enterprise", photo: "https://i.pravatar.cc/150?img=47", goal: 260000 },
   { id: "s2", name: "Bruno Costa", team: "Enterprise", photo: "https://i.pravatar.cc/150?img=12", goal: 240000 },
   { id: "s3", name: "Carla Mendes", team: "SMB", photo: "https://i.pravatar.cc/150?img=45", goal: 160000 },
@@ -29,7 +29,7 @@ function rng(seed: number) {
 }
 const CLIENTS = ["Acme", "Orion", "Nexa", "Lumen", "Vértice", "Atlas", "Pulsar", "Íris", "Quantum", "Boreal", "Zênite", "Ômega"];
 
-export const DEALS: Deal[] = (() => {
+export let DEALS: Deal[] = (() => {
   const r = rng(42);
   const out: Deal[] = [];
   for (let i = 0; i < 420; i++) {
@@ -188,4 +188,62 @@ export function previousKpis(f: Filters) {
   const revenue = won.reduce((a, d) => a + d.value, 0);
   const openCount = DEALS.filter((d) => d.status === "open" && d.createdAt <= end && (!f.sellerId || d.sellerId === f.sellerId) && (!f.team || d.team === f.team)).length;
   return { revenue, ticket: won.length ? revenue / won.length : 0, conversion: won.length + lost.length ? won.length / (won.length + lost.length) : 0, openCount };
+}
+
+// ---------- Real Bitrix24 dataset ----------
+export type RawDataset = {
+  domain: string; lastSyncAt: string | null;
+  deals: { deal_id: string; title: string | null; stage_id: string | null; category_id: string | null; opportunity: number; assigned_by_id: string | null; closed: boolean; date_create: string | null; close_date: string | null; date_modify: string | null }[];
+  users: { user_id: string; name: string; photo: string | null; department: string | null }[];
+  stages: { stage_id: string; category_id: string | null; category_name: string | null; name: string; sort: number; semantics: string | null }[];
+};
+
+const MOCK = { NOW, DEALS, SELLERS, COMPANIES, TEAMS, LOSS_REASONS };
+const avatar = (name: string) => `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(name)}&backgroundColor=ede9fe&textColor=5b21b6`;
+
+/** Maps Bitrix24 rows onto the dashboard model: open stages are spread across the 4 open funnel steps by their order in each pipeline; S = won, F = lost (stage name becomes the loss reason). */
+export function toDataset(raw: RawDataset, now = new Date()) {
+  const byStage = new Map(raw.stages.map((s) => [s.stage_id, s]));
+  const openByCat = new Map<string, string[]>();
+  raw.stages.filter((s) => !s.semantics || (s.semantics !== "S" && s.semantics !== "F")).sort((a, b) => a.sort - b.sort)
+    .forEach((s) => { const k = s.category_id ?? "0"; openByCat.set(k, [...(openByCat.get(k) ?? []), s.stage_id]); });
+  const catName = new Map(raw.stages.map((s) => [s.category_id ?? "0", s.category_name ?? "Funil"]));
+  const users = new Map(raw.users.map((u) => [u.user_id, u]));
+  const deals: Deal[] = raw.deals.map((d) => {
+    const st = d.stage_id ? byStage.get(d.stage_id) : undefined;
+    const code = d.stage_id?.split(":").pop() ?? "";
+    const won = st?.semantics === "S" || code === "WON";
+    const lost = st?.semantics === "F" || code === "LOSE" || code === "APOLOGY" || (d.closed && !won);
+    const cat = d.category_id ?? "0";
+    const list = openByCat.get(cat) ?? [];
+    const pos = Math.max(0, list.indexOf(d.stage_id ?? ""));
+    const stage: Stage = won ? "Ganho" : STAGES[Math.min(3, Math.floor((pos / Math.max(1, list.length)) * 4))]!;
+    const createdAt = new Date(d.date_create ?? now);
+    const closedAt = won || lost ? new Date(d.close_date ?? d.date_modify ?? d.date_create ?? now) : undefined;
+    const sellerId = d.assigned_by_id ?? "0";
+    return {
+      id: d.deal_id, title: d.title ?? `Negócio ${d.deal_id}`, company: catName.get(cat) ?? (cat === "0" ? "Funil geral" : `Funil ${cat}`),
+      sellerId, team: users.get(sellerId)?.department ?? "Sem equipe", stage, status: won ? "won" : lost ? "lost" : "open",
+      value: Number(d.opportunity) || 0, createdAt, closedAt,
+      lossReason: lost ? (st?.name ?? "Não informado") : undefined,
+      lastActivityDays: Math.max(0, Math.floor((now.getTime() - new Date(d.date_modify ?? d.date_create ?? now).getTime()) / 864e5)),
+    };
+  });
+  const sellerIds = [...new Set(deals.map((d) => d.sellerId))];
+  const yearAgo = now.getTime() - 365 * 864e5;
+  const sellers: Seller[] = sellerIds.map((id) => {
+    const u = users.get(id);
+    const name = u?.name ?? `Usuário ${id}`;
+    const wonYear = deals.filter((d) => d.sellerId === id && d.status === "won" && d.closedAt!.getTime() >= yearAgo).reduce((a, d) => a + d.value, 0);
+    // No goals in Bitrix24 yet: monthly goal = 10% above the trailing 12-month monthly average (÷0.35 compensates goalFor's factor).
+    return { id, name, team: u?.department ?? "Sem equipe", photo: u?.photo || avatar(name), goal: Math.round(((wonYear / 12) * 1.1) / 0.35) };
+  });
+  const uniq = (xs: string[]) => [...new Set(xs)].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  return { NOW: now, DEALS: deals, SELLERS: sellers, COMPANIES: uniq(deals.map((d) => d.company)), TEAMS: uniq(sellers.map((s) => s.team)), LOSS_REASONS: uniq(deals.filter((d) => d.lossReason).map((d) => d.lossReason!)) };
+}
+
+/** Swaps the module-level dataset every widget reads; pass null to go back to the demo data. */
+export function setDataset(raw: RawDataset | null) {
+  const d = raw ? toDataset(raw) : MOCK;
+  NOW = d.NOW; DEALS = d.DEALS; SELLERS = d.SELLERS; COMPANIES = d.COMPANIES; TEAMS = d.TEAMS; LOSS_REASONS = d.LOSS_REASONS;
 }
