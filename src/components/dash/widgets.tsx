@@ -3,7 +3,7 @@ import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { AtlasTrigger } from "./atlas";
 import { cn } from "@/lib/utils";
 import {
-  atRisk, brl, funnel, funnelPipeline, goalFor, kpis, lossReasons, pace, pct, previousKpis, ranking, sellerName, type Filters, type Stage,
+  ACTIVITY_LABELS, atRisk, brl, productivity, taskHealth, type ActivityType, funnel, funnelPipeline, goalFor, kpis, lossReasons, pace, pct, previousKpis, ranking, sellerName, type Filters, type Stage,
 } from "@/lib/crm-data";
 
 export type SetFilter = (patch: Partial<Filters>) => void;
@@ -283,12 +283,89 @@ export function PaceWidget({ f, big }: P) {
   );
 }
 
+const ACT_ORDER: ActivityType[] = ["call", "meeting", "email", "chat", "task"];
+const ACT_TONE: Record<ActivityType, string> = { call: "bg-primary", meeting: "bg-primary/70", email: "bg-primary/45", chat: "bg-primary/25", task: "bg-muted-foreground/30" };
+
+export function ActivityWidget({ f, set, big }: P) {
+  const { rows, by, total } = productivity(f);
+  const max = Math.max(...rows.map((r) => r.total), 1);
+  return (
+    <Card title="Produtividade da equipe" subtitle="Atividades registradas no CRM no período"
+      right={<span className="text-sm font-semibold tabular-nums">{total.toLocaleString("pt-BR")}</span>}>
+      <div className="mb-4 flex flex-wrap gap-x-4 gap-y-1.5">
+        {ACT_ORDER.map((k) => (
+          <span key={k} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className={cn("size-2 rounded-sm", ACT_TONE[k])} />{ACTIVITY_LABELS[k]} <span className="font-semibold tabular-nums text-foreground">{by[k]}</span>
+          </span>
+        ))}
+      </div>
+      <div className="-mx-2 max-h-[22rem] space-y-0.5 overflow-auto">
+        {rows.slice(0, big ? 8 : 20).map((r) => {
+          const active = f.sellerId === r.id;
+          return (
+            <button key={r.id} onClick={() => set({ sellerId: active ? undefined : r.id })}
+              className={cn("grid w-full grid-cols-[minmax(0,10rem)_1fr_auto] items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted/60", active && "bg-primary-soft", f.sellerId && !active && "opacity-40")}>
+              <span className="flex min-w-0 items-center gap-2"><img src={r.photo} alt="" className="size-6 shrink-0 rounded-full object-cover" /><span className={cn("truncate text-sm font-medium", big && "text-base")}>{r.name}</span></span>
+              <span className="flex h-2 overflow-hidden rounded-full bg-muted" style={{ width: `${(r.total / max) * 100}%` }}>
+                {ACT_ORDER.map((k) => r.by[k] ? <span key={k} className={ACT_TONE[k]} style={{ width: `${(r.by[k] / r.total) * 100}%` }} /> : null)}
+              </span>
+              <span className="text-right text-xs tabular-nums"><span className="font-semibold">{r.total}</span>
+                <span className="ml-2 text-muted-foreground">{r.wins ? `${r.perWin.toFixed(1)}/venda` : "sem vendas"}</span></span>
+            </button>
+          );
+        })}
+        {!rows.length && <p className="py-10 text-center text-sm text-muted-foreground">Nenhuma atividade no período</p>}
+      </div>
+    </Card>
+  );
+}
+
+export function TasksWidget({ f, set, big }: P) {
+  const h = taskHealth(f);
+  const stat = (label: string, v: string, tone?: string) => (
+    <div className="rounded-lg border border-border px-3 py-2.5"><div className="text-xs text-muted-foreground">{label}</div><div className={cn("mt-0.5 text-lg font-semibold tabular-nums", big && "text-2xl", tone)}>{v}</div></div>
+  );
+  return (
+    <Card title="Tarefas e follow-ups" subtitle="Pendências abertas e atrasadas agora">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {stat("Tarefas abertas", String(h.open))}
+        {stat("Tarefas atrasadas", String(h.overdue), h.overdue ? "text-danger" : undefined)}
+        {stat("Atividades vencidas", String(h.lateActs), h.lateActs ? "text-warning" : undefined)}
+        {stat("Concluídas no prazo", h.closed ? pct(h.onTimeRate) : "—")}
+      </div>
+      <div className="-mx-5 mt-4 max-h-[18rem] overflow-auto border-t border-border">
+        <table className={cn("w-full text-sm", big && "text-base")}>
+          <thead className="sticky top-0 bg-card"><tr className="border-b border-border text-left text-xs text-muted-foreground">
+            <th className="px-5 py-2.5 font-medium">Responsável</th><th className="py-2.5 text-right font-medium">Abertas</th><th className="py-2.5 text-right font-medium">Atrasadas</th><th className="px-5 py-2.5 text-right font-medium">Ativ. vencidas</th>
+          </tr></thead>
+          <tbody className="divide-y divide-border">
+            {h.rows.slice(0, big ? 6 : 15).map((r) => {
+              const active = f.sellerId === r.id;
+              return (
+                <tr key={r.id} onClick={() => set({ sellerId: active ? undefined : r.id })} className={cn("cursor-pointer hover:bg-muted/60", active && "bg-primary-soft", f.sellerId && !active && "opacity-40")}>
+                  <td className="px-5 py-2.5"><span className="flex items-center gap-2"><img src={r.photo} alt="" className="size-6 rounded-full object-cover" /><span className="font-medium">{r.name}</span></span></td>
+                  <td className="py-2.5 text-right tabular-nums">{r.open}</td>
+                  <td className="py-2.5 text-right tabular-nums">{r.overdue ? <span className="rounded-md bg-danger-soft px-1.5 py-0.5 font-medium text-danger">{r.overdue}</span> : 0}</td>
+                  <td className="px-5 py-2.5 text-right tabular-nums">{r.lateActs ? <span className="rounded-md bg-warning-soft px-1.5 py-0.5 font-medium text-warning">{r.lateActs}</span> : 0}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        {!h.rows.length && <p className="py-10 text-center text-sm text-muted-foreground">Nenhuma pendência</p>}
+      </div>
+    </Card>
+  );
+}
+
 export const WIDGETS = {
   funnel: { title: "Funil", C: FunnelWidget, span: "lg:col-span-3" },
   ranking: { title: "Ranking", C: RankingWidget, span: "" },
   pace: { title: "Ritmo", C: PaceWidget, span: "lg:col-span-2" },
   loss: { title: "Perdas", C: LossWidget, span: "" },
   risk: { title: "Risco", C: RiskWidget, span: "lg:col-span-3" },
+  activity: { title: "Produtividade", C: ActivityWidget, span: "lg:col-span-2" },
+  tasks: { title: "Tarefas", C: TasksWidget, span: "" },
 } as const;
 export type WidgetId = keyof typeof WIDGETS;
-export const DEFAULT_ORDER: WidgetId[] = ["funnel", "ranking", "pace", "loss", "risk"];
+export const DEFAULT_ORDER: WidgetId[] = ["funnel", "ranking", "pace", "loss", "activity", "tasks", "risk"];

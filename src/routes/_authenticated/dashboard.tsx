@@ -165,8 +165,9 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
     let live = true;
     void loadLayout({ data: { companyId } }).then((l) => {
       if (!live) return;
-      const valid = l?.order && l.order.length === DEFAULT_ORDER.length && l.order.every((x) => DEFAULT_ORDER.includes(x as WidgetId));
-      setOrder(valid ? (l!.order as WidgetId[]) : DEFAULT_ORDER);
+      // Keep the saved order and append cards added after it was saved.
+      const kept = (l?.order ?? []).filter((x): x is WidgetId => DEFAULT_ORDER.includes(x as WidgetId));
+      setOrder(kept.length ? [...new Set([...kept, ...DEFAULT_ORDER])] : DEFAULT_ORDER);
       setSizes((l?.sizes ?? {}) as Partial<Record<WidgetId, Size>>);
     }).catch(() => { /* keep defaults */ });
     return () => { live = false; };
