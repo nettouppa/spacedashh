@@ -26,15 +26,6 @@ import { AppShell, Segmented } from "@/components/dash/app-shell";
 import type { AiAction } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  // Bitrix24 returns OAuth to the registered Application URL; forward the short-lived code to the callback immediately.
-  beforeLoad: () => {
-    if (typeof window === "undefined") return;
-    const p = new URLSearchParams(window.location.search);
-    if (p.get("code") && p.get("state")) {
-      window.location.replace(`/api/public/bitrix/callback?${p.toString()}`);
-      throw new Promise(() => {});
-    }
-  },
   validateSearch: (s: Record<string, unknown>): { view?: string; seller?: string } => ({
     ...(typeof s['view'] === "string" ? { view: s['view'].slice(0, 40) } : {}),
     ...(typeof s['seller'] === "string" ? { seller: s['seller'].slice(0, 64) } : {}),

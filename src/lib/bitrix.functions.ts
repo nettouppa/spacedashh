@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { canManageBitrix, normalizePortalDomain, BITRIX_SETUP_URLS } from "@/lib/bitrix-policy";
+import { canManageBitrix, parseWebhookUrl, canBindPortal } from "@/lib/bitrix-policy";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -42,20 +42,25 @@ export const getBitrixSetup = createServerFn({ method: "GET" })
     return { companies: withStatus, isAdmin, name: profile.data?.display_name || "Usuário" };
   });
 
-export const startBitrixConnect = createServerFn({ method: "POST" })
+export const connectBitrixWebhook = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ companyId: z.string().uuid(), domain: z.string().min(3).max(300) }).parse(d))
+  .inputValidator((d) => z.object({ companyId: z.string().uuid(), url: z.string().min(10).max(500) }).parse(d))
   .handler(async ({ data, context }) => {
     await assertManager(context.supabase, context.userId, data.companyId);
-    const domain = normalizePortalDomain(data.domain);
-    if (!domain) throw new Error("Endereço do portal inválido. Ex.: suaempresa.bitrix24.com.br");
-    const { clientId } = await import("@/lib/bitrix.server");
-    const nonce = crypto.randomUUID() + crypto.randomUUID().replace(/-/g, "");
+    const hook = parseWebhookUrl(data.url);
+    if (!hook) throw new Error("URL do webhook inválida. Ex.: https://suaempresa.bitrix24.com.br/rest/1/abc123/");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const ins = await supabaseAdmin.from("bitrix_oauth_states").insert({ nonce, company_id: data.companyId, user_id: context.userId, domain });
-    if (ins.error) throw new Error("Não foi possível iniciar a conexão.");
-    const qs = new URLSearchParams({ client_id: clientId(), state: nonce, redirect_uri: BITRIX_SETUP_URLS.callback });
-    return { url: `https://${domain}/oauth/authorize/?${qs}` };
+    const taken = await supabaseAdmin.from("bitrix_connections").select("company_id").eq("member_id", hook.domain).maybeSingle();
+    if (!canBindPortal(taken.data?.company_id ?? null, data.companyId)) throw new Error("Este portal já está vinculado a outra empresa no Spacedash.");
+    const { testWebhook } = await import("@/lib/bitrix.server");
+    const who = await testWebhook(hook.url);
+    const up = await supabaseAdmin.from("bitrix_connections").upsert({
+      company_id: data.companyId, domain: hook.domain, member_id: hook.domain, webhook_url: hook.url,
+      client_endpoint: null, access_token: null, refresh_token: null, expires_at: null,
+      connected_by: context.userId, connected_at: new Date().toISOString(), last_sync_status: null, last_sync_error: null,
+    }, { onConflict: "company_id" });
+    if (up.error) throw new Error("Não foi possível salvar a conexão.");
+    return { domain: hook.domain, userName: who.userName, isAdmin: who.isAdmin };
   });
 
 export const syncBitrixNow = createServerFn({ method: "POST" })

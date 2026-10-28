@@ -2,11 +2,6 @@ export function canManageBitrix(isAdmin: boolean, role: "gestor" | "colaborador"
   return isAdmin || role === "gestor";
 }
 
-export const BITRIX_SETUP_URLS = {
-  installation: "https://spacedashh.lovable.app/api/public/bitrix/install",
-  callback: "https://spacedashh.lovable.app/api/public/bitrix/callback",
-};
-
 /** Accepts "empresa.bitrix24.com.br", "https://empresa.bitrix24.com/..." etc. Returns a bare hostname or null. */
 export function normalizePortalDomain(input: string): string | null {
   let s = input.trim().toLowerCase();
@@ -17,10 +12,15 @@ export function normalizePortalDomain(input: string): string | null {
   return s;
 }
 
-/** OAuth states are single-use and expire after 15 minutes. */
-export const STATE_TTL_MS = 15 * 60 * 1000;
-export function isStateValid(createdAt: Date, usedAt: Date | null, now: Date): boolean {
-  return usedAt === null && now.getTime() - createdAt.getTime() <= STATE_TTL_MS;
+/** Parses a Bitrix24 inbound webhook: https://<portal>/rest/<userId>/<key>/ (trailing method part is ignored). */
+export function parseWebhookUrl(input: string): { url: string; domain: string; userId: string } | null {
+  let u: URL;
+  try { u = new URL(input.trim()); } catch { return null; }
+  if (u.protocol !== "https:") return null;
+  const domain = normalizePortalDomain(u.hostname);
+  const m = u.pathname.match(/^\/rest\/(\d+)\/([A-Za-z0-9]{6,64})(?:\/|$)/);
+  if (!domain || !m) return null;
+  return { url: `https://${domain}/rest/${m[1]}/${m[2]}/`, domain, userId: m[1]! };
 }
 
 /** A portal may be bound to only one Spacedash company. */
