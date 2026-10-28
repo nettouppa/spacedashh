@@ -151,7 +151,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
   const goalsQ = useQuery({ queryKey: ["goals", companyId], queryFn: () => loadGoals({ data: { companyId } }) });
   const [goalsOpen, setGoalsOpen] = useState(false);
   // Widgets read the module-level dataset; swap it before children render.
-  useMemo(() => setDataset(real), [real]);
+  useMemo(() => setDataset(dataQ.isSuccess ? real : "empty"), [real, dataQ.isSuccess]);
   useMemo(() => setGoals(goalsQ.data ?? []), [goalsQ.data]);
   const ME = membership.sellerRef && SELLERS.some((s) => s.id === membership.sellerRef) ? membership.sellerRef : (SELLERS[0]?.id ?? "s1");
   const [f, setF] = useState<Filters>(() => (search.seller ? { period: "month", sellerId: search.seller } : { period: "month" }));

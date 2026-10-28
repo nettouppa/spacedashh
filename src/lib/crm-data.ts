@@ -368,8 +368,11 @@ export function toDataset(raw: RawDataset, now = new Date()) {
   return { ACTIVITIES: activities, TASKS: tasks, PIPELINES: pipeByName, NOW: now, DEALS: deals, SELLERS: sellers, COMPANIES: uniq(deals.map((d) => d.company)), TEAMS: uniq(sellers.map((s) => s.team)), LOSS_REASONS: uniq(deals.filter((d) => d.lossReason).map((d) => d.lossReason!)) };
 }
 
-/** Swaps the module-level dataset every widget reads; pass null to go back to the demo data. */
-export function setDataset(raw: RawDataset | null) {
+const EMPTY_RAW: RawDataset = { domain: "", lastSyncAt: null, deals: [], users: [], stages: [], activities: [], tasks: [] };
+
+/** Swaps the module-level dataset every widget reads. null = demo data (company without Bitrix24); "empty" = loading/error, never show demo numbers. */
+export function setDataset(input: RawDataset | null | "empty") {
+  const raw = input === "empty" ? EMPTY_RAW : input;
   const d = raw ? toDataset(raw) : MOCK;
   PIPELINES = d.PIPELINES; NOW = d.NOW; DEALS = d.DEALS; SELLERS = d.SELLERS; COMPANIES = d.COMPANIES; TEAMS = d.TEAMS; LOSS_REASONS = d.LOSS_REASONS; ACTIVITIES = d.ACTIVITIES; TASKS = d.TASKS;
   CONVERSATIONS = raw ? toConversations(raw.activities ?? [], d.SELLERS, d.NOW) : MOCK_CONVERSATIONS;
