@@ -3,7 +3,7 @@ import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { AtlasTrigger } from "./atlas";
 import { cn } from "@/lib/utils";
 import {
-  ACTIVITY_LABELS, paceWeekly, atRisk, brl, duration, evolution, productivity, support, taskHealth, type ActivityType, funnel, funnelPipeline, goalFor, kpis, lossReasons, pace, pct, previousKpis, ranking, sellerName, type Filters, type Stage,
+  ACTIVITY_LABELS, paceWeekly, atRisk, brl, duration, evolution, productivity, support, taskHealth, type ActivityType, funnel, funnelPipeline, goalFor, kpis, lossReasons, pace, pct, previousKpis, ranking, hygiene, sources, stageAging, STALL_DAYS, sellerName, type Filters, type Stage,
 } from "@/lib/crm-data";
 
 export type SetFilter = (patch: Partial<Filters>) => void;
@@ -59,10 +59,11 @@ export function KpiStrip({ f, big }: P) {
       </div>) },
     { label: "Ticket médio", value: brl(k.ticket), delta: <Delta cur={k.ticket} prev={p.ticket} />, foot: <Spark data={trend} className="mt-3" /> },
     { label: "Negócios abertos", value: String(k.openCount), delta: <span className="text-xs text-muted-foreground">{brl(k.openValue)}</span>, foot: <Spark data={trend.map((_, i) => k.openCount * (0.8 + ((i * 37) % 9) / 30))} className="mt-3" /> },
+    { label: "Ciclo médio de venda", value: `${Math.round(k.cycleDays)} dias`, delta: <Delta cur={k.cycleDays} prev={p.cycleDays} invert />, foot: <p className="mt-3 text-xs text-muted-foreground">da criação ao ganho · {k.wonCount} ganhos</p> },
     { label: "Taxa de conversão", value: pct(k.conversion), delta: <Delta cur={k.conversion} prev={p.conversion} />, foot: <Spark data={trend.map((v) => v * (0.6 + k.conversion))} className="mt-3" /> },
   ];
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       {items.map((it) => (
         <section key={it.label} className="rounded-xl border border-border bg-card p-5 shadow-soft">
           <div className="flex items-center justify-between gap-2"><span className={cn("text-[13px] font-medium text-muted-foreground", big && "text-lg")}>{it.label}</span><div className="flex items-center gap-1">{it.delta}{!big && <AtlasTrigger topic={it.label} />}</div></div>
@@ -202,6 +203,83 @@ export function RankingWidget({ f, set, big }: P) {
           );
         })}
       </ul>
+      <FunnelAging f={f} big={big} />
+    </Card>
+  );
+}
+
+function FunnelAging({ f, big }: { f: Filters; big?: boolean | undefined }) {
+  const rows = stageAging(f).filter((r) => r.open);
+  if (!rows.length) return null;
+  const max = Math.max(...rows.map((r) => r.avgDays), 1);
+  return (
+    <div className="mt-6 border-t border-border pt-4">
+      <div className="mb-2 flex items-baseline justify-between"><h4 className="text-xs font-semibold">Tempo parado por etapa</h4><span className="text-xs text-muted-foreground">parado = mais de {STALL_DAYS} dias na etapa</span></div>
+      <div className="space-y-1.5">
+        {rows.map((r) => (
+          <div key={r.stage} className={cn("grid grid-cols-[minmax(0,10rem)_1fr_auto_auto] items-center gap-3 text-xs", big && "text-sm")}>
+            <span className="truncate font-medium">{r.stage}</span>
+            <div className="h-1.5 rounded-full bg-muted"><div className={cn("h-1.5 rounded-full", r.avgDays > STALL_DAYS ? "bg-warning" : "bg-primary")} style={{ width: `${(r.avgDays / max) * 100}%` }} /></div>
+            <span className="tabular-nums text-muted-foreground">{Math.round(r.avgDays)}d média</span>
+            <span className={cn("rounded-md px-1.5 py-0.5 tabular-nums", r.stalled ? "bg-danger-soft text-danger" : "bg-muted text-muted-foreground")}>{r.stalled} de {r.open} parados</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function HygieneWidget({ f, big }: P) {
+  const h = hygiene(f);
+  const tone = h.score >= 80 ? "text-success" : h.score >= 60 ? "text-warning" : "text-danger";
+  return (
+    <Card title="Saúde do CRM" subtitle="Disciplina de preenchimento no Bitrix24 · negócios abertos"
+      right={<span className="rounded-md bg-danger-soft px-2 py-0.5 text-xs font-medium text-danger">{h.noNext.length} sem próximo passo</span>}>
+      <div className="grid gap-5 md:grid-cols-[12rem_1fr]">
+        <div>
+          <div className="text-xs font-medium text-muted-foreground">Nota de saúde</div>
+          <div className={cn("mt-1 font-semibold tabular-nums", tone, big ? "text-6xl" : "text-4xl")}>{h.score}<span className="text-base text-muted-foreground">/100</span></div>
+          <div className="mt-4 space-y-2.5">
+            {h.parts.map((p) => (
+              <div key={p.label}>
+                <div className="flex justify-between text-xs"><span className="text-muted-foreground">{p.label}</span><span className="tabular-nums font-medium">{pct(p.value)}</span></div>
+                <div className="mt-1 h-1.5 rounded-full bg-muted"><div className="h-1.5 rounded-full bg-primary" style={{ width: `${p.value * 100}%` }} /></div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="min-w-0">
+          <div className="mb-2 flex items-baseline justify-between"><h4 className="text-xs font-semibold">Negócios sem próxima atividade</h4><span className="text-xs text-muted-foreground tabular-nums">{brl(h.noNextValue)} parados</span></div>
+          <div className="max-h-[18rem] divide-y divide-border overflow-auto rounded-lg border border-border">
+            {h.noNext.slice(0, big ? 6 : 15).map((d) => (
+              <div key={d.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                <div className="min-w-0"><div className="truncate font-medium">{d.title}</div><div className="truncate text-xs text-muted-foreground">{sellerName(d.sellerId)} · {d.stage} · {d.lastActivityDays}d sem mexer</div></div>
+                <span className="shrink-0 tabular-nums font-medium">{brl(d.value)}</span>
+              </div>
+            ))}
+            {!h.noNext.length && <p className="p-4 text-center text-xs text-muted-foreground">Todos os negócios abertos têm próximo passo agendado.</p>}
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+export function SourcesWidget({ f, big }: P) {
+  const rows = sources(f);
+  const max = Math.max(...rows.map((r) => r.revenue), 1);
+  return (
+    <Card title="Origem dos negócios" subtitle="Receita ganha e conversão por canal de origem do Bitrix24">
+      <div className="space-y-3">
+        {rows.slice(0, big ? 6 : 10).map((r) => (
+          <div key={r.source} className={cn("text-sm", big && "text-base")}>
+            <div className="flex items-baseline justify-between gap-3"><span className="truncate font-medium">{r.source}</span><span className="shrink-0 tabular-nums font-semibold">{brl(r.revenue)}</span></div>
+            <div className="mt-1 h-1.5 rounded-full bg-muted"><div className="h-1.5 rounded-full bg-primary" style={{ width: `${(r.revenue / max) * 100}%` }} /></div>
+            <div className="mt-1 flex justify-between text-xs text-muted-foreground tabular-nums"><span>{r.count} negócios · {r.wonCount} ganhos</span><span>{pct(r.winRate)} de conversão</span></div>
+          </div>
+        ))}
+        {!rows.length && <p className="text-center text-xs text-muted-foreground">Sem negócios no período.</p>}
+      </div>
     </Card>
   );
 }
@@ -467,6 +545,8 @@ export const WIDGETS = {
   activity: { title: "Produtividade", C: ActivityWidget, span: "lg:col-span-2" },
   tasks: { title: "Tarefas", C: TasksWidget, span: "" },
   support: { title: "Atendimento", C: SupportWidget, span: "lg:col-span-3" },
+  hygiene: { title: "Saúde do CRM", C: HygieneWidget, span: "lg:col-span-3" },
+  sources: { title: "Origem", C: SourcesWidget, span: "" },
 } as const;
 export type WidgetId = keyof typeof WIDGETS;
-export const DEFAULT_ORDER: WidgetId[] = ["funnel", "evolution", "ranking", "pace", "loss", "activity", "tasks", "support", "risk"];
+export const DEFAULT_ORDER: WidgetId[] = ["funnel", "evolution", "ranking", "pace", "loss", "activity", "tasks", "support", "hygiene", "sources", "risk"];
