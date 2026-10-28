@@ -26,6 +26,10 @@ export type Deal = {
   id: string; title: string; company: string; sellerId: string; team: string;
   stage: Stage; status: "open" | "won" | "lost"; value: number;
   createdAt: Date; closedAt?: Date | undefined; lossReason?: string | undefined; lastActivityDays: number;
+  /** Origin (Bitrix24 SOURCE_ID name). */ source?: string | undefined;
+  /** When the deal entered its current stage (MOVED_TIME). */ stageSince?: Date | undefined;
+  /** Open deal has a pending activity scheduled from today on. */ hasNext?: boolean | undefined;
+  /** Linked to a company or contact. */ linked?: boolean | undefined;
 };
 
 function rng(seed: number) {
@@ -54,6 +58,14 @@ export let DEALS: Deal[] = (() => {
       lastActivityDays: status === "open" ? Math.floor(r() * 30) : 0,
     });
   }
+  const r2 = rng(314); const SOURCES = ["Site", "Indicação", "WhatsApp", "Google Ads", "Meta Ads", "Outbound"];
+  out.forEach((d) => {
+    d.source = SOURCES[Math.floor(r2() * r2() * SOURCES.length)];
+    d.stageSince = new Date(NOW.getTime() - Math.floor(r2() * (d.status === "open" ? 45 : 5)) * 864e5);
+    if (d.stageSince < d.createdAt) d.stageSince = d.createdAt;
+    d.hasNext = d.status === "open" ? r2() < 0.62 : false;
+    d.linked = r2() < 0.86;
+  });
   return out;
 })();
 
@@ -188,8 +200,57 @@ export function kpis(f: Filters) {
     ticket: won.length ? revenue / won.length : 0,
     openCount: open.length, openValue: open.reduce((a, d) => a + d.value, 0),
     conversion: won.length + lost.length ? won.length / (won.length + lost.length) : 0,
-    wonCount: won.length,
+    wonCount: won.length, cycleDays: cycleDays(won),
   };
+}
+
+/** Average days from creation to win. */
+export function cycleDays(won: Deal[]) {
+  const xs = won.filter((d) => d.closedAt).map((d) => Math.max(0, (d.closedAt!.getTime() - d.createdAt.getTime()) / DAY));
+  return xs.length ? xs.reduce((a, x) => a + x, 0) / xs.length : 0;
+}
+
+/** CRM hygiene: open deals without a scheduled next step, without value or without client, plus a 0–100 score. */
+export function hygiene(f: Filters) {
+  const open = filterDeals(f).filter((d) => d.status === "open");
+  const noNext = open.filter((d) => !d.hasNext).sort((a, b) => b.value - a.value);
+  const noValue = open.filter((d) => !d.value).length;
+  const noClient = open.filter((d) => d.linked === false).length;
+  const th = taskHealth(f);
+  const share = (n: number) => (open.length ? 1 - n / open.length : 1);
+  const parts = [
+    { label: "Com próxima atividade", value: share(noNext.length), weight: 0.4 },
+    { label: "Com valor preenchido", value: share(noValue), weight: 0.2 },
+    { label: "Com cliente vinculado", value: share(noClient), weight: 0.2 },
+    { label: "Tarefas no prazo", value: th.onTimeRate, weight: 0.2 },
+  ];
+  const score = Math.round(parts.reduce((a, p) => a + p.value * p.weight, 0) * 100);
+  return { score, parts, open: open.length, noNext, noNextValue: noNext.reduce((a, d) => a + d.value, 0) };
+}
+
+/** Deals by origin: won revenue, count and win rate per source. */
+export function sources(f: Filters) {
+  const deals = filterDeals(f);
+  const m = new Map<string, Deal[]>();
+  deals.forEach((d) => { const k = d.source || "Sem origem"; m.set(k, [...(m.get(k) ?? []), d]); });
+  return [...m.entries()].map(([source, ds]) => {
+    const won = ds.filter((d) => d.status === "won"), lost = ds.filter((d) => d.status === "lost").length;
+    return { source, count: ds.length, wonCount: won.length, revenue: won.reduce((a, d) => a + d.value, 0), winRate: won.length + lost ? won.length / (won.length + lost) : 0 };
+  }).sort((a, b) => b.revenue - a.revenue || b.count - a.count);
+}
+
+/** Days stalled limit per stage before a deal counts as stuck. */
+export const STALL_DAYS = 15;
+/** Average days open deals have been sitting in each funnel stage, and how many passed STALL_DAYS. */
+export function stageAging(f: Filters) {
+  const pipe = funnelPipeline(f);
+  const steps = pipe ? PIPELINES[pipe]! : STAGES;
+  const open = filterDeals(f, ["stage"]).filter((d) => d.status === "open" && (!pipe || d.company === pipe));
+  return steps.map((stage) => {
+    const ds = open.filter((d) => d.stage === stage);
+    const days = ds.map((d) => Math.max(0, (NOW.getTime() - (d.stageSince ?? d.createdAt).getTime()) / DAY));
+    return { stage, open: ds.length, avgDays: days.length ? days.reduce((a, x) => a + x, 0) / days.length : 0, stalled: days.filter((x) => x > STALL_DAYS).length };
+  });
 }
 
 /** Pipeline the funnel shows: the selected one, else the pipeline with the most deals in the current filters. */
@@ -295,16 +356,16 @@ export function previousKpis(f: Filters) {
   const lost = deals.filter((d) => d.status === "lost");
   const revenue = won.reduce((a, d) => a + d.value, 0);
   const openCount = DEALS.filter((d) => d.status === "open" && d.createdAt <= end && (!f.sellerId || d.sellerId === f.sellerId) && (!f.team || d.team === f.team)).length;
-  return { revenue, ticket: won.length ? revenue / won.length : 0, conversion: won.length + lost.length ? won.length / (won.length + lost.length) : 0, openCount };
+  return { revenue, cycleDays: cycleDays(won), ticket: won.length ? revenue / won.length : 0, conversion: won.length + lost.length ? won.length / (won.length + lost.length) : 0, openCount };
 }
 
 // ---------- Real Bitrix24 dataset ----------
 export type RawDataset = {
   domain: string; lastSyncAt: string | null; syncStatus?: string | null;
-  deals: { deal_id: string; title: string | null; stage_id: string | null; category_id: string | null; opportunity: number; assigned_by_id: string | null; closed: boolean; date_create: string | null; close_date: string | null; date_modify: string | null }[];
+  deals: { deal_id: string; title: string | null; stage_id: string | null; category_id: string | null; opportunity: number; assigned_by_id: string | null; closed: boolean; date_create: string | null; close_date: string | null; date_modify: string | null; source_name?: string | null; moved_time?: string | null; company_ref?: string | null; contact_ref?: string | null }[];
   users: { user_id: string; name: string; photo: string | null; department: string | null }[];
   stages: { stage_id: string; category_id: string | null; category_name: string | null; name: string; sort: number; semantics: string | null }[];
-  activities?: { type: string; responsible_id: string | null; completed: boolean; created_at: string | null; deadline: string | null; provider?: string | null; channel?: string | null; start_time?: string | null; end_time?: string | null }[];
+  activities?: { type: string; responsible_id: string | null; owner_type_id?: string | null; owner_id?: string | null; completed: boolean; created_at: string | null; deadline: string | null; provider?: string | null; channel?: string | null; start_time?: string | null; end_time?: string | null }[];
   tasks?: { responsible_id: string | null; status: string | null; created_at: string | null; deadline: string | null; closed_at: string | null }[];
 };
 
@@ -324,6 +385,9 @@ export function toDataset(raw: RawDataset, now = new Date()) {
     const ws = raw.stages.filter((s) => (s.category_id ?? "0") === cat && (s.semantics === "S" || s.semantics === "success" || s.stage_id.endsWith(":WON") || s.stage_id === "WON"));
     pipelines.set(cat, { open: (openByCat.get(cat) ?? []).map((id) => byStage.get(id)!.name), won: ws[0]?.name ?? "Ganho" });
   });
+  // Deals (OWNER_TYPE_ID 2) with a pending activity due from today on.
+  const today = new Date(now.getTime() - (now.getTime() % DAY));
+  const scheduled = new Set((raw.activities ?? []).filter((a) => a.owner_type_id === "2" && a.owner_id && !a.completed && (!a.deadline || new Date(a.deadline) >= today)).map((a) => a.owner_id!));
   const deals: Deal[] = raw.deals.map((d) => {
     const st = d.stage_id ? byStage.get(d.stage_id) : undefined;
     const code = d.stage_id?.split(":").pop() ?? "";
@@ -342,6 +406,9 @@ export function toDataset(raw: RawDataset, now = new Date()) {
       value: Number(d.opportunity) || 0, createdAt, closedAt,
       lossReason: lost ? (st?.name ?? "Não informado") : undefined,
       lastActivityDays: Math.max(0, Math.floor((now.getTime() - new Date(d.date_modify ?? d.date_create ?? now).getTime()) / 864e5)),
+      source: d.source_name ?? undefined, stageSince: d.moved_time ? new Date(d.moved_time) : createdAt,
+      hasNext: !won && !lost && scheduled.has(d.deal_id),
+      linked: d.company_ref || d.contact_ref ? true : d.source_name === undefined && d.moved_time === undefined ? undefined : false,
     };
   });
   const sellerIds = [...new Set(deals.map((d) => d.sellerId))];

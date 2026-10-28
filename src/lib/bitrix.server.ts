@@ -38,7 +38,7 @@ export async function testWebhook(webhookUrl: string) {
   return { userName: [result?.NAME, result?.LAST_NAME].filter(Boolean).join(" ") || "Usuário", isAdmin: !!result?.ADMIN };
 }
 
-type Deal = { ID: string; TITLE?: string; STAGE_ID?: string; CATEGORY_ID?: string; OPPORTUNITY?: string; CURRENCY_ID?: string; ASSIGNED_BY_ID?: string; CLOSED?: string; DATE_CREATE?: string; CLOSEDATE?: string; DATE_MODIFY?: string };
+type Deal = { ID: string; TITLE?: string; STAGE_ID?: string; CATEGORY_ID?: string; OPPORTUNITY?: string; CURRENCY_ID?: string; ASSIGNED_BY_ID?: string; CLOSED?: string; DATE_CREATE?: string; CLOSEDATE?: string; DATE_MODIFY?: string; SOURCE_ID?: string; MOVED_TIME?: string; COMPANY_ID?: string; CONTACT_ID?: string };
 
 type BxUser = { ID: string; NAME?: string; LAST_NAME?: string; PERSONAL_PHOTO?: string; UF_DEPARTMENT?: number[]; ACTIVE?: boolean };
 type BxStatus = { STATUS_ID: string; NAME: string; SORT: string | number; ENTITY_ID: string; EXTRA?: { SEMANTICS?: string }; SEMANTICS?: string };
@@ -155,24 +155,40 @@ export async function syncDeals(companyId: string) {
   await db.from("bitrix_connections").update({ last_sync_status: "running", last_sync_error: null }).eq("company_id", companyId);
   try {
     const conn: Conn = { company_id: row.company_id, webhook_url: row.webhook_url };
-    const full = !row.last_full_sync_at;
+    // Deals imported before origin/stage-time fields existed need one full re-import.
+    let fullDone = row.last_full_sync_at;
+    if (fullDone && !(await db.from("bitrix_deals").select("deal_id").eq("company_id", companyId).not("moved_time", "is", null).limit(1)).data?.length) {
+      fullDone = null; // restart the resumable full import once
+      await db.from("bitrix_connections").update({ last_full_sync_at: null, sync_cursor: 0 }).eq("company_id", companyId);
+      row.sync_cursor = 0;
+    }
+    const full = !fullDone;
     const cursor = full ? row.sync_cursor ?? 0 : 0;
     if (cursor === 0) { await syncMeta(db, conn, companyId); await syncWork(db, conn, companyId); }
     const since = !full && row.last_sync_at ? new Date(new Date(row.last_sync_at).getTime() - 3600_000).toISOString() : null;
     const startedAt = new Date().toISOString();
+    const sources = new Map<string, string>();
+    try {
+      const { result } = await call<BxStatus[]>(conn, "crm.status.list", { filter: { ENTITY_ID: "SOURCE" } });
+      (result ?? []).forEach((x) => sources.set(x.STATUS_ID, x.NAME));
+    } catch { /* optional */ }
     let start = cursor, pages = 0, total = 0;
     do {
       const { result, next } = await call<Deal[]>(conn, "crm.deal.list", {
         order: { ID: "ASC" },
         ...(since ? { filter: { ">DATE_MODIFY": since } } : {}),
-        select: ["ID", "TITLE", "STAGE_ID", "CATEGORY_ID", "OPPORTUNITY", "CURRENCY_ID", "ASSIGNED_BY_ID", "CLOSED", "DATE_CREATE", "CLOSEDATE", "DATE_MODIFY"],
+        select: ["ID", "TITLE", "STAGE_ID", "CATEGORY_ID", "OPPORTUNITY", "CURRENCY_ID", "ASSIGNED_BY_ID", "CLOSED", "DATE_CREATE", "CLOSEDATE", "DATE_MODIFY", "SOURCE_ID", "MOVED_TIME", "COMPANY_ID", "CONTACT_ID"],
         start,
       });
       const rows = (result ?? []).map((d) => ({
         company_id: companyId, deal_id: String(d.ID), title: d.TITLE ?? null, stage_id: d.STAGE_ID ?? null, category_id: d.CATEGORY_ID ?? null,
         opportunity: Number(d.OPPORTUNITY ?? 0) || 0, currency: d.CURRENCY_ID ?? null, assigned_by_id: d.ASSIGNED_BY_ID ?? null,
         closed: d.CLOSED === "Y", date_create: d.DATE_CREATE || null, close_date: d.CLOSEDATE ? d.CLOSEDATE.slice(0, 10) : null,
-        date_modify: d.DATE_MODIFY || null, synced_at: new Date().toISOString(),
+        date_modify: d.DATE_MODIFY || null,
+        source_id: d.SOURCE_ID || null, source_name: d.SOURCE_ID ? sources.get(d.SOURCE_ID) ?? d.SOURCE_ID : null,
+        moved_time: d.MOVED_TIME || d.DATE_CREATE || null,
+        company_ref: d.COMPANY_ID && d.COMPANY_ID !== "0" ? d.COMPANY_ID : null, contact_ref: d.CONTACT_ID && d.CONTACT_ID !== "0" ? d.CONTACT_ID : null,
+        synced_at: new Date().toISOString(),
       }));
       if (rows.length) {
         const up = await db.from("bitrix_deals").upsert(rows, { onConflict: "company_id,deal_id" });

@@ -78,6 +78,13 @@
       "when": 1793146992160,
       "tag": "0010_bitrix_sync_cursor",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793147818491,
+      "tag": "0011_deal_insights_fields",
+      "breakpoints": true
     }
   ]
 }
