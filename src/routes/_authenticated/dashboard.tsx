@@ -104,16 +104,19 @@ function SortableItem({ id, edit, children, size, onSize, onHide }: { id: string
   );
 }
 
-function Select<T extends string>({ value, onChange, options, label }: { value?: T | undefined; onChange: (v?: T) => void; options: { v: T; l: string }[]; label: string }) {
+function Select<T extends string>({ value, onChange, options, label, name }: { value?: T | undefined; onChange: (v?: T) => void; options: { v: T; l: string }[]; label: string; name: string }) {
+  const current = options.find((o) => o.v === value)?.l ?? "Todos";
   return (
-    <div className="relative">
-      <select aria-label={label} value={value ?? ""} onChange={(e) => onChange((e.target.value || undefined) as T | undefined)}
-        className={cn("h-8 max-w-[11rem] cursor-pointer appearance-none truncate rounded-md py-0 pl-2.5 pr-7 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary",
-          value ? "bg-primary-soft text-accent-foreground" : "bg-transparent text-foreground hover:bg-muted")}>
+    <div className={cn("group relative inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13px] transition-all focus-within:ring-2 focus-within:ring-primary/30",
+      value ? "border-primary/30 bg-primary-soft" : "border-border bg-card hover:border-foreground/20 hover:shadow-sm")}>
+      <span className="text-muted-foreground">{name}</span>
+      <span className={cn("max-w-[9rem] truncate font-medium", value ? "text-primary" : "text-foreground")}>{current}</span>
+      <svg aria-hidden viewBox="0 0 16 16" className="size-3 text-muted-foreground transition-transform group-hover:translate-y-px"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      <select aria-label={name} value={value ?? ""} onChange={(e) => onChange((e.target.value || undefined) as T | undefined)}
+        className="absolute inset-0 cursor-pointer appearance-none opacity-0">
         <option value="">{label}</option>
         {options.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
       </select>
-      <svg aria-hidden viewBox="0 0 16 16" className="pointer-events-none absolute right-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
     </div>
   );
 }
@@ -320,20 +323,18 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
             : <><span className="size-1.5 rounded-full bg-warning" />Dados de demonstração · Bitrix24 não conectado <Link to="/integrations" className="ml-1 text-primary hover:underline">Configurar integração</Link></>}</p>
         </div>
         <div data-tour="filters" className="flex flex-wrap items-center gap-2">
-          <div className="flex flex-wrap items-center gap-0.5 rounded-lg border border-border bg-card p-0.5 shadow-sm">
-            <DateRangePicker value={f.period} onChange={(p: Period) => set({ period: p })} />
-            <span className="mx-0.5 h-4 w-px bg-border" />
-            <Select label={real ? "Todos funis" : "Todas empresas"} value={f.company} onChange={(v) => set({ company: v })} options={COMPANIES.map((c) => ({ v: c, l: c }))} />
-            {profile === "manager" && <>
-              <Select label="Todas equipes" value={f.team} onChange={(v) => set({ team: v, sellerId: undefined })} options={TEAMS.map((t) => ({ v: t, l: t }))} />
-              <Select label="Todos vendedores" value={f.sellerId} onChange={(v) => set({ sellerId: v })} options={SELLERS.filter((s) => !f.team || s.team === f.team).map((s) => ({ v: s.id, l: s.name }))} />
-            </>}
-          </div>
+          <DateRangePicker value={f.period} onChange={(p: Period) => set({ period: p })} />
+          <Select name={real ? "Funil" : "Empresa"} label={real ? "Todos funis" : "Todas empresas"} value={f.company} onChange={(v) => set({ company: v })} options={COMPANIES.map((c) => ({ v: c, l: c }))} />
+          {profile === "manager" && <>
+            <Select name="Equipe" label="Todas equipes" value={f.team} onChange={(v) => set({ team: v, sellerId: undefined })} options={TEAMS.map((t) => ({ v: t, l: t }))} />
+            <Select name="Vendedor" label="Todos vendedores" value={f.sellerId} onChange={(v) => set({ sellerId: v })} options={SELLERS.filter((s) => !f.team || s.team === f.team).map((s) => ({ v: s.id, l: s.name }))} />
+          </>}
+          <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
           {edit ? <>
             <button onClick={() => { setOrder(PRESET_VIEWS(DEFAULT_ORDER).find((p) => p.id === active)?.order as WidgetId[] ?? DEFAULT_ORDER); setSizes(() => ({})); }} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted"><RotateCcw className="size-3.5" />Padrão</button>
             <button onClick={saveLayout} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[13px] font-medium text-primary-foreground"><Save className="size-3.5" />Salvar layout</button>
           </> : (
-            <button onClick={() => setEdit(true)} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted">
+            <button onClick={() => setEdit(true)} className="inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
               {saved ? <><Check className="size-3.5 text-success" />Salvo</> : <><LayoutGrid className="size-3.5" />Personalizar</>}
             </button>
           )}
