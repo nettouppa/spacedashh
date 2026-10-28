@@ -146,11 +146,11 @@ const MAX_PAGES = 40; // 2.000 negócios por execução, para caber no tempo do 
 
 export async function syncDeals(companyId: string) {
   const db = await admin();
-  const { data: row, error } = await db.from("bitrix_connections").select("company_id, domain, client_endpoint, access_token, refresh_token, expires_at").eq("company_id", companyId).maybeSingle();
-  if (error || !row) throw new Error("Empresa sem portal Bitrix24 conectado.");
+  const { data: row, error } = await db.from("bitrix_connections").select("company_id, webhook_url").eq("company_id", companyId).maybeSingle();
+  if (error || !row || !row.webhook_url) throw new Error("Empresa sem portal Bitrix24 conectado.");
   await db.from("bitrix_connections").update({ last_sync_status: "running", last_sync_error: null }).eq("company_id", companyId);
   try {
-    const conn = await freshToken(row);
+    const conn: Conn = { company_id: row.company_id, webhook_url: row.webhook_url };
     await syncMeta(db, conn, companyId);
     await syncWork(db, conn, companyId);
     let start = 0, pages = 0, total = 0;
