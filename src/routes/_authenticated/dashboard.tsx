@@ -106,11 +106,15 @@ function SortableItem({ id, edit, children, size, onSize, onHide }: { id: string
 
 function Select<T extends string>({ value, onChange, options, label }: { value?: T | undefined; onChange: (v?: T) => void; options: { v: T; l: string }[]; label: string }) {
   return (
-    <select aria-label={label} value={value ?? ""} onChange={(e) => onChange((e.target.value || undefined) as T | undefined)}
-      className="h-8 rounded-md border border-border bg-card px-2.5 text-[13px] font-medium outline-none focus:ring-2 focus:ring-primary">
-      <option value="">{label}</option>
-      {options.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
-    </select>
+    <div className="relative">
+      <select aria-label={label} value={value ?? ""} onChange={(e) => onChange((e.target.value || undefined) as T | undefined)}
+        className={cn("h-8 max-w-[11rem] cursor-pointer appearance-none truncate rounded-md py-0 pl-2.5 pr-7 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary",
+          value ? "bg-primary-soft text-accent-foreground" : "bg-transparent text-foreground hover:bg-muted")}>
+        <option value="">{label}</option>
+        {options.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
+      </select>
+      <svg aria-hidden viewBox="0 0 16 16" className="pointer-events-none absolute right-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+    </div>
   );
 }
 
@@ -316,12 +320,15 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
             : <><span className="size-1.5 rounded-full bg-warning" />Dados de demonstração · Bitrix24 não conectado <Link to="/integrations" className="ml-1 text-primary hover:underline">Configurar integração</Link></>}</p>
         </div>
         <div data-tour="filters" className="flex flex-wrap items-center gap-2">
-          <DateRangePicker value={f.period} onChange={(p: Period) => set({ period: p })} />
-          <Select label={real ? "Todos funis" : "Todas empresas"} value={f.company} onChange={(v) => set({ company: v })} options={COMPANIES.map((c) => ({ v: c, l: c }))} />
-          {profile === "manager" && <>
-            <Select label="Todas equipes" value={f.team} onChange={(v) => set({ team: v, sellerId: undefined })} options={TEAMS.map((t) => ({ v: t, l: t }))} />
-            <Select label="Todos vendedores" value={f.sellerId} onChange={(v) => set({ sellerId: v })} options={SELLERS.filter((s) => !f.team || s.team === f.team).map((s) => ({ v: s.id, l: s.name }))} />
-          </>}
+          <div className="flex flex-wrap items-center gap-0.5 rounded-lg border border-border bg-card p-0.5 shadow-sm">
+            <DateRangePicker value={f.period} onChange={(p: Period) => set({ period: p })} />
+            <span className="mx-0.5 h-4 w-px bg-border" />
+            <Select label={real ? "Todos funis" : "Todas empresas"} value={f.company} onChange={(v) => set({ company: v })} options={COMPANIES.map((c) => ({ v: c, l: c }))} />
+            {profile === "manager" && <>
+              <Select label="Todas equipes" value={f.team} onChange={(v) => set({ team: v, sellerId: undefined })} options={TEAMS.map((t) => ({ v: t, l: t }))} />
+              <Select label="Todos vendedores" value={f.sellerId} onChange={(v) => set({ sellerId: v })} options={SELLERS.filter((s) => !f.team || s.team === f.team).map((s) => ({ v: s.id, l: s.name }))} />
+            </>}
+          </div>
           {edit ? <>
             <button onClick={() => { setOrder(PRESET_VIEWS(DEFAULT_ORDER).find((p) => p.id === active)?.order as WidgetId[] ?? DEFAULT_ORDER); setSizes(() => ({})); }} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted"><RotateCcw className="size-3.5" />Padrão</button>
             <button onClick={saveLayout} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[13px] font-medium text-primary-foreground"><Save className="size-3.5" />Salvar layout</button>

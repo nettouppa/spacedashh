@@ -20,7 +20,7 @@ export function DateRangePicker({ value, onChange }: { value: Period; onChange: 
   return (
     <Popover open={open} onOpenChange={(o) => { setOpen(o); setDraft(undefined); }}>
       <PopoverTrigger asChild>
-        <button className="inline-flex h-8 items-center gap-2 whitespace-nowrap rounded-md border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted" aria-label="Período">
+        <button className="inline-flex h-8 items-center gap-2 whitespace-nowrap rounded-md px-2.5 text-[13px] font-medium transition-colors hover:bg-muted" aria-label="Período">
           <CalendarIcon className="size-3.5 text-muted-foreground" />
           {r.preset && <span className="text-primary">{PRESET_LABELS[r.preset]}</span>}
           <span className={cn(r.preset && "text-muted-foreground")}>{periodLabel(value)}</span>
