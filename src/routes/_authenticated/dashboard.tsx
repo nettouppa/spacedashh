@@ -364,6 +364,9 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
       <AiPanel open={ai} onClose={() => setAi(false)} onToggle={() => setAi((v) => !v)} f={eff} onAction={onAi} request={atlasReq} onRestore={setF} userName={account.name.split(" ")[0]!} companyId={companyId} />
       {tv && <TvMode f={eff} set={setEff} views={views} onClose={closeTv} onRefresh={refreshTv} share={profile === "manager" || account.isAdmin ? { companyId } : undefined} />}
       {goalsOpen && <GoalsDialog onClose={() => setGoalsOpen(false)} onSave={async (month, goals) => { await persistGoals({ data: { companyId, month, goals } }); toast.success("Metas salvas."); await goalsQ.refetch(); }} />}
+      <NewViewDialog open={newOpen} onOpenChange={setNewOpen} onCreate={createFromTemplate} />
+      <RenameViewDialog current={renaming ? views.find((v) => v.id === renaming)?.name ?? "" : null} onClose={() => setRenaming(null)} onSave={doRename} />
+      <DeleteViewDialog name={deleting ? current?.name ?? "" : null} onClose={() => setDeleting(false)} onConfirm={doDelete} />
     </AppShell>
   );
 }
