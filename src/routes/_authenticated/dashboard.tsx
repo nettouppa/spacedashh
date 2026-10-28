@@ -4,7 +4,7 @@ import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMe, getLayout, saveLayout as saveLayoutFn } from "@/lib/account.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRef, useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getDashboardData } from "@/lib/dashboard-data.functions";
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
@@ -194,8 +194,21 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
   }, [companyId, loadLayout]);
 
   const eff: Filters = profile === "seller" ? { ...f, sellerId: ME, team: undefined } : f;
+  const hist = useRef<Filters[]>([]);
   const set = useCallback((patch: Partial<Filters>) => {
-    setF((prev) => ({ ...prev, ...patch }));
+    setF((prev) => { hist.current = [...hist.current.slice(-19), prev]; return { ...prev, ...patch }; });
+  }, []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "z" || e.shiftKey || (t && ["INPUT", "TEXTAREA"].includes(t.tagName))) return;
+      const prev = hist.current.pop();
+      if (prev) { e.preventDefault(); setF(prev); toast("Filtro desfeito."); }
+    };
+    const onAsk = (e: Event) => { setAi(true); setAtlasReq({ mode: "ask", topic: String((e as CustomEvent).detail), id: Date.now() }); };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("atlas:ask", onAsk);
+    return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("atlas:ask", onAsk); };
   }, []);
   const setEff = (patch: Partial<Filters>) => { if (profile === "seller") delete patch.sellerId; set(patch); };
 
@@ -254,7 +267,15 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
   const me = SELLERS.find((s) => s.id === ME) ?? { id: ME, name: account.name, team: "", photo: "", goal: 0 };
 
   return (
-    <AppShell compact={ai} userName={account.name} userPhoto="" page={active === "comercial" ? "pipeline" : "dashboard"}
+    <AppShell compact={ai} commands={[
+        { id: "atlas-ask", label: "Perguntar ao Atlas", group: "Atlas", run: () => setAi(true) },
+        { id: "atlas", label: "Abrir o Atlas", group: "Ações", shortcut: "a", run: () => setAi((v) => !v) },
+        { id: "tv", label: "Modo TV", group: "Ações", shortcut: "t", run: () => setTv(true) },
+        { id: "clear", label: "Limpar todos os filtros", group: "Ações", run: () => set({ company: undefined, team: undefined, sellerId: undefined, stage: undefined, lossReason: undefined }) },
+        { id: "new", label: "Novo painel a partir de modelo", group: "Ações", run: () => setNewOpen(true) },
+        ...views.map((v) => ({ id: `view-${v.id}`, label: v.name, group: "Painéis", run: () => switchView(v.id) })),
+        ...(profile === "manager" ? SELLERS.map((x) => ({ id: `seller-${x.id}`, label: x.name, group: "Filtrar por vendedor", run: () => set({ sellerId: x.id }) })) : []),
+      ]} userName={account.name} userPhoto="" page={active === "comercial" ? "pipeline" : "dashboard"}
       companyName={membership.companyName} roleLabel={profile === "manager" ? "Gestor" : "Colaborador"} isAdmin={account.isAdmin} onSignOut={() => signOut(nav)}
       topRight={<>
         {account.memberships.length > 1 && (
