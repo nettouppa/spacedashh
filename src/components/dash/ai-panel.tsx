@@ -123,7 +123,6 @@ export function AiPanel({ open, onClose, onToggle, f, onAction, request, onResto
   const [voiceOpen, setVoiceOpen] = useState(false);
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); onToggle(); }
       else if (e.key === "Escape" && open && !voiceOpen && !historyOpen) onClose();
     };
     window.addEventListener("keydown", h);
@@ -371,7 +370,7 @@ export function AiPanel({ open, onClose, onToggle, f, onAction, request, onResto
             <button disabled={busy || !input.trim()} aria-label="Enviar" className="grid size-7 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground transition disabled:bg-muted disabled:text-subtle-foreground"><ArrowUp className="size-4" /></button>
           </div>
         </form>
-        <p className="mt-1.5 text-center text-[10px] text-subtle-foreground">Enter envia · Shift+Enter quebra linha · Ctrl+K abre/fecha · Esc fecha</p>
+        <p className="mt-1.5 text-center text-[10px] text-subtle-foreground">Enter envia · Shift+Enter quebra linha · A abre · Esc fecha</p>
       </div>
     </aside>
   );
