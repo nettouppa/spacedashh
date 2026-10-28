@@ -176,7 +176,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
   const { refetch: refetchData } = dataQ, { refetch: refetchGoals } = goalsQ;
   const refreshTv = useCallback(() => { void refetchData(); void refetchGoals(); }, [refetchData, refetchGoals]);
   const [atlasReq, setAtlasReq] = useState<AtlasRequest | null>(null);
-  const atlasCtx = { hidden: edit, request: (mode: "explain" | "ask", topic: string) => { setAi(true); setAtlasReq({ mode, topic, id: Date.now() }); } };
+  const atlasCtx = { hidden: edit, focus: ai ? atlasReq?.topic ?? null : null, request: (mode: "explain" | "ask", topic: string) => { setAi(true); setAtlasReq({ mode, topic, id: Date.now() }); } };
 
   useEffect(() => {
     const saved = localStorage.getItem(COMPANY_KEY);
