@@ -14,8 +14,9 @@ export function AtlasIcon({ className }: { className?: string }) {
 }
 
 export type AtlasRequest = { mode: "explain" | "ask"; topic: string; id: number };
-type Ctx = { request: (mode: "explain" | "ask", topic: string) => void; hidden: boolean };
+type Ctx = { request: (mode: "explain" | "ask", topic: string) => void; hidden: boolean; focus?: string | null | undefined };
 export const AtlasContext = createContext<Ctx>({ request: () => {}, hidden: false });
+export const useAtlasFocus = (topic?: string) => { const c = useContext(AtlasContext); return !!topic && c.focus === topic; };
 
 export function AtlasTrigger({ topic }: { topic: string }) {
   const { request, hidden } = useContext(AtlasContext);

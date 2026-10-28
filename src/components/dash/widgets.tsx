@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
-import { AtlasTrigger } from "./atlas";
+import { AtlasTrigger, useAtlasFocus } from "./atlas";
 import { AnimatedNumber, DrillSheet, type DrillKind } from "./drill";
 import { cn } from "@/lib/utils";
 import {
@@ -11,8 +11,9 @@ export type SetFilter = (patch: Partial<Filters>) => void;
 type P = { f: Filters; set: SetFilter; big?: boolean | undefined };
 
 export function Card({ className, children, title, subtitle, right, estimate }: { className?: string; children: React.ReactNode; title?: string; subtitle?: string; right?: React.ReactNode; estimate?: string }) {
+  const focus = useAtlasFocus(title);
   return (
-    <section className={cn("flex h-full flex-col rounded-xl border border-border bg-card text-card-foreground shadow-soft", className)}>
+    <section className={cn("flex h-full flex-col rounded-xl border border-border bg-card text-card-foreground shadow-soft transition-shadow duration-500", focus && "ring-2 ring-primary/60 ring-offset-2 ring-offset-background", className)}>
       {title && (
         <header className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
           <div><h3 className="flex items-center gap-2 text-sm font-semibold">{title}{estimate && <span title={estimate} className="cursor-help rounded border border-border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">estimado</span>}</h3>{subtitle && <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>}</div>
