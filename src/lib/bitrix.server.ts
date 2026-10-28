@@ -142,21 +142,29 @@ async function syncWork(db: Awaited<ReturnType<typeof admin>>, conn: Conn, compa
   } catch (e) { console.error("bitrix task sync", e); }
 }
 
-const MAX_PAGES = 40; // 2.000 negócios por execução, para caber no tempo do servidor
+const MAX_PAGES = 40; // até 2.000 negócios por execução, para caber no tempo do servidor
 
+/**
+ * Resumable sync. While the first full import is unfinished, each run continues from `sync_cursor`.
+ * After it finishes, runs fetch only deals modified since the last sync (with 1h overlap).
+ */
 export async function syncDeals(companyId: string) {
   const db = await admin();
-  const { data: row, error } = await db.from("bitrix_connections").select("company_id, webhook_url").eq("company_id", companyId).maybeSingle();
+  const { data: row, error } = await db.from("bitrix_connections").select("company_id, webhook_url, sync_cursor, last_full_sync_at, last_sync_at").eq("company_id", companyId).maybeSingle();
   if (error || !row || !row.webhook_url) throw new Error("Empresa sem portal Bitrix24 conectado.");
   await db.from("bitrix_connections").update({ last_sync_status: "running", last_sync_error: null }).eq("company_id", companyId);
   try {
     const conn: Conn = { company_id: row.company_id, webhook_url: row.webhook_url };
-    await syncMeta(db, conn, companyId);
-    await syncWork(db, conn, companyId);
-    let start = 0, pages = 0, total = 0;
+    const full = !row.last_full_sync_at;
+    const cursor = full ? row.sync_cursor ?? 0 : 0;
+    if (cursor === 0) { await syncMeta(db, conn, companyId); await syncWork(db, conn, companyId); }
+    const since = !full && row.last_sync_at ? new Date(new Date(row.last_sync_at).getTime() - 3600_000).toISOString() : null;
+    const startedAt = new Date().toISOString();
+    let start = cursor, pages = 0, total = 0;
     do {
       const { result, next } = await call<Deal[]>(conn, "crm.deal.list", {
         order: { ID: "ASC" },
+        ...(since ? { filter: { ">DATE_MODIFY": since } } : {}),
         select: ["ID", "TITLE", "STAGE_ID", "CATEGORY_ID", "OPPORTUNITY", "CURRENCY_ID", "ASSIGNED_BY_ID", "CLOSED", "DATE_CREATE", "CLOSEDATE", "DATE_MODIFY"],
         start,
       });
@@ -172,13 +180,30 @@ export async function syncDeals(companyId: string) {
       }
       total += rows.length; pages++;
       start = next ?? -1;
+      if (full) await db.from("bitrix_connections").update({ sync_cursor: start >= 0 ? start : 0 }).eq("company_id", companyId);
     } while (start >= 0 && pages < MAX_PAGES);
+    const partial = start >= 0;
     const { count } = await db.from("bitrix_deals").select("deal_id", { count: "exact", head: true }).eq("company_id", companyId);
-    await db.from("bitrix_connections").update({ last_sync_at: new Date().toISOString(), last_sync_status: start >= 0 ? "partial" : "ok", deals_count: count ?? total }).eq("company_id", companyId);
-    return { imported: total, partial: start >= 0 };
+    await db.from("bitrix_connections").update({
+      last_sync_at: partial ? row.last_sync_at : startedAt, last_sync_status: partial ? "partial" : "ok", deals_count: count ?? total,
+      ...(full && !partial ? { last_full_sync_at: startedAt, sync_cursor: 0 } : {}),
+    }).eq("company_id", companyId);
+    return { imported: total, partial };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Erro desconhecido";
     await db.from("bitrix_connections").update({ last_sync_status: "error", last_sync_error: msg.slice(0, 300) }).eq("company_id", companyId);
     throw new Error(msg);
   }
+}
+
+/** Runs one sync batch for every connected company; used by the hourly schedule. */
+export async function syncAll() {
+  const db = await admin();
+  const { data } = await db.from("bitrix_connections").select("company_id").not("webhook_url", "is", null);
+  const out: { companyId: string; ok: boolean; partial?: boolean }[] = [];
+  for (const c of data ?? []) {
+    try { const r = await syncDeals(c.company_id); out.push({ companyId: c.company_id, ok: true, partial: r.partial }); }
+    catch { out.push({ companyId: c.company_id, ok: false }); }
+  }
+  return out;
 }
