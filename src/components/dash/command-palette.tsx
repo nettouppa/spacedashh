@@ -42,7 +42,7 @@ export function CommandPalette({ commands = [], isAdmin, onToggleMenu }: { comma
       const k = e.key.toLowerCase();
       if (Date.now() - g.current < 1000) {
         g.current = 0;
-        const map: Record<string, string> = { p: "/dashboard", e: "/team", r: "/reports", i: "/integrations", c: "/settings" };
+        const map: Record<string, string> = { p: "/dashboard", e: "/team", r: "/reports", i: "/integrations", c: "/settings", m: "/members" };
         if (map[k]) { e.preventDefault(); go(map[k]); }
         return;
       }
