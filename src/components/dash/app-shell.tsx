@@ -1,15 +1,15 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { ShieldCheck, LogOut, Menu } from "lucide-react";
-import { BarChart3, Users, LayoutDashboard, Filter, Plug, Settings, ChevronRight } from "lucide-react";
+import { BarChart3, Users, LayoutDashboard, Plug, Settings, ChevronRight } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
 export type ShellPage = "dashboard" | "pipeline" | "team" | "reports" | "integrations" | "settings" | "admin";
 
 const CRUMB: Record<ShellPage, [string, string]> = {
-  dashboard: ["Dashboards", "Visão geral"],
-  pipeline: ["Dashboards", "Pipeline"],
+  dashboard: ["Análise", "Painel"],
+  pipeline: ["Análise", "Painel"],
   team: ["Análise", "Equipe"],
   reports: ["Análise", "Relatórios"],
   integrations: ["Workspace", "Integrações"],
@@ -22,8 +22,7 @@ function Nav({ page, compact, isAdmin, onNavigate }: { page: ShellPage; compact:
   return (
     <nav className="flex-1 space-y-0.5 p-3">
       {!compact && <p className="px-2 pb-1 pt-2 text-[11px] font-medium text-subtle-foreground">Análise</p>}
-      <Link to="/dashboard" search={{}} onClick={onNavigate} title="Visão geral" className={item(page === "dashboard")}><LayoutDashboard className="size-4" />{!compact && "Visão geral"}</Link>
-      <Link to="/dashboard" search={{ view: "comercial" }} onClick={onNavigate} title="Pipeline" className={item(page === "pipeline")}><Filter className="size-4" />{!compact && "Pipeline"}</Link>
+      <Link to="/dashboard" search={{}} onClick={onNavigate} title="Painel" className={item(page === "dashboard" || page === "pipeline")}><LayoutDashboard className="size-4" />{!compact && "Painel"}</Link>
       <Link to="/team" onClick={onNavigate} title="Equipe" className={item(page === "team")}><Users className="size-4" />{!compact && "Equipe"}</Link>
       <Link to="/reports" onClick={onNavigate} title="Relatórios" className={item(page === "reports")}><BarChart3 className="size-4" />{!compact && "Relatórios"}</Link>
       {compact ? <div className="my-3 border-t border-border" /> : <p className="px-2 pb-1 pt-5 text-[11px] font-medium text-subtle-foreground">Workspace</p>}
