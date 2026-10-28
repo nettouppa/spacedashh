@@ -140,7 +140,7 @@ function NoAccess({ isAdmin }: { isAdmin: boolean }) {
         <h1 className="text-lg font-semibold">Aguardando convite</h1>
         <p className="mt-2 text-sm text-muted-foreground">Sua conta ainda não está vinculada a nenhuma empresa. Peça ao administrador do Spacedash para liberar seu acesso.</p>
         <div className="mt-5 flex justify-center gap-2">
-          {isAdmin && <Link to="/admin" className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">Administração</Link>}
+          {isAdmin && <Link to="/companies" className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">Administração</Link>}
           <button onClick={() => signOut(nav)} className="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted">Sair</button>
         </div>
       </div>
@@ -301,7 +301,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
         ...views.map((v) => ({ id: `view-${v.id}`, label: v.name, group: "Painéis", run: () => switchView(v.id) })),
         ...(profile === "manager" ? SELLERS.map((x) => ({ id: `seller-${x.id}`, label: x.name, group: "Filtrar por vendedor", run: () => set({ sellerId: x.id }) })) : []),
       ]} userName={account.name} userPhoto="" page={active === "comercial" ? "pipeline" : "dashboard"}
-      companyName={membership.companyName} roleLabel={profile === "manager" ? "Gestor" : "Colaborador"} isAdmin={account.isAdmin} onSignOut={() => signOut(nav)}
+      companyName={membership.companyName} roleLabel={profile === "manager" ? "Gestor" : "Colaborador"} isAdmin={account.isAdmin} canManage={profile === "manager" || account.isAdmin} onSignOut={() => signOut(nav)}
       topRight={<>
         {(!!real || dataQ.isSuccess) && <AlertsBell f={eff} onAsk={(q) => { setAi(true); setAtlasReq({ mode: "ask", topic: q, id: Date.now() }); }} />}
         {account.memberships.length > 1 && (
@@ -374,7 +374,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
       {profile === "manager" && <div className="mt-5"><Onboarding companyId={companyId} steps={[
         { id: "bitrix", label: "Conectar o Bitrix24", done: !!real, to: "/integrations" },
         { id: "goals", label: "Cadastrar metas", done: (goalsQ.data?.length ?? 0) > 0, action: () => setGoalsOpen(true) },
-        { id: "team", label: "Convidar o time", done: usedTeam, to: account.isAdmin ? "/admin" : "/team" },
+        { id: "team", label: "Convidar o time", done: usedTeam, to: "/members" },
         { id: "view", label: "Criar um painel", done: views.some((v) => !["geral", "comercial", "operacao"].includes(v.id)), action: () => setNewOpen(true) },
         { id: "atlas", label: "Perguntar ao Atlas", done: usedAtlas, action: () => setAi(true) },
       ]} /></div>}

@@ -14,7 +14,7 @@
 - Cross-filtering: one `Filters` state in `src/routes/_authenticated/dashboard.tsx`; widgets call `set()` and each widget skips its own dimension so siblings stay visible.
 - AI assistant uses a server function (`src/lib/ai.functions.ts`) with tool calling to return dashboard filter actions.
 - Tenancy: `companies` + `company_members` (role gestor|colaborador, `seller_ref` maps a member to a CRM seller); RLS via security-definer `is_member`/`member_role_of`; global admin lives in `user_roles` (`has_role`). Keeps tenant isolation in the database.
-- Access is invite-only: users without a membership see "Aguardando convite"; the first user ever becomes admin (trigger `handle_new_user`). Admin invites from `/admin` via server functions in `src/lib/account.functions.ts`.
+- Access is invite-only: users without a membership see "Aguardando convite"; the first user ever becomes admin (trigger `handle_new_user`).
 - Per-user, per-company card layout is stored in `user_layouts.layout` ({order, sizes}), not localStorage, so it follows the account.
 - Bitrix24 connects via an inbound REST webhook URL pasted by a manager, validated (`parseWebhookUrl`) and tested before saving; no Market/OAuth app. The URL is a secret stored in `bitrix_connections.webhook_url` (service_role only), never returned; status via `bitrix_status()`; one portal per company (`member_id` = domain).
 - Integration setup reads company access through authenticated RLS queries and exposes no credentials; manager/admin controls are derived from a shared policy to keep UI and future operations consistent.
@@ -24,3 +24,4 @@
 - Bitrix sync is resumable: the first full import continues from `bitrix_connections.sync_cursor` across runs, then runs are incremental by `DATE_MODIFY`; an hourly managed schedule calls `/api/public/cron/bitrix-sync`. Keeps each run within worker time.
 - `setDataset(null)` = demo (no Bitrix24), `setDataset("empty")` = loading/error; demo numbers must never appear for a connected company.
 - Password recovery and invite acceptance share the public `/reset-password` route.
+- Access management is split: `/members` (managers of the active company, server fns in `src/lib/members.functions.ts` authorize via `canManageMembers`) and `/companies` (platform admin only); `/admin` only redirects. Lets managers run their own team without the platform owner.

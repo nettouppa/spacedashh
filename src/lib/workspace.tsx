@@ -40,7 +40,7 @@ export function WorkspaceShell({ ws, page, children, actions }: { ws: Workspace;
   const nav = useNavigate();
   return (
     <AppShell page={page} userName={ws.me.name} userPhoto="" companyName={ws.membership?.companyName ?? "Sem empresa"}
-      roleLabel={ws.me.isAdmin ? "Administrador" : ws.membership?.role === "gestor" ? "Gestor" : "Colaborador"} isAdmin={ws.me.isAdmin}
+      roleLabel={ws.me.isAdmin ? "Administrador" : ws.membership?.role === "gestor" ? "Gestor" : "Colaborador"} isAdmin={ws.me.isAdmin} canManage={ws.isManager}
       onSignOut={async () => { await supabase.auth.signOut(); void nav({ to: "/auth", replace: true }); }}
       topRight={<>
         {actions}
