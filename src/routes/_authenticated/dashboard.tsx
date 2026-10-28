@@ -16,7 +16,8 @@ import { COMPANIES, SELLERS, TEAMS, sellerName, range, setDataset, setGoals, typ
 import { getGoals, saveGoals as saveGoalsFn } from "@/lib/goals.functions";
 import { GoalsDialog } from "@/components/dash/goals-dialog";
 import { Target, Plus, Copy, Pencil, Trash2 } from "lucide-react";
-import { loadViews, newViewId, PRESET_VIEWS, type View } from "@/lib/views";
+import { loadViews, newViewId, PRESET_VIEWS, type View, type Template } from "@/lib/views";
+import { NewViewDialog, RenameViewDialog, DeleteViewDialog } from "@/components/dash/view-dialogs";
 import { DEFAULT_ORDER, KpiStrip, WIDGETS, type WidgetId } from "@/components/dash/widgets";
 import { AiPanel } from "@/components/dash/ai-panel";
 import { AtlasContext, AtlasIcon, type AtlasRequest } from "@/components/dash/atlas";
@@ -166,6 +167,9 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
   const setSizes = (u: (p: Partial<Record<WidgetId, Size>>) => Partial<Record<WidgetId, Size>> | Record<string, never>) => patchView((v) => ({ ...v, sizes: u(v.sizes as Partial<Record<WidgetId, Size>>) as Record<string, number> }));
   const [edit, setEdit] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [newOpen, setNewOpen] = useState(false);
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [ai, setAi] = useState(false);
   const [tv, setTv] = useState(false);
   const closeTv = useCallback(() => setTv(false), []);
