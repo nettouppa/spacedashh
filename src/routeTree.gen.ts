@@ -19,6 +19,7 @@ import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as TvTokenRouteImport } from './routes/tv.$token'
+import { Route as ApiPublicCronBitrixSyncRouteImport } from './routes/api/public/cron/bitrix-sync'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -70,6 +71,11 @@ const TvTokenRoute = TvTokenRouteImport.update({
   path: '/tv/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronBitrixSyncRoute = ApiPublicCronBitrixSyncRouteImport.update({
+  id: '/api/public/cron/bitrix-sync',
+  path: '/api/public/cron/bitrix-sync',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -81,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/team': typeof AuthenticatedTeamRoute
   '/tv/$token': typeof TvTokenRoute
+  '/api/public/cron/bitrix-sync': typeof ApiPublicCronBitrixSyncRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -92,6 +99,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/team': typeof AuthenticatedTeamRoute
   '/tv/$token': typeof TvTokenRoute
+  '/api/public/cron/bitrix-sync': typeof ApiPublicCronBitrixSyncRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -105,6 +113,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/tv/$token': typeof TvTokenRoute
+  '/api/public/cron/bitrix-sync': typeof ApiPublicCronBitrixSyncRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -118,6 +127,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/team'
     | '/tv/$token'
+    | '/api/public/cron/bitrix-sync'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -129,6 +139,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/team'
     | '/tv/$token'
+    | '/api/public/cron/bitrix-sync'
   id:
     | '__root__'
     | '/'
@@ -141,6 +152,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/team'
     | '/tv/$token'
+    | '/api/public/cron/bitrix-sync'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -148,6 +160,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   TvTokenRoute: typeof TvTokenRoute
+  ApiPublicCronBitrixSyncRoute: typeof ApiPublicCronBitrixSyncRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -222,6 +235,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TvTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/bitrix-sync': {
+      id: '/api/public/cron/bitrix-sync'
+      path: '/api/public/cron/bitrix-sync'
+      fullPath: '/api/public/cron/bitrix-sync'
+      preLoaderRoute: typeof ApiPublicCronBitrixSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -251,6 +271,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   TvTokenRoute: TvTokenRoute,
+  ApiPublicCronBitrixSyncRoute: ApiPublicCronBitrixSyncRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
