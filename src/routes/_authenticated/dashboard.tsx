@@ -16,7 +16,8 @@ import { COMPANIES, SELLERS, TEAMS, sellerName, range, setDataset, setGoals, typ
 import { getGoals, saveGoals as saveGoalsFn } from "@/lib/goals.functions";
 import { GoalsDialog } from "@/components/dash/goals-dialog";
 import { Target, Plus, Copy, Pencil, Trash2 } from "lucide-react";
-import { loadViews, newViewId, PRESET_VIEWS, type View } from "@/lib/views";
+import { loadViews, newViewId, PRESET_VIEWS, type View, type Template } from "@/lib/views";
+import { NewViewDialog, RenameViewDialog, DeleteViewDialog } from "@/components/dash/view-dialogs";
 import { DEFAULT_ORDER, KpiStrip, WIDGETS, type WidgetId } from "@/components/dash/widgets";
 import { AiPanel } from "@/components/dash/ai-panel";
 import { AtlasContext, AtlasIcon, type AtlasRequest } from "@/components/dash/atlas";
@@ -166,6 +167,9 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
   const setSizes = (u: (p: Partial<Record<WidgetId, Size>>) => Partial<Record<WidgetId, Size>> | Record<string, never>) => patchView((v) => ({ ...v, sizes: u(v.sizes as Partial<Record<WidgetId, Size>>) as Record<string, number> }));
   const [edit, setEdit] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [newOpen, setNewOpen] = useState(false);
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [ai, setAi] = useState(false);
   const [tv, setTv] = useState(false);
   const closeTv = useCallback(() => setTv(false), []);
@@ -203,20 +207,29 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
   const persist = (vs: View[], a: string) => persistLayout({ data: { companyId, layout: { views: vs, active: a } } }).then(() => true).catch(() => { toast.error("Não foi possível salvar o layout. Tente de novo."); return false; });
   const saveLayout = async () => { if (!(await persist(views, active))) return; setSaved(true); setEdit(false); setTimeout(() => setSaved(false), 2000); };
   const switchView = (id: string) => { setActive(id); setEdit(false); void persist(views, id); };
+  const pushView = (v: View, editAfter: boolean) => {
+    const vs = [...views, v]; setViews(vs); setActive(v.id); setEdit(editAfter); void persist(vs, v.id);
+  };
   const addView = (dup: boolean) => {
-    const name = window.prompt("Nome do novo painel", dup ? `${current?.name ?? "Painel"} (cópia)` : "Meu painel")?.trim().slice(0, 60);
-    if (!name) return;
-    const v: View = { id: newViewId(), name, order: dup ? [...order] : [], sizes: dup ? { ...sizes } as Record<string, number> : {} };
-    const vs = [...views, v]; setViews(vs); setActive(v.id); setEdit(!dup || edit); void persist(vs, v.id);
+    if (!dup) { setNewOpen(true); return; }
+    pushView({ id: newViewId(), name: `${current?.name ?? "Painel"} (cópia)`.slice(0, 60), order: [...order], sizes: { ...sizes } as Record<string, number> }, edit);
+    toast.success("Painel duplicado.");
   };
-  const renameView = (id: string) => {
-    const v = views.find((x) => x.id === id); if (!v) return;
-    const name = window.prompt("Renomear painel", v.name)?.trim().slice(0, 60); if (!name) return;
-    const vs = views.map((x) => (x.id === id ? { ...x, name } : x)); setViews(vs); void persist(vs, active);
+  const createFromTemplate = (name: string, t: Template | null) => {
+    setNewOpen(false);
+    const ids = (t?.order ?? []).filter((x) => (DEFAULT_ORDER as string[]).includes(x));
+    pushView({ id: newViewId(), name: name.slice(0, 60), order: ids, sizes: t ? { ...t.sizes } : {} }, !t);
+    toast.success(t ? `Painel "${name}" criado a partir do modelo.` : "Painel criado. Adicione os cards abaixo.");
   };
-  const deleteView = () => {
-    if (views.length < 2 || !window.confirm(`Excluir o painel "${current?.name}"?`)) return;
+  const renameView = (id: string) => setRenaming(id);
+  const doRename = (name: string) => {
+    const vs = views.map((x) => (x.id === renaming ? { ...x, name } : x)); setViews(vs); setRenaming(null); void persist(vs, active);
+  };
+  const deleteView = () => { if (views.length > 1) setDeleting(true); };
+  const doDelete = () => {
+    setDeleting(false);
     const vs = views.filter((x) => x.id !== active); setViews(vs); setActive(vs[0]!.id); setEdit(false); void persist(vs, vs[0]!.id);
+    toast.success("Painel excluído.");
   };
 
   const onAi = (a: AiAction) => {
@@ -351,6 +364,9 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
       <AiPanel open={ai} onClose={() => setAi(false)} onToggle={() => setAi((v) => !v)} f={eff} onAction={onAi} request={atlasReq} onRestore={setF} userName={account.name.split(" ")[0]!} companyId={companyId} />
       {tv && <TvMode f={eff} set={setEff} views={views} onClose={closeTv} onRefresh={refreshTv} share={profile === "manager" || account.isAdmin ? { companyId } : undefined} />}
       {goalsOpen && <GoalsDialog onClose={() => setGoalsOpen(false)} onSave={async (month, goals) => { await persistGoals({ data: { companyId, month, goals } }); toast.success("Metas salvas."); await goalsQ.refetch(); }} />}
+      <NewViewDialog open={newOpen} onOpenChange={setNewOpen} onCreate={createFromTemplate} />
+      <RenameViewDialog current={renaming ? views.find((v) => v.id === renaming)?.name ?? "" : null} onClose={() => setRenaming(null)} onSave={doRename} />
+      <DeleteViewDialog name={deleting ? current?.name ?? "" : null} onClose={() => setDeleting(false)} onConfirm={doDelete} />
     </AppShell>
   );
 }
