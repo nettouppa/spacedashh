@@ -20,7 +20,7 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const nav = useNavigate();
-  const [mode, setMode] = useState<"in" | "up">("in");
+  const [mode, setMode] = useState<"in" | "up" | "forgot">("in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState<{ t: "ok" | "err"; m: string } | null>(null);
@@ -32,7 +32,10 @@ function AuthPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault(); setBusy(true); setMsg(null);
-    if (mode === "in") {
+    if (mode === "forgot") {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/reset-password` });
+      setMsg(error ? { t: "err", m: "Não foi possível enviar agora. Tente de novo em instantes." } : { t: "ok", m: "Se esse e-mail tiver conta, enviamos um link para criar uma nova senha." });
+    } else if (mode === "in") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setMsg({ t: "err", m: "E-mail ou senha inválidos." }); else void nav({ to: "/dashboard" });
     } else {
@@ -57,7 +60,7 @@ function AuthPage() {
           <span className="text-lg font-semibold">Spacedash</span>
         </div>
         <div className="rounded-xl border border-border bg-card p-6">
-          <h1 className="text-xl font-semibold tracking-tight">{mode === "in" ? "Entrar na sua conta" : "Criar sua conta"}</h1>
+          <h1 className="text-xl font-semibold tracking-tight">{mode === "in" ? "Entrar na sua conta" : mode === "up" ? "Criar sua conta" : "Recuperar senha"}</h1>
           <p className="mt-1 text-sm text-muted-foreground">Acesso para empresas convidadas.</p>
           <div className="mt-5 space-y-2">
             <button type="button" onClick={() => oauth("google")} className="flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-card text-sm font-medium hover:bg-muted">
@@ -69,13 +72,16 @@ function AuthPage() {
           <div className="my-5 flex items-center gap-3 text-xs text-subtle-foreground"><span className="h-px flex-1 bg-border" />ou<span className="h-px flex-1 bg-border" /></div>
           <form onSubmit={submit} className="space-y-3">
             <input type="email" required placeholder="seu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30" />
-            <input type="password" required minLength={6} placeholder="Senha" value={password} onChange={(e) => setPassword(e.target.value)} className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30" />
-            <button disabled={busy} className="h-10 w-full rounded-md bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60">{mode === "in" ? "Entrar" : "Criar conta"}</button>
+            {mode !== "forgot" && <input type="password" required minLength={6} placeholder="Senha" value={password} onChange={(e) => setPassword(e.target.value)} className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30" />}
+            <button disabled={busy} className="h-10 w-full rounded-md bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60">{mode === "in" ? "Entrar" : mode === "up" ? "Criar conta" : "Enviar link"}</button>
           </form>
           {msg && <p className={msg.t === "ok" ? "mt-3 text-sm text-success" : "mt-3 text-sm text-danger"}>{msg.m}</p>}
-          <button onClick={() => { setMode(mode === "in" ? "up" : "in"); setMsg(null); }} className="mt-4 text-sm text-muted-foreground hover:text-foreground">
-            {mode === "in" ? "Recebeu um convite? Criar conta" : "Já tem conta? Entrar"}
-          </button>
+          <div className="mt-4 flex flex-wrap justify-between gap-2 text-sm">
+            <button onClick={() => { setMode(mode === "in" ? "up" : "in"); setMsg(null); }} className="text-muted-foreground hover:text-foreground">
+              {mode === "in" ? "Recebeu um convite? Criar conta" : "Já tem conta? Entrar"}
+            </button>
+            {mode === "in" && <button onClick={() => { setMode("forgot"); setMsg(null); }} className="text-muted-foreground hover:text-foreground">Esqueci minha senha</button>}
+          </div>
         </div>
       </div>
     </div>
