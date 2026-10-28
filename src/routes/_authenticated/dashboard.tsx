@@ -4,6 +4,7 @@ import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMe, getLayout, saveLayout as saveLayoutFn } from "@/lib/account.functions";
 import { supabase } from "@/integrations/supabase/client";
+import { Onboarding } from "@/components/dash/onboarding";
 import { useRef, useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getDashboardData } from "@/lib/dashboard-data.functions";
@@ -172,6 +173,10 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
   const [deleting, setDeleting] = useState(false);
   const [ai, setAi] = useState(false);
   const [tv, setTv] = useState(false);
+  const [usedAtlas, setUsedAtlas] = useState(false);
+  const [usedTeam, setUsedTeam] = useState(false);
+  useEffect(() => { setUsedAtlas(localStorage.getItem("sd-used-atlas") === "1"); setUsedTeam(localStorage.getItem("sd-used-team") === "1"); }, []);
+  useEffect(() => { if (ai) { localStorage.setItem("sd-used-atlas", "1"); setUsedAtlas(true); } }, [ai]);
   const closeTv = useCallback(() => setTv(false), []);
   const { refetch: refetchData } = dataQ, { refetch: refetchGoals } = goalsQ;
   const refreshTv = useCallback(() => { void refetchData(); void refetchGoals(); }, [refetchData, refetchGoals]);
@@ -343,6 +348,13 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
       )}
 
       <AtlasContext.Provider value={atlasCtx}>
+      {profile === "manager" && <div className="mt-5"><Onboarding companyId={companyId} steps={[
+        { id: "bitrix", label: "Conectar o Bitrix24", done: !!real, to: "/integrations" },
+        { id: "goals", label: "Cadastrar metas", done: (goalsQ.data?.length ?? 0) > 0, action: () => setGoalsOpen(true) },
+        { id: "team", label: "Convidar o time", done: usedTeam, to: account.isAdmin ? "/admin" : "/team" },
+        { id: "view", label: "Criar um painel", done: views.some((v) => !["geral", "comercial", "operacao"].includes(v.id)), action: () => setNewOpen(true) },
+        { id: "atlas", label: "Perguntar ao Atlas", done: usedAtlas, action: () => setAi(true) },
+      ]} /></div>}
       <div className="mt-5"><KpiStrip f={eff} set={setEff} /></div>
 
       {edit && hidden.length > 0 && (
