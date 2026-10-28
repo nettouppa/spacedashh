@@ -83,6 +83,7 @@ function AdminInner() {
               </div>
               <InviteForm sellers={c.sellers} busy={busy === `inv-${c.id}`} onInvite={(v) => run(`inv-${c.id}`, async () => {
                 const r = await invite({ data: { companyId: c.id, ...v, redirectTo: `${window.location.origin}/reset-password` } });
+                localStorage.setItem("sd-used-team", "1");
                 return r.invited ? `Convite enviado para ${v.email}.` : `${v.email} já tinha conta e agora tem acesso a ${c.name}.`;
               })} />
             </div>
