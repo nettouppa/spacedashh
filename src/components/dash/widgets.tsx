@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { AtlasTrigger } from "./atlas";
+import { AnimatedNumber, DrillSheet, type DrillKind } from "./drill";
 import { cn } from "@/lib/utils";
 import {
   ACTIVITY_LABELS, paceWeekly, atRisk, brl, duration, evolution, productivity, support, taskHealth, type ActivityType, funnel, funnelPipeline, goalFor, kpis, lossReasons, pace, pct, previousKpis, ranking, hygiene, sources, stageAging, STALL_DAYS, sellerName, type Filters, type Stage,
@@ -50,27 +51,29 @@ function Spark({ data, className }: { data: number[]; className?: string }) {
 export function KpiStrip({ f, big }: P) {
   const k = kpis(f), p = previousKpis(f);
   const trend = pace(f).map((d) => d.value);
+  const [drill, setDrill] = useState<DrillKind | null>(null);
   const num = cn("font-semibold tracking-tight tabular-nums", big ? "text-6xl" : "text-[28px] leading-9");
   const items = [
-    { label: "Receita realizada", value: brl(k.revenue), delta: <Delta cur={k.revenue} prev={p.revenue} />, foot: (
+    { label: "Receita realizada", drill: "won" as DrillKind, value: <AnimatedNumber value={k.revenue} format={brl} />, delta: <Delta cur={k.revenue} prev={p.revenue} />, foot: (
       <div className="mt-3">
         <div className="flex justify-between text-xs text-muted-foreground"><span>{pct(k.goalPct)} da meta</span><span>{brl(k.goal)}</span></div>
         <div className="mt-1.5 h-1.5 rounded-full bg-muted"><div className="h-1.5 rounded-full bg-primary" style={{ width: `${Math.min(k.goalPct, 1) * 100}%` }} /></div>
       </div>) },
-    { label: "Ticket médio", value: brl(k.ticket), delta: <Delta cur={k.ticket} prev={p.ticket} />, foot: <Spark data={trend} className="mt-3" /> },
-    { label: "Negócios abertos", value: String(k.openCount), delta: <span className="text-xs text-muted-foreground">{brl(k.openValue)}</span>, foot: <Spark data={trend.map((_, i) => k.openCount * (0.8 + ((i * 37) % 9) / 30))} className="mt-3" /> },
-    { label: "Ciclo médio de venda", value: `${Math.round(k.cycleDays)} dias`, delta: <Delta cur={k.cycleDays} prev={p.cycleDays} invert />, foot: <p className="mt-3 text-xs text-muted-foreground">da criação ao ganho · {k.wonCount} ganhos</p> },
-    { label: "Taxa de conversão", value: pct(k.conversion), delta: <Delta cur={k.conversion} prev={p.conversion} />, foot: <Spark data={trend.map((v) => v * (0.6 + k.conversion))} className="mt-3" /> },
+    { label: "Ticket médio", drill: "won" as DrillKind, value: <AnimatedNumber value={k.ticket} format={brl} />, delta: <Delta cur={k.ticket} prev={p.ticket} />, foot: <Spark data={trend} className="mt-3" /> },
+    { label: "Negócios abertos", drill: "open" as DrillKind, value: <AnimatedNumber value={k.openCount} format={(n) => String(Math.round(n))} />, delta: <span className="text-xs text-muted-foreground">{brl(k.openValue)}</span>, foot: <Spark data={trend.map((_, i) => k.openCount * (0.8 + ((i * 37) % 9) / 30))} className="mt-3" /> },
+    { label: "Ciclo médio de venda", drill: "won" as DrillKind, value: <AnimatedNumber value={k.cycleDays} format={(n) => `${Math.round(n)} dias`} />, delta: <Delta cur={k.cycleDays} prev={p.cycleDays} invert />, foot: <p className="mt-3 text-xs text-muted-foreground">da criação ao ganho · {k.wonCount} ganhos</p> },
+    { label: "Taxa de conversão", drill: "all" as DrillKind, value: <AnimatedNumber value={k.conversion} format={pct} />, delta: <Delta cur={k.conversion} prev={p.conversion} />, foot: <Spark data={trend.map((v) => v * (0.6 + k.conversion))} className="mt-3" /> },
   ];
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       {items.map((it) => (
         <section key={it.label} className="rounded-xl border border-border bg-card p-5 shadow-soft">
           <div className="flex items-center justify-between gap-2"><span className={cn("text-[13px] font-medium text-muted-foreground", big && "text-lg")}>{it.label}</span><div className="flex items-center gap-1">{it.delta}{!big && <AtlasTrigger topic={it.label} />}</div></div>
-          <div className={cn("mt-2", num)}>{it.value}</div>
+          <button onClick={() => !big && setDrill(it.drill)} title="Ver negócios" className={cn("mt-2 block rounded text-left hover:text-primary", num)}>{it.value}</button>
           {it.foot}
         </section>
       ))}
+      <DrillSheet kind={drill} f={f} onClose={() => setDrill(null)} />
     </div>
   );
 }
