@@ -30,7 +30,7 @@ export function AtlasTrigger({ topic }: { topic: string }) {
       {open && (
         <div className="absolute right-0 top-full z-20 pt-1">
           <div className="w-44 rounded-lg border border-border bg-card p-1 shadow-soft">
-            <button onClick={() => { setOpen(false); request("explain", topic); }} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] hover:bg-muted"><Lightbulb className="size-3.5 text-primary" />Explique-me</button>
+            <button onClick={() => { setOpen(false); request("explain", topic); }} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] hover:bg-muted"><Lightbulb className="size-3.5 text-primary" />Explique isso!</button>
             <button onClick={() => { setOpen(false); request("ask", topic); }} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] hover:bg-muted"><MessageCircleQuestion className="size-3.5 text-primary" />Pergunte-me</button>
           </div>
         </div>
