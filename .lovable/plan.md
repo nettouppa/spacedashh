@@ -1,5 +1,12 @@
 # Trocar a conexão Bitrix24: de aplicativo (marketplace) para REST API (webhook de entrada)
 
+## Por que o webhook de entrada
+A documentação oficial lista três formas de acessar a REST API: **webhook de entrada**, **aplicativo local** e **aplicativo do Market**.
+- Webhook de entrada: o cliente gera uma URL com chave no próprio portal e cola no Spacedash. Sem publicar nada, sem login OAuth, sem tokens que expiram. Melhor encaixe para clientes convidados.
+- Aplicativo local: também não vai ao Market, mas exige o cliente criar app, copiar ID e chave secreta e passar por OAuth — mais passos sem ganho para leitura de dados.
+- Market: o que tínhamos; só faz sentido para venda em massa no futuro.
+Cuidado apontado pela documentação: a chave do webhook não pode aparecer no código nem em logs, e as permissões seguem as do usuário que criou o webhook (recomendar um usuário administrador).
+
 ## Como fica para o cliente
 1. No Bitrix24 dele: Aplicativos > Recursos para desenvolvedores > Outro > **Webhook de entrada**.
 2. Marca as permissões: CRM, Usuários, Departamentos, Tarefas, Canais Abertos.
