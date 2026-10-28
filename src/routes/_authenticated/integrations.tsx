@@ -2,11 +2,10 @@ import { useServerFn } from "@tanstack/react-start";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowUpRight, Check, Copy, Plug, ShieldCheck, Clock3, Building2, RefreshCw, Unplug } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Check, Plug, ShieldCheck, Clock3, Building2, RefreshCw, Unplug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AppShell } from "@/components/dash/app-shell";
-import { getBitrixSetup, startBitrixConnect, syncBitrixNow, disconnectBitrix } from "@/lib/bitrix.functions";
-import { BITRIX_SETUP_URLS } from "@/lib/bitrix-policy";
+import { getBitrixSetup, connectBitrixWebhook, syncBitrixNow, disconnectBitrix } from "@/lib/bitrix.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { AiSettingsCard } from "@/components/dash/ai-settings-card";
 import { VoiceSettingsCard } from "@/components/dash/voice-settings-card";
@@ -19,21 +18,11 @@ import { AtlasPersonalitySettings } from "@/components/dash/atlas-personality-se
 
 const setupQuery = queryOptions({ queryKey: ["bitrix-setup"], queryFn: () => getBitrixSetup() });
 
-const FLASH: Record<string, { ok: boolean; text: string }> = {
-  connected: { ok: true, text: "Portal Bitrix24 conectado. Clique em “Sincronizar agora” para importar os negócios." },
-  expired: { ok: false, text: "O pedido de conexão expirou ou já foi usado. Tente conectar novamente." },
-  mismatch: { ok: false, text: "O portal autorizado é diferente do informado. Tente novamente." },
-  taken: { ok: false, text: "Este portal já está vinculado a outra empresa no Spacedash." },
-  denied: { ok: false, text: "O Bitrix24 não confirmou a autorização." },
-  invalid: { ok: false, text: "Retorno do Bitrix24 inválido." },
-  error: { ok: false, text: "Não foi possível salvar a conexão." },
-};
-
 export const Route = createFileRoute("/_authenticated/integrations")({
   loader: ({ context }) => context.queryClient.ensureQueryData(setupQuery),
   head: () => ({ meta: [
     { title: "Integrações Bitrix24 — Spacedash" },
-    { name: "description", content: "Conexão do Bitrix24 por empresa, instalação do aplicativo Spacedash e situação da sincronização." },
+    { name: "description", content: "Conexão do Bitrix24 por empresa, conexão por webhook REST e situação da sincronização." },
     { property: "og:title", content: "Integrações Bitrix24 — Spacedash" },
     { property: "og:description", content: "Gerencie a conexão segura de cada empresa com o Bitrix24." },
     { property: "og:type", content: "website" },
@@ -49,17 +38,11 @@ function Integrations() {
   const [selected, setSelected] = useState("");
   const company = data.companies.find((c) => c.id === selected) ?? data.companies[0];
   const conn = company?.connection ?? null;
-  const [copied, setCopied] = useState<string | null>(null);
-  const [error, setError] = useState("");
   const [domain, setDomain] = useState("");
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<{ ok: boolean; text: string } | null>(null);
   const [tab, setTab] = useState("bitrix");
   useEffect(() => { if (new URLSearchParams(window.location.search).get("tab") === "atlas") setTab("atlas"); }, []);
-  useEffect(() => {
-    const k = new URLSearchParams(window.location.search).get("bitrix");
-    if (k && FLASH[k]) { setFlash(FLASH[k]); window.history.replaceState(null, "", "/integrations"); }
-  }, []);
   async function run(fn: () => Promise<void>) {
     setBusy(true); setFlash(null);
     try { await fn(); } catch (e) { setFlash({ ok: false, text: e instanceof Error ? e.message : "Erro inesperado." }); }
@@ -67,8 +50,10 @@ function Integrations() {
   }
   const connect = () => run(async () => {
     if (!company) return;
-    const { url } = await startBitrixConnect({ data: { companyId: company.id, domain } });
-    window.top ? (window.top.location.href = url) : (window.location.href = url);
+    const r = await connectBitrixWebhook({ data: { companyId: company.id, url: domain } });
+    setDomain("");
+    const s = await syncBitrixNow({ data: { companyId: company.id } }).catch(() => null);
+    setFlash({ ok: true, text: `Portal ${r.domain} conectado pelo webhook de ${r.userName}.${r.isAdmin ? "" : " Atenção: esse usuário não é administrador, então só os dados que ele enxerga serão lidos."}${s ? ` ${s.imported} negócios importados.` : " Clique em “Sincronizar agora” para importar."}` });
   });
   const sync = () => run(async () => {
     if (!company) return;
@@ -86,10 +71,6 @@ function Integrations() {
   }, enabled: !!company });
   const countsFn = useServerFn(getModuleCounts);
   const countsQ = useQuery({ queryKey: ["module-counts", company?.id, conn?.last_sync_at], queryFn: () => countsFn({ data: { companyId: company!.id } }), enabled: !!company && !!conn });
-  async function copy(label: string, value: string) {
-    try { await navigator.clipboard.writeText(value); setCopied(label); setError(""); }
-    catch { setError("Não foi possível copiar. Selecione o endereço e copie manualmente."); }
-  }
   return <AppShell page="integrations" userName={data.name} userPhoto="" companyName={company?.name ?? "Sem empresa"}
     roleLabel={data.isAdmin ? "Administrador" : company?.canManage ? "Gestor" : "Colaborador"} isAdmin={data.isAdmin}
     onSignOut={async () => { await supabase.auth.signOut(); void nav({ to: "/auth" }); }}
@@ -137,11 +118,16 @@ function Integrations() {
       <div className="py-7">
         {!conn ? <>
           <h2 className="text-lg font-semibold">Conectar o portal</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Informe o endereço do portal Bitrix24 desta empresa. Você será levado ao Bitrix24 para autorizar o Spacedash (somente leitura).</p>
-          <form className="mt-4 flex max-w-xl flex-wrap gap-2" onSubmit={(e) => { e.preventDefault(); void connect(); }}>
-            <input aria-label="Endereço do portal" placeholder="suaempresa.bitrix24.com.br" value={domain} onChange={(e) => setDomain(e.target.value)} className="h-10 min-w-0 flex-1 rounded-md border border-border bg-card px-3 text-sm" />
-            <Button type="submit" disabled={busy || !domain.trim()}><Plug />{busy ? "Abrindo…" : "Conectar Bitrix24"}</Button>
+          <ol className="mt-3 max-w-2xl list-decimal space-y-1 pl-5 text-sm leading-6 text-muted-foreground">
+            <li>No Bitrix24, abra <b>Aplicativos › Recursos para desenvolvedores › Outro › Webhook de entrada</b>.</li>
+            <li>Use um usuário administrador e marque as permissões: CRM, Usuários, Departamentos, Tarefas e Canais Abertos.</li>
+            <li>Salve, copie a URL do webhook e cole abaixo.</li>
+          </ol>
+          <form className="mt-4 flex max-w-2xl flex-wrap gap-2" onSubmit={(e) => { e.preventDefault(); void connect(); }}>
+            <input aria-label="URL do webhook" type="password" autoComplete="off" placeholder="https://suaempresa.bitrix24.com.br/rest/1/abc123…/" value={domain} onChange={(e) => setDomain(e.target.value)} className="h-10 min-w-0 flex-1 rounded-md border border-border bg-card px-3 font-mono text-sm" />
+            <Button type="submit" disabled={busy || !domain.trim()}><Plug />{busy ? "Conectando…" : "Conectar"}</Button>
           </form>
+          <p className="mt-2 text-xs text-muted-foreground">A URL contém uma chave secreta: ela fica guardada só no servidor e nunca é exibida de novo.</p>
         </> : <>
           <h2 className="text-lg font-semibold">Sincronização</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Importa os negócios do CRM do portal. Cada execução traz até 2.000 negócios; repita para continuar quando ficar parcial.</p>
@@ -151,12 +137,8 @@ function Integrations() {
           </div>
         </>}
       </div>
-      <div className="border-t border-border py-6"><h3 className="font-semibold">Endereços do aplicativo</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">Endereços cadastrados no aplicativo Spacedash do Bitrix24.</p>
-        <div className="mt-4 space-y-4">{[{ label: "Instalação", value: BITRIX_SETUP_URLS.installation }, { label: "Retorno da autorização", value: BITRIX_SETUP_URLS.callback }].map((item) => <div key={item.label}><label className="text-xs font-medium text-muted-foreground">{item.label}</label><div className="mt-1 flex items-center gap-2"><input aria-label={`Endereço de ${item.label}`} readOnly value={item.value} className="h-10 min-w-0 flex-1 rounded-md border border-border bg-card px-3 font-mono text-xs" /><Button variant="outline" size="icon" aria-label={`Copiar ${item.label}`} title={`Copiar ${item.label}`} onClick={() => copy(item.label, item.value)}>{copied === item.label ? <Check /> : <Copy />}</Button></div></div>)}</div>
-        {copied && <p role="status" className="mt-3 text-xs text-success">{copied}: endereço copiado.</p>}{error && <p role="alert" className="mt-3 text-xs text-danger">{error}</p>}
-      </div>
       <div className="border-t border-border py-6"><h3 className="font-semibold">Módulos sincronizados</h3><div className="mt-4 divide-y divide-border">{([["CRM e vendas", "deals", "negócios"], ["Atividades", "activities", "atividades"], ["Tarefas", "tasks", "tarefas"], ["Atendimento", "support", "conversas"], ["Pessoas e departamentos", "users", "pessoas"]] as const).map(([module, key, unit]) => { const n = countsQ.data?.[key] ?? 0; return <div key={module} className="flex items-center justify-between gap-4 py-3 text-sm"><span>{module}</span><span className={`text-xs ${n ? "text-success" : "text-muted-foreground"}`}>{!conn ? "Não conectado" : countsQ.isLoading ? "…" : n ? `${n.toLocaleString("pt-BR")} ${unit}` : "Nenhum registro"}</span></div>; })}</div></div>
-      <div className="flex items-start gap-3 border-t border-border py-5 text-sm text-muted-foreground"><ShieldCheck className="mt-0.5 size-4 shrink-0" /><p>Credenciais serão solicitadas por formulário seguro. A instalação não concede acesso ao Spacedash sem convite.</p></div>
+      <div className="flex items-start gap-3 border-t border-border py-5 text-sm text-muted-foreground"><ShieldCheck className="mt-0.5 size-4 shrink-0" /><p>O Spacedash só lê dados do Bitrix24. Para trocar o webhook, desconecte e conecte de novo; para revogar, apague o webhook no Bitrix24.</p></div>
     </>}
       </TabsContent>
     </Tabs>
