@@ -21,9 +21,9 @@ export function AlertsBell({ f, onAsk }: { f: Filters; onAsk: (q: string) => voi
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button aria-label="Alertas" title="Alertas" className="relative grid size-8 place-items-center rounded-md border border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground">
+        <button aria-label="Alertas" title="Alertas" className="relative grid size-9 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
           <Bell className="size-4" />
-          {list.length > 0 && <span className="absolute -right-1 -top-1 grid min-w-4 place-items-center rounded-full bg-danger px-1 text-[10px] font-semibold text-primary-foreground">{list.length}</span>}
+          {list.length > 0 && <span className="absolute right-0.5 top-0.5 grid min-w-4 place-items-center rounded-full bg-danger px-1 ring-2 ring-background text-[10px] font-semibold text-primary-foreground">{list.length}</span>}
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-0">
