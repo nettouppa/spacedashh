@@ -4,6 +4,7 @@ import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMe, getLayout, saveLayout as saveLayoutFn } from "@/lib/account.functions";
 import { supabase } from "@/integrations/supabase/client";
+import { AlertsBell, useGoalCelebration } from "@/components/dash/alerts";
 import { Onboarding } from "@/components/dash/onboarding";
 import { useRef, useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -269,6 +270,8 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
   if (f.stage) chips.push({ k: "stage", label: `Etapa: ${f.stage}` });
   if (f.lossReason) chips.push({ k: "lossReason", label: `Perda: ${f.lossReason}` });
 
+  const goalNow = kpis(eff);
+  useGoalCelebration(goalNow.goal ? goalNow.goalPct : NaN, `${companyId}-${periodLabel(eff.period)}-${eff.sellerId ?? "all"}`, dataQ.isSuccess && !!goalNow.goal);
   const me = SELLERS.find((s) => s.id === ME) ?? { id: ME, name: account.name, team: "", photo: "", goal: 0 };
 
   return (
@@ -283,6 +286,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
       ]} userName={account.name} userPhoto="" page={active === "comercial" ? "pipeline" : "dashboard"}
       companyName={membership.companyName} roleLabel={profile === "manager" ? "Gestor" : "Colaborador"} isAdmin={account.isAdmin} onSignOut={() => signOut(nav)}
       topRight={<>
+        {(!!real || dataQ.isSuccess) && <AlertsBell f={eff} onAsk={(q) => { setAi(true); setAtlasReq({ mode: "ask", topic: q, id: Date.now() }); }} />}
         {account.memberships.length > 1 && (
           <select aria-label="Empresa" value={companyId} onChange={(e) => { setCompanyId(e.target.value); setF({ period: f.period }); }}
             className="h-8 max-w-44 rounded-md border border-border bg-card px-2.5 text-[13px] font-medium outline-none focus:ring-2 focus:ring-primary">
