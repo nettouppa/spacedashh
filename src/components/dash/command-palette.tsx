@@ -65,7 +65,8 @@ export function CommandPalette({ commands = [], isAdmin, onToggleMenu }: { comma
     { to: "/reports", label: "Relatórios", icon: BarChart3, sc: "G R" },
     { to: "/integrations", label: "Integrações", icon: Plug, sc: "G I" },
     { to: "/settings", label: "Configurações", icon: Settings, sc: "G C" },
-    ...(isAdmin ? [{ to: "/admin", label: "Administração", icon: ShieldCheck, sc: "" }] : []),
+    { to: "/members", label: "Membros", icon: Users, sc: "G M" },
+    ...(isAdmin ? [{ to: "/companies", label: "Empresas", icon: ShieldCheck, sc: "" }] : []),
   ];
 
   return (

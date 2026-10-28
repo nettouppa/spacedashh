@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { CommandPalette, type PaletteCommand } from "./command-palette";
 import { Link } from "@tanstack/react-router";
-import { ShieldCheck, LogOut, Menu, Search, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Building2, UserCog, LogOut, Menu, Search, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { BarChart3, Users, LayoutDashboard, Plug, Settings, ChevronRight } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
-export type ShellPage = "dashboard" | "pipeline" | "team" | "reports" | "integrations" | "settings" | "admin";
+export type ShellPage = "dashboard" | "pipeline" | "team" | "reports" | "integrations" | "settings" | "members" | "companies";
 
 const CRUMB: Record<ShellPage, [string, string]> = {
   dashboard: ["Análise", "Painel"],
@@ -15,10 +15,11 @@ const CRUMB: Record<ShellPage, [string, string]> = {
   reports: ["Análise", "Relatórios"],
   integrations: ["Workspace", "Integrações"],
   settings: ["Workspace", "Configurações"],
-  admin: ["Workspace", "Administração"],
+  members: ["Workspace", "Membros"],
+  companies: ["Plataforma", "Empresas"],
 };
 
-function Nav({ page, compact, isAdmin, onNavigate }: { page: ShellPage; compact: boolean; isAdmin: boolean; onNavigate?: () => void }) {
+function Nav({ page, compact, isAdmin, canManage, onNavigate }: { page: ShellPage; compact: boolean; isAdmin: boolean; canManage: boolean; onNavigate?: () => void }) {
   const item = (on: boolean) => cn("flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm", on ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/60");
   return (
     <nav className="flex-1 space-y-0.5 p-3">
@@ -28,8 +29,12 @@ function Nav({ page, compact, isAdmin, onNavigate }: { page: ShellPage; compact:
       <Link to="/reports" onClick={onNavigate} title="Relatórios" className={item(page === "reports")}><BarChart3 className="size-4" />{!compact && "Relatórios"}</Link>
       {compact ? <div className="my-3 border-t border-border" /> : <p className="px-2 pb-1 pt-5 text-[11px] font-medium text-subtle-foreground">Workspace</p>}
       <Link to="/integrations" onClick={onNavigate} title="Integrações" className={item(page === "integrations")}><Plug className="size-4" />{!compact && <>Integrações<span className="ml-auto text-[11px] text-muted-foreground">Bitrix24</span></>}</Link>
+      {canManage && <Link to="/members" onClick={onNavigate} title="Membros" className={item(page === "members")}><UserCog className="size-4" />{!compact && "Membros"}</Link>}
       <Link to="/settings" onClick={onNavigate} title="Configurações" className={item(page === "settings")}><Settings className="size-4" />{!compact && "Configurações"}</Link>
-      {isAdmin && <Link to="/admin" onClick={onNavigate} title="Administração" className={item(page === "admin")}><ShieldCheck className="size-4" />{!compact && "Administração"}</Link>}
+      {isAdmin && <>
+        {compact ? <div className="my-3 border-t border-border" /> : <p className="px-2 pb-1 pt-5 text-[11px] font-medium text-subtle-foreground">Plataforma</p>}
+        <Link to="/companies" onClick={onNavigate} title="Empresas" className={item(page === "companies")}><Building2 className="size-4" />{!compact && "Empresas"}</Link>
+      </>}
     </nav>
   );
 }
@@ -44,7 +49,7 @@ function UserBox({ compact, userName, userPhoto, companyName, roleLabel, onSignO
   );
 }
 
-export function AppShell({ children, topRight, userName, userPhoto, compact: atlasOpen = false, companyName, roleLabel, isAdmin, onSignOut, page = "dashboard", commands }: { commands?: PaletteCommand[]; page?: ShellPage; compact?: boolean; children: ReactNode; topRight?: ReactNode; userName: string; userPhoto: string; companyName: string; roleLabel: string; isAdmin: boolean; onSignOut: () => void }) {
+export function AppShell({ children, topRight, userName, userPhoto, compact: atlasOpen = false, companyName, roleLabel, isAdmin, canManage = isAdmin, onSignOut, page = "dashboard", commands }: { canManage?: boolean; commands?: PaletteCommand[]; page?: ShellPage; compact?: boolean; children: ReactNode; topRight?: ReactNode; userName: string; userPhoto: string; companyName: string; roleLabel: string; isAdmin: boolean; onSignOut: () => void }) {
   const [mobile, setMobile] = useState(false);
   const [folded, setFolded] = useState(false);
   useEffect(() => { setFolded(localStorage.getItem("sd-menu-folded") === "1"); }, []);
@@ -61,7 +66,7 @@ export function AppShell({ children, topRight, userName, userPhoto, compact: atl
     <div className="min-h-screen bg-background">
       <aside className={cn("fixed inset-y-0 left-0 z-20 hidden flex-col border-r border-border bg-card transition-[width] duration-300 lg:flex", compact ? "w-16" : "w-60")}>
         <Brand small={compact} />
-        <Nav page={page} compact={compact} isAdmin={isAdmin} />
+        <Nav page={page} compact={compact} isAdmin={isAdmin} canManage={canManage} />
         {!atlasOpen && <button onClick={toggleMenu} title={folded ? "Expandir menu ( [ )" : "Recolher menu ( [ )"} aria-label="Recolher ou expandir menu" className="mx-3 mb-2 flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted">{folded ? <PanelLeftOpen className="size-4" /> : <><PanelLeftClose className="size-4" />Recolher</>}</button>}
         <UserBox compact={compact} {...user} />
       </aside>
@@ -70,7 +75,7 @@ export function AppShell({ children, topRight, userName, userPhoto, compact: atl
         <SheetContent side="left" className="flex w-64 flex-col p-0">
           <SheetTitle className="sr-only">Menu</SheetTitle>
           <Brand small={false} />
-          <Nav page={page} compact={false} isAdmin={isAdmin} onNavigate={() => setMobile(false)} />
+          <Nav page={page} compact={false} isAdmin={isAdmin} canManage={canManage} onNavigate={() => setMobile(false)} />
           <UserBox compact={false} {...user} />
         </SheetContent>
       </Sheet>

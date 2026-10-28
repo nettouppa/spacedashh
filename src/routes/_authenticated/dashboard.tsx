@@ -140,7 +140,7 @@ function NoAccess({ isAdmin }: { isAdmin: boolean }) {
         <h1 className="text-lg font-semibold">Aguardando convite</h1>
         <p className="mt-2 text-sm text-muted-foreground">Sua conta ainda não está vinculada a nenhuma empresa. Peça ao administrador do Spacedash para liberar seu acesso.</p>
         <div className="mt-5 flex justify-center gap-2">
-          {isAdmin && <Link to="/admin" className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">Administração</Link>}
+          {isAdmin && <Link to="/companies" className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">Administração</Link>}
           <button onClick={() => signOut(nav)} className="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted">Sair</button>
         </div>
       </div>
@@ -374,7 +374,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
       {profile === "manager" && <div className="mt-5"><Onboarding companyId={companyId} steps={[
         { id: "bitrix", label: "Conectar o Bitrix24", done: !!real, to: "/integrations" },
         { id: "goals", label: "Cadastrar metas", done: (goalsQ.data?.length ?? 0) > 0, action: () => setGoalsOpen(true) },
-        { id: "team", label: "Convidar o time", done: usedTeam, to: account.isAdmin ? "/admin" : "/team" },
+        { id: "team", label: "Convidar o time", done: usedTeam, to: "/members" },
         { id: "view", label: "Criar um painel", done: views.some((v) => !["geral", "comercial", "operacao"].includes(v.id)), action: () => setNewOpen(true) },
         { id: "atlas", label: "Perguntar ao Atlas", done: usedAtlas, action: () => setAi(true) },
       ]} /></div>}
