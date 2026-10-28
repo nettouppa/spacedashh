@@ -163,11 +163,13 @@ export type Database = {
           deals_count: number
           domain: string
           expires_at: string | null
+          last_full_sync_at: string | null
           last_sync_at: string | null
           last_sync_error: string | null
           last_sync_status: string | null
           member_id: string
           refresh_token: string | null
+          sync_cursor: number
           webhook_url: string | null
         }
         Insert: {
@@ -179,11 +181,13 @@ export type Database = {
           deals_count?: number
           domain: string
           expires_at?: string | null
+          last_full_sync_at?: string | null
           last_sync_at?: string | null
           last_sync_error?: string | null
           last_sync_status?: string | null
           member_id: string
           refresh_token?: string | null
+          sync_cursor?: number
           webhook_url?: string | null
         }
         Update: {
@@ -195,11 +199,13 @@ export type Database = {
           deals_count?: number
           domain?: string
           expires_at?: string | null
+          last_full_sync_at?: string | null
           last_sync_at?: string | null
           last_sync_error?: string | null
           last_sync_status?: string | null
           member_id?: string
           refresh_token?: string | null
+          sync_cursor?: number
           webhook_url?: string | null
         }
         Relationships: [
@@ -638,6 +644,13 @@ export type Database = {
           last_sync_at: string
           last_sync_error: string
           last_sync_status: string
+        }[]
+      }
+      bitrix_sync_progress: {
+        Args: { _company_id: string }
+        Returns: {
+          last_full_sync_at: string
+          sync_cursor: number
         }[]
       }
       has_role: {
