@@ -1,0 +1,1 @@
+ALTER TABLE public.bitrix_deals ADD COLUMN IF NOT EXISTS source_id text, ADD COLUMN IF NOT EXISTS source_name text, ADD COLUMN IF NOT EXISTS moved_time timestamptz, ADD COLUMN IF NOT EXISTS company_ref text, ADD COLUMN IF NOT EXISTS contact_ref text;

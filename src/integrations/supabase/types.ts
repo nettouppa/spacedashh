@@ -225,11 +225,16 @@ export type Database = {
           close_date: string | null
           closed: boolean
           company_id: string
+          company_ref: string | null
+          contact_ref: string | null
           currency: string | null
           date_create: string | null
           date_modify: string | null
           deal_id: string
+          moved_time: string | null
           opportunity: number
+          source_id: string | null
+          source_name: string | null
           stage_id: string | null
           synced_at: string
           title: string | null
@@ -240,11 +245,16 @@ export type Database = {
           close_date?: string | null
           closed?: boolean
           company_id: string
+          company_ref?: string | null
+          contact_ref?: string | null
           currency?: string | null
           date_create?: string | null
           date_modify?: string | null
           deal_id: string
+          moved_time?: string | null
           opportunity?: number
+          source_id?: string | null
+          source_name?: string | null
           stage_id?: string | null
           synced_at?: string
           title?: string | null
@@ -255,11 +265,16 @@ export type Database = {
           close_date?: string | null
           closed?: boolean
           company_id?: string
+          company_ref?: string | null
+          contact_ref?: string | null
           currency?: string | null
           date_create?: string | null
           date_modify?: string | null
           deal_id?: string
+          moved_time?: string | null
           opportunity?: number
+          source_id?: string | null
+          source_name?: string | null
           stage_id?: string | null
           synced_at?: string
           title?: string | null
