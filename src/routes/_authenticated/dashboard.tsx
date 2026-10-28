@@ -301,7 +301,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
         ...views.map((v) => ({ id: `view-${v.id}`, label: v.name, group: "Painéis", run: () => switchView(v.id) })),
         ...(profile === "manager" ? SELLERS.map((x) => ({ id: `seller-${x.id}`, label: x.name, group: "Filtrar por vendedor", run: () => set({ sellerId: x.id }) })) : []),
       ]} userName={account.name} userPhoto="" page={active === "comercial" ? "pipeline" : "dashboard"}
-      companyName={membership.companyName} roleLabel={profile === "manager" ? "Gestor" : "Colaborador"} isAdmin={account.isAdmin} onSignOut={() => signOut(nav)}
+      companyName={membership.companyName} roleLabel={profile === "manager" ? "Gestor" : "Colaborador"} isAdmin={account.isAdmin} canManage={profile === "manager" || account.isAdmin} onSignOut={() => signOut(nav)}
       topRight={<>
         {(!!real || dataQ.isSuccess) && <AlertsBell f={eff} onAsk={(q) => { setAi(true); setAtlasReq({ mode: "ask", topic: q, id: Date.now() }); }} />}
         {account.memberships.length > 1 && (
