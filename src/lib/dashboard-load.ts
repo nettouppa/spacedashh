@@ -9,7 +9,7 @@ export async function loadDataset(sb: SupabaseClient, companyId: string): Promis
   const deals: RawDataset["deals"] = [];
   for (let from = 0; from < 20000; from += 1000) {
     const { data: rows, error } = await sb.from("bitrix_deals")
-      .select("deal_id, title, stage_id, category_id, opportunity, assigned_by_id, closed, date_create, close_date, date_modify")
+      .select("deal_id, title, stage_id, category_id, opportunity, assigned_by_id, closed, date_create, close_date, date_modify, source_name, moved_time, company_ref, contact_ref")
       .eq("company_id", companyId).order("deal_id").range(from, from + 999);
     if (error) throw new Error("Não foi possível carregar os negócios.");
     deals.push(...(rows as RawDataset["deals"]));
@@ -30,7 +30,7 @@ export async function loadDataset(sb: SupabaseClient, companyId: string): Promis
     return out;
   };
   const [activities, tasks] = await Promise.all([
-    page<NonNullable<RawDataset["activities"]>[number]>("bitrix_activities", "type, responsible_id, completed, created_at, deadline, provider, channel, start_time, end_time", "activity_id"),
+    page<NonNullable<RawDataset["activities"]>[number]>("bitrix_activities", "type, responsible_id, owner_type_id, owner_id, completed, created_at, deadline, provider, channel, start_time, end_time", "activity_id"),
     page<NonNullable<RawDataset["tasks"]>[number]>("bitrix_tasks", "responsible_id, status, created_at, deadline, closed_at", "task_id"),
   ]);
   return {
