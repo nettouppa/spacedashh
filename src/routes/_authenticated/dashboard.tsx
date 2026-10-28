@@ -5,6 +5,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { getMe, getLayout, saveLayout as saveLayoutFn } from "@/lib/account.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { AlertsBell, useGoalCelebration } from "@/components/dash/alerts";
+import { parseFilterSearch, filtersFromSearch, searchFromFilters, type FilterSearch } from "@/lib/filter-url";
+import { Tour } from "@/components/dash/tour";
 import { Onboarding } from "@/components/dash/onboarding";
 import { useRef, useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -29,9 +31,10 @@ import { AppShell, Segmented } from "@/components/dash/app-shell";
 import type { AiAction } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  validateSearch: (s: Record<string, unknown>): { view?: string; seller?: string } => ({
+  validateSearch: (s: Record<string, unknown>): FilterSearch & { view?: string; tour?: string } => ({
+    ...parseFilterSearch(s),
     ...(typeof s['view'] === "string" ? { view: s['view'].slice(0, 40) } : {}),
-    ...(typeof s['seller'] === "string" ? { seller: s['seller'].slice(0, 64) } : {}),
+    ...(typeof s['tour'] === "string" ? { tour: "1" } : {}),
   }),
   loader: ({ context }) => context.queryClient.ensureQueryData(meQuery),
   head: () => ({
@@ -157,7 +160,10 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
   useMemo(() => setDataset(dataQ.isSuccess ? real : "empty"), [real, dataQ.isSuccess]);
   useMemo(() => setGoals(goalsQ.data ?? []), [goalsQ.data]);
   const ME = membership.sellerRef && SELLERS.some((s) => s.id === membership.sellerRef) ? membership.sellerRef : (SELLERS[0]?.id ?? "s1");
-  const [f, setF] = useState<Filters>(() => (search.seller ? { period: "month", sellerId: search.seller } : { period: "month" }));
+  const [f, setF] = useState<Filters>(() => filtersFromSearch(search));
+  useEffect(() => {
+    void nav({ to: "/dashboard", search: (prev) => ({ ...(prev.view ? { view: prev.view } : {}), ...searchFromFilters(f) }), replace: true });
+  }, [f, nav]);
   const [views, setViews] = useState<View[]>(() => PRESET_VIEWS(DEFAULT_ORDER));
   const [active, setActive] = useState("geral");
   const current = views.find((v) => v.id === active) ?? views[0];
@@ -174,6 +180,8 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
   const [deleting, setDeleting] = useState(false);
   const [ai, setAi] = useState(false);
   const [tv, setTv] = useState(false);
+  const [tour, setTour] = useState(false);
+  useEffect(() => { if (search.tour || !localStorage.getItem("sd-tour-done")) setTour(true); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [usedAtlas, setUsedAtlas] = useState(false);
   const [usedTeam, setUsedTeam] = useState(false);
   useEffect(() => { setUsedAtlas(localStorage.getItem("sd-used-atlas") === "1"); setUsedTeam(localStorage.getItem("sd-used-team") === "1"); }, []);
@@ -225,7 +233,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
   };
   const persist = (vs: View[], a: string) => persistLayout({ data: { companyId, layout: { views: vs, active: a } } }).then(() => true).catch(() => { toast.error("Não foi possível salvar o layout. Tente de novo."); return false; });
   const saveLayout = async () => { if (!(await persist(views, active))) return; setSaved(true); setEdit(false); setTimeout(() => setSaved(false), 2000); };
-  const switchView = (id: string) => { setActive(id); setEdit(false); void persist(views, id); };
+  const switchView = (id: string) => { void nav({ to: "/dashboard", search: (prev) => ({ ...prev, view: id }), replace: true }); setActive(id); setEdit(false); void persist(views, id); };
   const pushView = (v: View, editAfter: boolean) => {
     const vs = [...views, v]; setViews(vs); setActive(v.id); setEdit(editAfter); void persist(vs, v.id);
   };
@@ -278,6 +286,8 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
     <AppShell compact={ai} commands={[
         { id: "atlas-ask", label: "Perguntar ao Atlas", group: "Atlas", run: () => setAi(true) },
         { id: "atlas", label: "Abrir o Atlas", group: "Ações", shortcut: "a", run: () => setAi((v) => !v) },
+        { id: "share", label: "Copiar link desta visão", group: "Ações", run: () => { void navigator.clipboard.writeText(window.location.href).then(() => toast.success("Link copiado. Quem abrir verá os mesmos filtros.")); } },
+        { id: "tour", label: "Fazer o tour guiado", group: "Ajuda", run: () => setTour(true) },
         { id: "tv", label: "Modo TV", group: "Ações", shortcut: "t", run: () => setTv(true) },
         { id: "clear", label: "Limpar todos os filtros", group: "Ações", run: () => set({ company: undefined, team: undefined, sellerId: undefined, stage: undefined, lossReason: undefined }) },
         { id: "new", label: "Novo painel a partir de modelo", group: "Ações", run: () => setNewOpen(true) },
