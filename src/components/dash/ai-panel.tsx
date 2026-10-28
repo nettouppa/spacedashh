@@ -123,7 +123,7 @@ export function AiPanel({ open, onClose, onToggle, f, onAction, request, onResto
   const [voiceOpen, setVoiceOpen] = useState(false);
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
-      else if (e.key === "Escape" && open && !voiceOpen && !historyOpen) onClose();
+      if (e.key === "Escape" && open && !voiceOpen && !historyOpen && !document.querySelector("[role=dialog]")) onClose();
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
