@@ -155,49 +155,52 @@ export type Database = {
       }
       bitrix_connections: {
         Row: {
-          access_token: string
-          client_endpoint: string
+          access_token: string | null
+          client_endpoint: string | null
           company_id: string
           connected_at: string
           connected_by: string
           deals_count: number
           domain: string
-          expires_at: string
+          expires_at: string | null
           last_sync_at: string | null
           last_sync_error: string | null
           last_sync_status: string | null
           member_id: string
-          refresh_token: string
+          refresh_token: string | null
+          webhook_url: string | null
         }
         Insert: {
-          access_token: string
-          client_endpoint: string
+          access_token?: string | null
+          client_endpoint?: string | null
           company_id: string
           connected_at?: string
           connected_by: string
           deals_count?: number
           domain: string
-          expires_at: string
+          expires_at?: string | null
           last_sync_at?: string | null
           last_sync_error?: string | null
           last_sync_status?: string | null
           member_id: string
-          refresh_token: string
+          refresh_token?: string | null
+          webhook_url?: string | null
         }
         Update: {
-          access_token?: string
-          client_endpoint?: string
+          access_token?: string | null
+          client_endpoint?: string | null
           company_id?: string
           connected_at?: string
           connected_by?: string
           deals_count?: number
           domain?: string
-          expires_at?: string
+          expires_at?: string | null
           last_sync_at?: string | null
           last_sync_error?: string | null
           last_sync_status?: string | null
           member_id?: string
-          refresh_token?: string
+          refresh_token?: string | null
+          webhook_url?: string | null
         }
         Relationships: [
           {

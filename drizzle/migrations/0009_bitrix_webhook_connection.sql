@@ -1,0 +1,10 @@
+ALTER TABLE public.bitrix_connections ADD COLUMN IF NOT EXISTS webhook_url text;
+ALTER TABLE public.bitrix_connections ALTER COLUMN client_endpoint DROP NOT NULL;
+ALTER TABLE public.bitrix_connections ALTER COLUMN access_token DROP NOT NULL;
+ALTER TABLE public.bitrix_connections ALTER COLUMN refresh_token DROP NOT NULL;
+ALTER TABLE public.bitrix_connections ALTER COLUMN expires_at DROP NOT NULL;
+COMMENT ON COLUMN public.bitrix_connections.access_token IS 'DEPRECATED: replaced by webhook_url';
+COMMENT ON COLUMN public.bitrix_connections.refresh_token IS 'DEPRECATED: replaced by webhook_url';
+COMMENT ON COLUMN public.bitrix_connections.expires_at IS 'DEPRECATED: replaced by webhook_url';
+COMMENT ON COLUMN public.bitrix_connections.client_endpoint IS 'DEPRECATED: replaced by webhook_url';
+COMMENT ON TABLE public.bitrix_oauth_states IS 'DEPRECATED: OAuth app flow replaced by inbound webhook';

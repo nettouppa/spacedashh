@@ -64,6 +64,13 @@
       "when": 1792726588532,
       "tag": "0008_atlas_conversations",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793146169967,
+      "tag": "0009_bitrix_webhook_connection",
+      "breakpoints": true
     }
   ]
 }
