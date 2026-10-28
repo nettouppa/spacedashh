@@ -310,9 +310,9 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
             {account.memberships.map((m) => <option key={m.companyId} value={m.companyId}>{m.companyName}</option>)}
           </select>
         )}
-        {(profile === "manager" || account.isAdmin) && <button onClick={() => setGoalsOpen(true)} className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted"><Target className="size-3.5" /><span className="hidden sm:inline">Metas</span></button>}
-        <button onClick={() => setTv(true)} className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted"><Monitor className="size-3.5" /><span className="hidden sm:inline">Modo TV</span></button>
-        <button data-tour="atlas" onClick={() => setAi((v) => !v)} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[13px] font-medium text-primary-foreground hover:bg-primary/90"><AtlasIcon className="size-4" /><span className="hidden sm:inline">Atlas</span></button>
+        {(profile === "manager" || account.isAdmin) && <button onClick={() => setGoalsOpen(true)} className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><Target className="size-3.5" /><span className="hidden sm:inline">Metas</span></button>}
+        <button onClick={() => setTv(true)} className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><Monitor className="size-3.5" /><span className="hidden sm:inline">Modo TV</span></button>
+        <button data-tour="atlas" onClick={() => setAi((v) => !v)} className="ml-1 inline-flex h-9 items-center gap-1.5 rounded-full bg-primary pl-2.5 pr-4 text-[13px] font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 hover:shadow-md"><AtlasIcon className="size-4" /><span className="hidden sm:inline">Atlas</span></button>
       </>}>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
