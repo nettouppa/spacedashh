@@ -19,8 +19,6 @@ import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as TvTokenRouteImport } from './routes/tv.$token'
-import { Route as ApiPublicBitrixCallbackRouteImport } from './routes/api/public/bitrix/callback'
-import { Route as ApiPublicBitrixInstallRouteImport } from './routes/api/public/bitrix/install'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -72,16 +70,6 @@ const TvTokenRoute = TvTokenRouteImport.update({
   path: '/tv/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicBitrixCallbackRoute = ApiPublicBitrixCallbackRouteImport.update({
-  id: '/api/public/bitrix/callback',
-  path: '/api/public/bitrix/callback',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicBitrixInstallRoute = ApiPublicBitrixInstallRouteImport.update({
-  id: '/api/public/bitrix/install',
-  path: '/api/public/bitrix/install',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -93,8 +81,6 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/team': typeof AuthenticatedTeamRoute
   '/tv/$token': typeof TvTokenRoute
-  '/api/public/bitrix/callback': typeof ApiPublicBitrixCallbackRoute
-  '/api/public/bitrix/install': typeof ApiPublicBitrixInstallRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -106,8 +92,6 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/team': typeof AuthenticatedTeamRoute
   '/tv/$token': typeof TvTokenRoute
-  '/api/public/bitrix/callback': typeof ApiPublicBitrixCallbackRoute
-  '/api/public/bitrix/install': typeof ApiPublicBitrixInstallRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -121,8 +105,6 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/tv/$token': typeof TvTokenRoute
-  '/api/public/bitrix/callback': typeof ApiPublicBitrixCallbackRoute
-  '/api/public/bitrix/install': typeof ApiPublicBitrixInstallRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -136,8 +118,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/team'
     | '/tv/$token'
-    | '/api/public/bitrix/callback'
-    | '/api/public/bitrix/install'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -149,8 +129,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/team'
     | '/tv/$token'
-    | '/api/public/bitrix/callback'
-    | '/api/public/bitrix/install'
   id:
     | '__root__'
     | '/'
@@ -163,8 +141,6 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/team'
     | '/tv/$token'
-    | '/api/public/bitrix/callback'
-    | '/api/public/bitrix/install'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -172,8 +148,6 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   TvTokenRoute: typeof TvTokenRoute
-  ApiPublicBitrixCallbackRoute: typeof ApiPublicBitrixCallbackRoute
-  ApiPublicBitrixInstallRoute: typeof ApiPublicBitrixInstallRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -248,20 +222,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TvTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/bitrix/callback': {
-      id: '/api/public/bitrix/callback'
-      path: '/api/public/bitrix/callback'
-      fullPath: '/api/public/bitrix/callback'
-      preLoaderRoute: typeof ApiPublicBitrixCallbackRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/bitrix/install': {
-      id: '/api/public/bitrix/install'
-      path: '/api/public/bitrix/install'
-      fullPath: '/api/public/bitrix/install'
-      preLoaderRoute: typeof ApiPublicBitrixInstallRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -291,8 +251,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   TvTokenRoute: TvTokenRoute,
-  ApiPublicBitrixCallbackRoute: ApiPublicBitrixCallbackRoute,
-  ApiPublicBitrixInstallRoute: ApiPublicBitrixInstallRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
