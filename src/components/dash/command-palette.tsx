@@ -25,7 +25,7 @@ const typing = (t: EventTarget | null) => {
   return !!el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName));
 };
 
-export function CommandPalette({ commands = [], isAdmin, onToggleMenu }: { commands?: PaletteCommand[]; isAdmin: boolean; onToggleMenu: () => void }) {
+export function CommandPalette({ commands = [], isAdmin, onToggleMenu }: { commands?: PaletteCommand[] | undefined; isAdmin: boolean; onToggleMenu: () => void }) {
   const [open, setOpen] = useState(false);
   const [help, setHelp] = useState(false);
   const [q, setQ] = useState("");
