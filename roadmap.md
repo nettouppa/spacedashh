@@ -1,28 +1,10 @@
-# Roadmap — Spacedash: o básico bem feito
+# Roadmap — o básico bem feito
 
-## Etapa 1 — nada quebrado nem enganoso
-- [x] Avisos (toasts) montados no app; falhas de salvar avisam
-- [x] Painel: carregando / erro / demonstração só sem Bitrix24
-- [x] Integrações: status real por módulo
-- [x] Páginas de erro/404 em português
-- [x] Topo sem sino e busca falsos
-
-## Etapa 2 — menus que funcionam
-- [x] Pipeline abre a aba Comercial & Funil
-- [x] Página Equipe
-- [x] Página Relatórios (CSV/PDF)
-- [x] Página Configurações (Atlas + Minha conta: nome, senha, empresa padrão)
-- [x] Menu no celular + marcar página ativa
-
-## Etapa 3 — contas e administração
-- [ ] Esqueci minha senha + nova senha
-- [ ] Minha conta (nome, senha, empresa padrão)
-- [ ] Admin: trocar papel, reenviar convite, vincular vendedor real
-- [ ] Histórico de ações administrativas
-- [ ] Busca ⌘K
-
-## Etapa 4 — dados sempre atualizados
-- [ ] Sincronização automática de hora em hora
-- [ ] Próxima sincronização e últimas execuções
-- [ ] Aviso de dados desatualizados / falha
-- [ ] Aviso quando o limite de registros é atingido
+- [x] Etapa 1: sincronização retomável + incremental
+- [x] Etapa 1: sincronização automática a cada hora
+- [x] Etapa 1: sem dados de demonstração para empresa conectada (carregando/erro)
+- [x] Etapa 1: selos "estimado"
+- [x] Etapa 2: esqueci minha senha + /reset-password (também usado no convite)
+- [x] Etapa 2: administração (editar papel/vendedor, vendedores da empresa, confirmação, erros, responsivo)
+- [x] Etapa 3: saúde da sincronização no topo
+- [ ] Depois: lista de convites pendentes com reenviar/cancelar

@@ -151,7 +151,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
   const goalsQ = useQuery({ queryKey: ["goals", companyId], queryFn: () => loadGoals({ data: { companyId } }) });
   const [goalsOpen, setGoalsOpen] = useState(false);
   // Widgets read the module-level dataset; swap it before children render.
-  useMemo(() => setDataset(real), [real]);
+  useMemo(() => setDataset(dataQ.isSuccess ? real : "empty"), [real, dataQ.isSuccess]);
   useMemo(() => setGoals(goalsQ.data ?? []), [goalsQ.data]);
   const ME = membership.sellerRef && SELLERS.some((s) => s.id === membership.sellerRef) ? membership.sellerRef : (SELLERS[0]?.id ?? "s1");
   const [f, setF] = useState<Filters>(() => (search.seller ? { period: "month", sellerId: search.seller } : { period: "month" }));
@@ -257,7 +257,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{profile === "manager" ? "Visão geral comercial" : `Meu desempenho · ${me.name}`}</h1>
-          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">{real ? <><span className="size-1.5 rounded-full bg-success" />Bitrix24 · {real.domain} · {real.deals.length} negócios{real.lastSyncAt ? ` · sincronizado em ${new Date(real.lastSyncAt).toLocaleString("pt-BR")}` : ""} <Link to="/integrations" className="ml-1 text-primary hover:underline">Sincronizar</Link></>
+          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">{real ? <><span className="size-1.5 rounded-full bg-success" />Bitrix24 · {real.domain} · {real.deals.length} negócios{real.lastSyncAt ? ` · sincronizado em ${new Date(real.lastSyncAt).toLocaleString("pt-BR")}` : ""}{real.syncStatus === "error" ? <span className="font-medium text-danger"> · última sincronização falhou</span> : real.syncStatus === "partial" ? <span className="font-medium text-warning"> · importação em andamento</span> : real.lastSyncAt && Date.now() - new Date(real.lastSyncAt).getTime() > 3 * 3600_000 ? <span className="font-medium text-warning"> · desatualizado</span> : null} <Link to="/integrations" className="ml-1 text-primary hover:underline">Sincronizar</Link></>
             : dataQ.isError ? <><span className="size-1.5 rounded-full bg-danger" />Erro ao carregar dados do Bitrix24</>
             : dataQ.isLoading ? <><span className="size-1.5 animate-pulse rounded-full bg-primary" />Carregando dados do Bitrix24…</>
             : <><span className="size-1.5 rounded-full bg-warning" />Dados de demonstração · Bitrix24 não conectado <Link to="/integrations" className="ml-1 text-primary hover:underline">Configurar integração</Link></>}</p>

@@ -58,7 +58,7 @@ function Integrations() {
   const sync = () => run(async () => {
     if (!company) return;
     const r = await syncBitrixNow({ data: { companyId: company.id } });
-    setFlash({ ok: true, text: `${r.imported} negócios importados${r.partial ? " (parcial — sincronize novamente para continuar)" : ""}.` });
+    setFlash({ ok: true, text: `${r.imported} negócios importados${r.partial ? " (parcial — continua de onde parou na próxima sincronização, automática a cada hora)" : ""}.` });
   });
   const disconnect = () => run(async () => {
     if (!company || !confirm("Desconectar este portal? Os acessos guardados serão apagados.")) return;
@@ -130,7 +130,7 @@ function Integrations() {
           <p className="mt-2 text-xs text-muted-foreground">A URL contém uma chave secreta: ela fica guardada só no servidor e nunca é exibida de novo.</p>
         </> : <>
           <h2 className="text-lg font-semibold">Sincronização</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Importa os negócios do CRM do portal. Cada execução traz até 2.000 negócios; repita para continuar quando ficar parcial.</p>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Importa os negócios do CRM do portal. Atualiza sozinho a cada hora. A primeira importação vem em lotes de até 2.000 negócios e continua de onde parou; depois, só o que mudou.</p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Button disabled={busy} onClick={() => void sync()}><RefreshCw className={busy ? "animate-spin" : ""} />{busy ? "Sincronizando…" : "Sincronizar agora"}</Button>
             <Button variant="outline" disabled={busy} onClick={() => void disconnect()}><Unplug />Desconectar</Button>

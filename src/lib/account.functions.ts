@@ -67,8 +67,11 @@ export const adminOverview = createServerFn({ method: "GET" })
       context.supabase.from("profiles").select("id, email, display_name"),
     ]);
     const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: bxUsers } = await supabaseAdmin.from("bitrix_users" as never).select("company_id, user_id, name").order("name" as never).limit(5000) as unknown as { data: { company_id: string; user_id: string; name: string }[] | null };
     return (companies ?? []).map((c) => ({
       ...c,
+      sellers: (bxUsers ?? []).filter((u) => u.company_id === c.id).map((u) => ({ id: u.user_id, name: u.name })),
       members: (members ?? []).filter((m) => m.company_id === c.id).map((m) => ({ ...m, email: byId.get(m.user_id)?.email ?? "—", name: byId.get(m.user_id)?.display_name ?? "" })),
     }));
   });
@@ -116,5 +119,15 @@ export const removeMember = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase as never, context.userId);
     const { error } = await context.supabase.from("company_members").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const updateMember = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid(), role: z.enum(["gestor", "colaborador"]), sellerRef: z.string().trim().max(40).nullable() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase as never, context.userId);
+    const { error } = await context.supabase.from("company_members").update({ role: data.role, seller_ref: data.sellerRef || null }).eq("id", data.id);
+    if (error) throw new Error("Não foi possível salvar a alteração.");
     return { ok: true };
   });

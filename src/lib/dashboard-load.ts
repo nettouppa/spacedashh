@@ -4,7 +4,7 @@ import type { RawDataset } from "@/lib/crm-data";
 /** Loads a company's synced Bitrix24 dataset with the given client (RLS user client or verified admin client). Null = not connected. */
 export async function loadDataset(sb: SupabaseClient, companyId: string): Promise<RawDataset | null> {
   const { data: st } = await sb.rpc("bitrix_status", { _company_id: companyId });
-  const status = Array.isArray(st) ? (st[0] as { domain?: string; last_sync_at?: string | null } | undefined) : undefined;
+  const status = Array.isArray(st) ? (st[0] as { domain?: string; last_sync_at?: string | null; last_sync_status?: string | null } | undefined) : undefined;
   if (!status?.domain) return null;
   const deals: RawDataset["deals"] = [];
   for (let from = 0; from < 20000; from += 1000) {
@@ -35,7 +35,7 @@ export async function loadDataset(sb: SupabaseClient, companyId: string): Promis
   ]);
   return {
     activities, tasks,
-    domain: status.domain, lastSyncAt: status.last_sync_at ?? null, deals,
+    domain: status.domain, lastSyncAt: status.last_sync_at ?? null, syncStatus: status.last_sync_status ?? null, deals,
     users: (users.data ?? []) as RawDataset["users"], stages: (stages.data ?? []) as RawDataset["stages"],
   };
 }

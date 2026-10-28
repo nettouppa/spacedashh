@@ -28,9 +28,9 @@ export function useWorkspace() {
   const dataQ = useQuery({ queryKey: ["dash-data", companyId], queryFn: () => loadData({ data: { companyId } }), enabled: !!companyId, staleTime: 5 * 60_000 });
   const goalsQ = useQuery({ queryKey: ["goals", companyId], queryFn: () => loadGoals({ data: { companyId } }), enabled: !!companyId });
   const real = dataQ.data ?? null;
-  useMemo(() => setDataset(real), [real]);
+  useMemo(() => setDataset(dataQ.isSuccess ? real : "empty"), [real, dataQ.isSuccess]);
   useMemo(() => setGoals(goalsQ.data ?? []), [goalsQ.data]);
-  return { me, companyId, setCompanyId, membership, isManager, dataQ, real, ready: !dataQ.isLoading && !goalsQ.isLoading };
+  return { me, companyId, setCompanyId, membership, isManager, dataQ, real, ready: dataQ.isSuccess && !goalsQ.isLoading };
 }
 
 export type Workspace = ReturnType<typeof useWorkspace>;

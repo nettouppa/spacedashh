@@ -9,12 +9,12 @@ import {
 export type SetFilter = (patch: Partial<Filters>) => void;
 type P = { f: Filters; set: SetFilter; big?: boolean | undefined };
 
-export function Card({ className, children, title, subtitle, right }: { className?: string; children: React.ReactNode; title?: string; subtitle?: string; right?: React.ReactNode }) {
+export function Card({ className, children, title, subtitle, right, estimate }: { className?: string; children: React.ReactNode; title?: string; subtitle?: string; right?: React.ReactNode; estimate?: string }) {
   return (
     <section className={cn("flex h-full flex-col rounded-xl border border-border bg-card text-card-foreground shadow-soft", className)}>
       {title && (
         <header className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
-          <div><h3 className="text-sm font-semibold">{title}</h3>{subtitle && <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>}</div>
+          <div><h3 className="flex items-center gap-2 text-sm font-semibold">{title}{estimate && <span title={estimate} className="cursor-help rounded border border-border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">estimado</span>}</h3>{subtitle && <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>}</div>
           <div className="flex items-center gap-2">{right}<AtlasTrigger topic={title} /></div>
         </header>
       )}
@@ -177,7 +177,7 @@ export function FunnelWidget({ f, set, big }: P) {
 export function RankingWidget({ f, set, big }: P) {
   const data = ranking(f);
   return (
-    <Card title="Ranking de executivos" subtitle="Receita ganha e % da meta individual">
+    <Card title="Ranking de executivos" subtitle="Receita ganha e % da meta individual" estimate="Sem meta cadastrada, usamos a média dos últimos 12 meses + 10%. Cadastre metas no botão Metas.">
       <ul className="-my-1 divide-y divide-border">
         {data.map((s, i) => {
           const active = f.sellerId === s.id;
@@ -210,7 +210,7 @@ export function RiskWidget({ f, big }: P) {
   const data = atRisk(f);
   const total = data.reduce((a, d) => a + d.value, 0);
   return (
-    <Card title="Negócios em risco" subtitle="≥ R$ 20 mil, sem atividade há 10+ dias"
+    <Card title="Negócios em risco" subtitle="≥ R$ 20 mil, sem atividade há 10+ dias" estimate="Dias sem atividade contam desde a última alteração do negócio no Bitrix24."
       right={<span className="rounded-md bg-danger-soft px-2 py-0.5 text-xs font-medium text-danger">{data.length} · {brl(total)}</span>}>
       <div className="-mx-5 -my-5 max-h-[22rem] overflow-auto">
         <table className={cn("w-full text-sm", big && "text-base")}>
@@ -237,7 +237,7 @@ export function LossWidget({ f, set, big }: P) {
   const data = lossReasons(f);
   const total = data.reduce((a, d) => a + d.count, 0) || 1;
   return (
-    <Card title="Motivos de perda" subtitle={`${data.reduce((a, d) => a + d.count, 0)} negócios perdidos`}>
+    <Card title="Motivos de perda" estimate="O Bitrix24 não tem campo de motivo; usamos o nome da etapa de perda em que o negócio foi fechado." subtitle={`${data.reduce((a, d) => a + d.count, 0)} negócios perdidos`}>
       <div className="space-y-1">
         {data.map((d) => {
           const active = f.lossReason === d.reason;

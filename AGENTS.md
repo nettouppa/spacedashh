@@ -21,3 +21,6 @@
 - Atlas AI uses each company's own OpenAI key stored in `ai_settings` (service_role only, status via `ai_status()`); `askAssistant` requires auth + membership. Keeps tenant billing and credentials isolated.
 - Atlas personality lives under `ai_settings.voice_settings.personality` and shares one prompt policy across chat and voice; dedicated manager-authorized saves preserve voice preferences, and voice saves preserve personality to avoid cross-setting overwrites.
 - Atlas conversations persist per user+company in `atlas_conversations` (messages as jsonb, RLS owner+member); the panel saves after each exchange and remembers the last one per company, so history follows the account.
+- Bitrix sync is resumable: the first full import continues from `bitrix_connections.sync_cursor` across runs, then runs are incremental by `DATE_MODIFY`; an hourly managed schedule calls `/api/public/cron/bitrix-sync`. Keeps each run within worker time.
+- `setDataset(null)` = demo (no Bitrix24), `setDataset("empty")` = loading/error; demo numbers must never appear for a connected company.
+- Password recovery and invite acceptance share the public `/reset-password` route.

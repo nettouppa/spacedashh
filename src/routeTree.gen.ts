@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedIntegrationsRouteImport } from './routes/_authenticated/integrations'
@@ -19,6 +20,7 @@ import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as TvTokenRouteImport } from './routes/tv.$token'
+import { Route as ApiPublicCronBitrixSyncRouteImport } from './routes/api/public/cron/bitrix-sync'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -32,6 +34,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
@@ -70,10 +77,16 @@ const TvTokenRoute = TvTokenRouteImport.update({
   path: '/tv/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronBitrixSyncRoute = ApiPublicCronBitrixSyncRouteImport.update({
+  id: '/api/public/cron/bitrix-sync',
+  path: '/api/public/cron/bitrix-sync',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
@@ -81,10 +94,12 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/team': typeof AuthenticatedTeamRoute
   '/tv/$token': typeof TvTokenRoute
+  '/api/public/cron/bitrix-sync': typeof ApiPublicCronBitrixSyncRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
@@ -92,12 +107,14 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/team': typeof AuthenticatedTeamRoute
   '/tv/$token': typeof TvTokenRoute
+  '/api/public/cron/bitrix-sync': typeof ApiPublicCronBitrixSyncRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/integrations': typeof AuthenticatedIntegrationsRoute
@@ -105,12 +122,14 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/tv/$token': typeof TvTokenRoute
+  '/api/public/cron/bitrix-sync': typeof ApiPublicCronBitrixSyncRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/auth'
+    | '/reset-password'
     | '/admin'
     | '/dashboard'
     | '/integrations'
@@ -118,10 +137,12 @@ export interface FileRouteTypes {
     | '/settings'
     | '/team'
     | '/tv/$token'
+    | '/api/public/cron/bitrix-sync'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
+    | '/reset-password'
     | '/admin'
     | '/dashboard'
     | '/integrations'
@@ -129,11 +150,13 @@ export interface FileRouteTypes {
     | '/settings'
     | '/team'
     | '/tv/$token'
+    | '/api/public/cron/bitrix-sync'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/reset-password'
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
     | '/_authenticated/integrations'
@@ -141,13 +164,16 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/team'
     | '/tv/$token'
+    | '/api/public/cron/bitrix-sync'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   TvTokenRoute: typeof TvTokenRoute
+  ApiPublicCronBitrixSyncRoute: typeof ApiPublicCronBitrixSyncRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -171,6 +197,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/admin': {
@@ -222,6 +255,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TvTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/bitrix-sync': {
+      id: '/api/public/cron/bitrix-sync'
+      path: '/api/public/cron/bitrix-sync'
+      fullPath: '/api/public/cron/bitrix-sync'
+      preLoaderRoute: typeof ApiPublicCronBitrixSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -250,7 +290,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   TvTokenRoute: TvTokenRoute,
+  ApiPublicCronBitrixSyncRoute: ApiPublicCronBitrixSyncRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -71,6 +71,13 @@
       "when": 1793146169967,
       "tag": "0009_bitrix_webhook_connection",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793146992160,
+      "tag": "0010_bitrix_sync_cursor",
+      "breakpoints": true
     }
   ]
 }
