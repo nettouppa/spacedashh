@@ -14,7 +14,7 @@ import { SortableContext, arrayMove, rectSortingStrategy, useSortable, sortableK
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, LayoutGrid, Monitor, X, Save, RotateCcw, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { COMPANIES, SELLERS, TEAMS, sellerName, range, setDataset, setGoals, type Filters, type Period, type Stage } from "@/lib/crm-data";
+import { COMPANIES, SELLERS, TEAMS, sellerName, range, setDataset, setGoals, type Filters, type Period, type Stage , kpis, periodLabel } from "@/lib/crm-data";
 import { getGoals, saveGoals as saveGoalsFn } from "@/lib/goals.functions";
 import { GoalsDialog } from "@/components/dash/goals-dialog";
 import { Target, Plus, Copy, Pencil, Trash2 } from "lucide-react";
