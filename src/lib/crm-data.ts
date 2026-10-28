@@ -300,7 +300,7 @@ export function previousKpis(f: Filters) {
 
 // ---------- Real Bitrix24 dataset ----------
 export type RawDataset = {
-  domain: string; lastSyncAt: string | null;
+  domain: string; lastSyncAt: string | null; syncStatus?: string | null;
   deals: { deal_id: string; title: string | null; stage_id: string | null; category_id: string | null; opportunity: number; assigned_by_id: string | null; closed: boolean; date_create: string | null; close_date: string | null; date_modify: string | null }[];
   users: { user_id: string; name: string; photo: string | null; department: string | null }[];
   stages: { stage_id: string; category_id: string | null; category_name: string | null; name: string; sort: number; semantics: string | null }[];
