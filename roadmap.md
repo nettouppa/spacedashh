@@ -5,4 +5,4 @@
 - [x] 3. Atlas: destaque do card explicado (resumo, continuações, copiar e avaliar já existiam)
 - [x] 4. Lista de primeiros passos (tour guiado pendente)
 - [x] 5. Sino de alertas + comemoração de metas (tela "Meu dia" pendente)
-- [ ] 6. Versão celular e acabamento
+- [x] 6. Celular: topo compacto, conflito de atalho Ctrl+K resolvido
