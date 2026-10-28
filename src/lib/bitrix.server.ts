@@ -156,8 +156,13 @@ export async function syncDeals(companyId: string) {
   try {
     const conn: Conn = { company_id: row.company_id, webhook_url: row.webhook_url };
     // Deals imported before origin/stage-time fields existed need one full re-import.
-    const { count: legacy } = await db.from("bitrix_deals").select("deal_id", { count: "exact", head: true }).eq("company_id", companyId).is("moved_time", null);
-    const full = !row.last_full_sync_at || (!row.sync_cursor && (legacy ?? 0) > 0 && !(await db.from("bitrix_deals").select("deal_id").eq("company_id", companyId).not("moved_time", "is", null).limit(1)).data?.length);
+    let fullDone = row.last_full_sync_at;
+    if (fullDone && !(await db.from("bitrix_deals").select("deal_id").eq("company_id", companyId).not("moved_time", "is", null).limit(1)).data?.length) {
+      fullDone = null; // restart the resumable full import once
+      await db.from("bitrix_connections").update({ last_full_sync_at: null, sync_cursor: 0 }).eq("company_id", companyId);
+      row.sync_cursor = 0;
+    }
+    const full = !fullDone;
     const cursor = full ? row.sync_cursor ?? 0 : 0;
     if (cursor === 0) { await syncMeta(db, conn, companyId); await syncWork(db, conn, companyId); }
     const since = !full && row.last_sync_at ? new Date(new Date(row.last_sync_at).getTime() - 3600_000).toISOString() : null;
