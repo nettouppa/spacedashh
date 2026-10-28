@@ -305,7 +305,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
         )}
         {(profile === "manager" || account.isAdmin) && <button onClick={() => setGoalsOpen(true)} className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted"><Target className="size-3.5" /><span className="hidden sm:inline">Metas</span></button>}
         <button onClick={() => setTv(true)} className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-card px-3 text-[13px] font-medium hover:bg-muted"><Monitor className="size-3.5" /><span className="hidden sm:inline">Modo TV</span></button>
-        <button onClick={() => setAi((v) => !v)} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[13px] font-medium text-primary-foreground hover:bg-primary/90"><AtlasIcon className="size-4" /><span className="hidden sm:inline">Atlas</span></button>
+        <button data-tour="atlas" onClick={() => setAi((v) => !v)} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[13px] font-medium text-primary-foreground hover:bg-primary/90"><AtlasIcon className="size-4" /><span className="hidden sm:inline">Atlas</span></button>
       </>}>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -315,7 +315,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
             : dataQ.isLoading ? <><span className="size-1.5 animate-pulse rounded-full bg-primary" />Carregando dados do Bitrix24…</>
             : <><span className="size-1.5 rounded-full bg-warning" />Dados de demonstração · Bitrix24 não conectado <Link to="/integrations" className="ml-1 text-primary hover:underline">Configurar integração</Link></>}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div data-tour="filters" className="flex flex-wrap items-center gap-2">
           <DateRangePicker value={f.period} onChange={(p: Period) => set({ period: p })} />
           <Select label={real ? "Todos funis" : "Todas empresas"} value={f.company} onChange={(v) => set({ company: v })} options={COMPANIES.map((c) => ({ v: c, l: c }))} />
           {profile === "manager" && <>
@@ -340,7 +340,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
             {v.name}
           </button>
         ))}
-        <button onClick={() => addView(false)} className="inline-flex items-center gap-1 px-2 py-2 text-[13px] font-medium text-muted-foreground hover:text-primary"><Plus className="size-3.5" />Novo painel</button>
+        <button data-tour="views" onClick={() => addView(false)} className="inline-flex items-center gap-1 px-2 py-2 text-[13px] font-medium text-muted-foreground hover:text-primary"><Plus className="size-3.5" />Novo painel</button>
         <div className="ml-auto flex items-center gap-1 pb-1">
           <button onClick={() => addView(true)} title="Duplicar painel" className="grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-muted"><Copy className="size-3.5" /></button>
           <button onClick={() => renameView(active)} title="Renomear painel" className="grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-muted"><Pencil className="size-3.5" /></button>
@@ -361,6 +361,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
         </div>
       )}
 
+      <Tour open={tour && !tv} onClose={() => { localStorage.setItem("sd-tour-done", "1"); setTour(false); }} />
       <AtlasContext.Provider value={atlasCtx}>
       {profile === "manager" && <div className="mt-5"><Onboarding companyId={companyId} steps={[
         { id: "bitrix", label: "Conectar o Bitrix24", done: !!real, to: "/integrations" },
@@ -369,7 +370,7 @@ function Dashboard({ me: account }: { me: Awaited<ReturnType<typeof getMe>> }) {
         { id: "view", label: "Criar um painel", done: views.some((v) => !["geral", "comercial", "operacao"].includes(v.id)), action: () => setNewOpen(true) },
         { id: "atlas", label: "Perguntar ao Atlas", done: usedAtlas, action: () => setAi(true) },
       ]} /></div>}
-      <div className="mt-5"><KpiStrip f={eff} set={setEff} /></div>
+      <div data-tour="kpis" className="mt-5"><KpiStrip f={eff} set={setEff} /></div>
 
       {edit && hidden.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-border bg-card px-3 py-2">
