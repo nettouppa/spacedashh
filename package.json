@@ -5,14 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "NITRO_PRESET=node-server vite build",
     "build:dev": "vite build --mode development",
-    "preview": "wrangler dev --config dist/server/wrangler.json --port 4173 --ip 0.0.0.0",
+    "preview": "PORT=4173 HOST=0.0.0.0 node .output/server/index.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "start": "wrangler dev --config dist/server/wrangler.json --port 4173 --ip 0.0.0.0"
+    "start": "PORT=4173 HOST=0.0.0.0 node .output/server/index.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1"
@@ -75,7 +75,6 @@
     "tw-animate-css": "^1.3.4",
     "vaul": "^1.1.2",
     "vite-tsconfig-paths": "^6.0.2",
-    "wrangler": "^4.154.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -102,6 +101,7 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "8.1.5",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "wrangler": "^4.154.0"
   }
 }
