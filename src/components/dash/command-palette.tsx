@@ -100,6 +100,10 @@ export function CommandPalette({ commands = [], isAdmin, onToggleMenu }: { comma
           ))}
           <CommandGroup heading="Ajuda">
             <CommandItem value="atalhos de teclado" onSelect={() => run(() => setHelp(true))}>Atalhos de teclado<CommandShortcut>?</CommandShortcut></CommandItem>
+            <CommandItem value="reiniciar onboarding primeiros passos tour" onSelect={() => run(() => {
+              Object.keys(localStorage).filter((k) => k.startsWith("sd-onboarding-hidden") || k === "sd-tour-done").forEach((k) => localStorage.removeItem(k));
+              window.location.href = "/dashboard?tour=1";
+            })}>Reiniciar primeiros passos</CommandItem>
           </CommandGroup>
         </CommandList>
       </CommandDialog>
