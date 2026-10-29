@@ -25,3 +25,4 @@
 - `setDataset(null)` = demo (no Bitrix24), `setDataset("empty")` = loading/error; demo numbers must never appear for a connected company.
 - Password recovery and invite acceptance share the public `/reset-password` route.
 - Access management is split: `/members` (managers of the active company, server fns in `src/lib/members.functions.ts` authorize via `canManageMembers`) and `/companies` (platform admin only); `/admin` only redirects. Lets managers run their own team without the platform owner.
+- External hosting (Onnira): `build` sets NITRO_PRESET=node-server (ignored inside Lovable builds) and `start` runs `.output/server/index.mjs` on port 4173; Onnira's container cannot run the Cloudflare worker output.
