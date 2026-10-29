@@ -42,7 +42,7 @@ function Integrations() {
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<{ ok: boolean; text: string } | null>(null);
   const [tab, setTab] = useState("bitrix");
-  useEffect(() => { if (new URLSearchParams(window.location.search).get("tab") === "atlas") setTab("atlas"); }, []);
+  useEffect(() => { if (new URLSearchParams(window.location.search).get("tab") === "atlas") void nav({ to: "/settings" }); }, [nav]);
   async function run(fn: () => Promise<void>) {
     setBusy(true); setFlash(null);
     try { await fn(); } catch (e) { setFlash({ ok: false, text: e instanceof Error ? e.message : "Erro inesperado." }); }
@@ -87,14 +87,8 @@ function Integrations() {
     <Tabs value={tab} onValueChange={setTab} className="mt-6">
       <TabsList>
         <TabsTrigger value="bitrix"><Plug className="size-4" />Bitrix24</TabsTrigger>
-        <TabsTrigger value="atlas"><AtlasIcon className="size-4" />Atlas</TabsTrigger>
       </TabsList>
-      <TabsContent value="atlas">
-        {company ? <><AiSettingsCard companyId={company.id} canManage={company.canManage} />
-          <AtlasPersonalitySettings key={company.id} companyId={company.id} canManage={company.canManage} connected={!!aiQ.data?.connected} />
-          <VoiceSettingsCard companyId={company.id} canManage={company.canManage} connected={!!aiQ.data?.connected} /></>
-          : <p className="py-8 text-sm text-muted-foreground">Nenhuma empresa disponível.</p>}
-      </TabsContent>
+      <p className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground"><AtlasIcon className="size-4" />As configurações do Atlas ficam em <Link to="/settings" className="font-medium text-primary hover:underline">Configurações</Link>.</p>
       <TabsContent value="bitrix">
     <section className="mt-7 border-y border-border py-6">
       <div className="flex flex-wrap items-center gap-4">
