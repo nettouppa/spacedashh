@@ -42,7 +42,8 @@ export function VoiceMode({ history, context, onAction, onClose, companyId }: {
   function listen() {
     if (!alive.current || !rec.current) return;
     setHeard(""); setP("listening");
-    try { rec.current.start(); } catch { /* já ativo */ }
+    try { rec.current.abort(); } catch { /* */ }
+    setTimeout(() => { if (alive.current && phaseRef.current === "listening") { try { rec.current.start(); } catch { /* já ativo */ } } }, 120);
   }
 
   function stopSpeech() {
@@ -52,10 +53,9 @@ export function VoiceMode({ history, context, onAction, onClose, companyId }: {
 
   function afterSpeech() { if (alive.current && phaseRef.current === "speaking") listen(); }
 
-  function startBargeIn() {
-    if (!vs.current.bargeIn || !rec.current) return;
-    try { rec.current.start(); } catch { /* já ativo */ }
-  }
+  // O microfone fica desligado enquanto o Atlas fala: abrir aqui fazia ele ouvir
+  // a própria voz, se interromper e reenviar a pergunta em loop.
+  function startBargeIn() { /* interrupção pelo botão */ }
 
   function speakBrowser(clean: string) {
     const synth = window.speechSynthesis;
@@ -92,6 +92,7 @@ export function VoiceMode({ history, context, onAction, onClose, companyId }: {
   }
 
   async function think(text: string) {
+    if (phaseRef.current === "thinking") return;
     setP("thinking"); sfx.micClose();
     const pulse = setInterval(() => { if (phaseRef.current === "thinking") sfx.thinking(); else clearInterval(pulse); }, 1200);
     turns.current.push({ role: "user", content: text });
@@ -118,10 +119,7 @@ export function VoiceMode({ history, context, onAction, onClose, companyId }: {
     r.onstart = () => { text = ""; };
     r.onresult = (e: any) => {
       text = Array.from(e.results).map((x: any) => x[0].transcript).join("");
-      if (phaseRef.current === "speaking") {
-        if (text.trim().length < 4) return;
-        stopSpeech(); sfx.bargeIn(); setP("listening");
-      }
+      if (phaseRef.current !== "listening") return;
       setHeard(text);
       if (silence.current) clearTimeout(silence.current);
       silence.current = setTimeout(() => { try { r.stop(); } catch { /* */ } }, vs.current.silenceMs);
@@ -129,7 +127,8 @@ export function VoiceMode({ history, context, onAction, onClose, companyId }: {
     r.onend = () => {
       if (silence.current) clearTimeout(silence.current);
       if (!alive.current || phaseRef.current !== "listening") return;
-      if (text.trim()) void think(text.trim());
+      const said = text.trim(); text = "";
+      if (said) void think(said);
       else setTimeout(listen, 200);
     };
     r.onerror = (e: any) => { if (e.error === "not-allowed") setP("muted"); };
